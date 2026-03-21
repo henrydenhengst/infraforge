@@ -70,3 +70,8 @@ reset_git_lastknowngood.sh
 **/.vault_pass
 **/*.vault
 EOF
+
+# Secrets - NOOIT in Git!
+applications/secrets/vault/*.yml
+!applications/secrets/vault/README.md
+!applications/secrets/vault/template-*.yml
