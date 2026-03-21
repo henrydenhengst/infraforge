@@ -1,12 +1,13 @@
 # --- ANSIBLE & SECRETS ---
-**/vault.yml
-**/secret.yml
-group_vars/all/secret.yml
-group_vars/all/secret.yaml
-group_vars/all/*.vault.yml
+# Sluit ALLE secrets uit, behalve versleutelde en voorbeelden
+**/secrets/vault/*.yml
+!**/secrets/vault/README.md
+!**/secrets/vault/template-*.yml
+!**/secrets/vault/example-*.yml
+# **/secrets/vault/*.vault   # otherwise GitHub problems
+**/vault_pass.txt
+**/.vault_pass
 *.retry
-*.vault_pass*
-.vault_pass*
 ansible.log
 *.iso
 
@@ -16,8 +17,6 @@ playbooks/*.dat
 playbooks/reports/*.dat
 **/lynis-report-*.dat
 **/lynis.log
-lynis.log
-lynis-report-*.dat
 
 # --- CONFIGURATIEBESTANDEN (lokaal) ---
 rclone.conf
@@ -50,7 +49,6 @@ desktop.ini
 *.backup
 *.old
 *.orig
-*~
 
 # --- TEMP BESTANDEN ---
 tmp/
@@ -58,20 +56,7 @@ temp/
 *.tmp
 *.temp
 
-# Lokale scripts
+# --- LOKALE SCRIPTS ---
 update_git.sh
 reset_git_lastknowngood.sh
-
-# Secrets - NOOIT in Git!
-**/secrets/vault/*.yml
-!**/secrets/vault/README.md
-!**/secrets/vault/example-*.yml
-**/vault_pass.txt
-**/.vault_pass
-**/*.vault
-EOF
-
-# Secrets - NOOIT in Git!
-applications/secrets/vault/*.yml
-!applications/secrets/vault/README.md
-!applications/secrets/vault/template-*.yml
+bfg-*.jar
