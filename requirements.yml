@@ -1,0 +1,550 @@
+# =============================================================================
+# ANSIBLE COLLECTIONS EN ROLES AFHANKELIJKHEDEN
+# =============================================================================
+# Dit bestand installeert alle benodigde collections en roles voor:
+# - AI/ML tools (Ollama, LocalAI, Qdrant, ChromaDB)
+# - Media servers (Jellyfin, Plex, Immich)
+# - Databases (PostgreSQL, Redis, MongoDB, ClickHouse)
+# - Monitoring (Prometheus, Grafana, Loki)
+# - Security (Wazuh, Authentik, Vault)
+# - En vele anderen...
+# =============================================================================
+
+---
+# -----------------------------------------------------------------------------
+# COLLECTIES (Verzamelde modules en plugins)
+# -----------------------------------------------------------------------------
+collections:
+  # ===== BASIS COLLECTIES =====
+  - name: community.docker
+    version: ">=3.4.0"
+    description: "Voor Docker container management (Ollama, LocalAI, Jellyfin)"
+    
+  - name: kubernetes.core
+    version: ">=2.4.0"
+    description: "Voor Kubernetes orchestratie"
+    
+  - name: community.general
+    version: ">=7.0.0"
+    description: "Algemene modules voor diverse tools"
+    
+  - name: ansible.posix
+    version: ">=1.5.0"
+    description: "POSIX systeemtaken"
+    
+  # ===== AI/ML COLLECTIES =====
+  - name: community.crypto
+    version: ">=2.0.0"
+    description: "Voor SSL certificaten (Ollama API, Open-WebUI)"
+    
+  - name: community.grafana
+    version: ">=1.5.0"
+    description: "Grafana dashboards voor AI metrics"
+    
+  - name: community.prometheus
+    version: ">=1.3.0"
+    description: "Prometheus monitoring voor AI workloads"
+    
+  - name: community.hashi_vault
+    version: ">=4.0.0"
+    description: "Voor secrets management (API keys voor AI tools)"
+    
+  # ===== DATABASE COLLECTIES =====
+  - name: community.mysql
+    version: ">=3.7.0"
+    description: "MySQL voor diverse applicaties"
+    
+  - name: community.postgresql
+    version: ">=3.0.0"
+    description: "PostgreSQL voor Nextcloud, Airflow, Superset"
+    
+  - name: community.mongodb
+    version: ">=1.5.0"
+    description: "MongoDB voor AI/ML tools"
+    
+  - name: community.cassandra
+    version: ">=1.0.0"
+    description: "Cassandra voor grootschalige data"
+    
+  - name: community.clickhouse
+    version: ">=1.0.0"
+    description: "ClickHouse voor analytics"
+    
+  - name: community.redis
+    version: ">=1.5.0"
+    description: "Redis voor caching en queues"
+    
+  # ===== MEDIA COLLECTIES =====
+  - name: community.jellyfin
+    version: ">=1.0.0"
+    description: "Jellyfin media server"
+    
+  - name: community.plex
+    version: ">=1.0.0"
+    description: "Plex media server"
+    
+  # ===== SECURITY COLLECTIES =====
+  - name: community.wazuh
+    version: ">=1.0.0"
+    description: "Wazuh security monitoring"
+    
+  - name: community.authelia
+    version: ">=1.0.0"
+    description: "Authelia 2FA/SSO"
+    
+  - name: community.authentik
+    version: ">=1.0.0"
+    description: "Authentik identity provider"
+    
+  - name: community.vault
+    version: ">=1.0.0"
+    description: "HashiCorp Vault voor secrets"
+    
+  # ===== MONITORING COLLECTIES =====
+  - name: community.zabbix
+    version: ">=2.0.0"
+    description: "Zabbix enterprise monitoring"
+    
+  - name: community.loki
+    version: ">=1.0.0"
+    description: "Loki logging"
+    
+  - name: community.prometheus
+    version: ">=1.3.0"
+    description: "Prometheus metrics"
+    
+  # ===== CLOUD COLLECTIES =====
+  - name: amazon.aws
+    version: ">=5.0.0"
+    description: "AWS cloud (optioneel)"
+    
+  - name: azure.azcollection
+    version: ">=1.15.0"
+    description: "Azure cloud (optioneel)"
+    
+  - name: google.cloud
+    version: ">=1.1.0"
+    description: "Google Cloud (optioneel)"
+    
+  # ===== VIRTUALISATIE COLLECTIES =====
+  - name: community.proxmox
+    version: ">=1.0.0"
+    description: "Proxmox VE management"
+    
+  - name: community.libvirt
+    version: ">=1.2.0"
+    description: "KVM/QEMU virtualisatie"
+    
+  # ===== TOOL-SPECIFIEKE COLLECTIES =====
+  - name: community.sops
+    version: ">=1.6.0"
+    description: "Mozilla SOPS voor secrets"
+    
+  - name: nginxinc.nginx
+    version: ">=0.21.0"
+    description: "Nginx voor reverse proxy"
+    
+  - name: community.rabbitmq
+    version: ">=1.2.0"
+    description: "RabbitMQ message broker"
+    
+  - name: community.kafka
+    version: ">=1.0.0"
+    description: "Apache Kafka streaming"
+    
+  - name: community.elastic
+    version: ">=7.0.0"
+    description: "Elasticsearch stack"
+    
+  - name: community.gitea
+    version: ">=1.0.0"
+    description: "Gitea Git service"
+    
+  - name: community.gitlab
+    version: ">=1.0.0"
+    description: "GitLab CI/CD"
+    
+  - name: community.jenkins
+    version: ">=1.0.0"
+    description: "Jenkins automation"
+    
+  - name: community.nextcloud
+    version: ">=1.0.0"
+    description: "Nextcloud collaboration"
+    
+  - name: community.mattermost
+    version: ">=1.0.0"
+    description: "Mattermost chat"
+    
+  - name: community.rocketchat
+    version: ">=1.0.0"
+    description: "RocketChat team chat"
+    
+  - name: community.zulip
+    version: ">=1.0.0"
+    description: "Zulip threaded chat"
+    
+  - name: community.wordpress
+    version: ">=1.0.0"
+    description: "WordPress CMS"
+    
+  - name: community.ghost
+    version: ">=1.0.0"
+    description: "Ghost blogging platform"
+    
+  - name: community.moodle
+    version: ">=1.0.0"
+    description: "Moodle LMS"
+    
+  - name: community.odoo
+    version: ">=1.0.0"
+    description: "Odoo ERP"
+    
+  - name: community.erpnext
+    version: ">=1.0.0"
+    description: "ERPNext systeem"
+    
+  - name: community.paperless
+    version: ">=1.0.0"
+    description: "Paperless document management"
+    
+  - name: community.immich
+    version: ">=1.0.0"
+    description: "Immich foto backup"
+    
+  - name: community.homeassistant
+    version: ">=1.0.0"
+    description: "Home Assistant automatisering"
+
+# -----------------------------------------------------------------------------
+# ROLES (Herbruikbare taken)
+# -----------------------------------------------------------------------------
+roles:
+  # ===== GEERLINGGUY BASIS ROLES =====
+  - name: geerlingguy.docker
+    version: "6.1.0"
+    description: "Docker installatie voor alle containers"
+    
+  - name: geerlingguy.kubernetes
+    version: "7.0.0"
+    description: "Kubernetes cluster"
+    
+  - name: geerlingguy.nodejs
+    version: "6.1.0"
+    description: "Node.js voor Open-WebUI, AnythingLLM"
+    
+  - name: geerlingguy.nginx
+    version: "3.1.4"
+    description: "Nginx reverse proxy voor alle web UI's"
+    
+  - name: geerlingguy.php
+    version: "4.3.0"
+    description: "PHP voor Nextcloud, Wordpress"
+    
+  - name: geerlingguy.mysql
+    version: "4.3.0"
+    description: "MySQL database"
+    
+  - name: geerlingguy.postgresql
+    version: "3.4.0"
+    description: "PostgreSQL voor Airflow, Superset"
+    
+  - name: geerlingguy.redis
+    version: "1.8.0"
+    description: "Redis cache voor AI tools"
+    
+  - name: geerlingguy.haproxy
+    version: "2.5.0"
+    description: "HAProxy load balancer"
+    
+  - name: geerlingguy.certbot
+    version: "5.0.0"
+    description: "SSL certificaten voor HTTPS"
+    
+  - name: geerlingguy.pip
+    version: "2.2.0"
+    description: "Python packages voor AI tools"
+    
+  - name: geerlingguy.git
+    version: "2.0.3"
+    description: "Git voor development"
+    
+  - name: geerlingguy.ntp
+    version: "2.2.0"
+    description: "Tijd synchronisatie"
+    
+  - name: geerlingguy.firewall
+    version: "2.4.0"
+    description: "UFW firewall configuratie"
+    
+  # ===== SECURITY HARDENING =====
+  - name: devsec.hardening
+    version: "8.5.0"
+    description: "OS hardening voor AI servers"
+    
+  - name: oasis_roles.system
+    version: "3.0.0"
+    description: "Systeembeveiliging"
+    
+  # ===== MONITORING STACK =====
+  - name: cloudalchemy.prometheus
+    version: "3.0.0"
+    description: "Prometheus voor AI metrics"
+    
+  - name: cloudalchemy.grafana
+    version: "1.0.0"
+    description: "Grafana dashboards"
+    
+  - name: cloudalchemy.node_exporter
+    version: "2.0.0"
+    description: "Node metrics voor AI servers"
+    
+  - name: cloudalchemy.alertmanager
+    version: "1.0.0"
+    description: "Alerting voor AI downtime"
+    
+  - name: prometheus.prometheus.blackbox_exporter
+    version: "1.0.0"
+    description: "Externe endpoint monitoring"
+    
+  # ===== LOGGING STACK =====
+  - name: elastic.elasticsearch
+    version: "7.17.0"
+    description: "Elasticsearch voor logs"
+    
+  - name: elastic.logstash
+    version: "7.17.0"
+    description: "Log verwerking"
+    
+  - name: elastic.kibana
+    version: "7.17.0"
+    description: "Log visualisatie"
+    
+  - name: elastic.beats
+    version: "7.17.0"
+    description: "Log collectors"
+    
+  - name: elastic.filebeat
+    version: "7.17.0"
+    description: "File log collector"
+    
+  # ===== BACKUP ROLES =====
+  - name: vladgh.samba
+    version: "2.0.3"
+    description: "Samba shares voor backups"
+    
+  - name: tersmitten.rsync
+    version: "2.0.0"
+    description: "Rsync voor data backup"
+    
+  - name: tersmitten.duplicity
+    version: "2.0.0"
+    description: "Encrypted backups"
+    
+  # ===== AI/ML SPECIFIEKE ROLES =====
+  - name: andrewrothstein.ollama
+    version: "1.0.0"
+    description: "Ollama LLM server"
+    
+  - name: andrewrothstein.localai
+    version: "1.0.0"
+    description: "LocalAI API server"
+    
+  - name: andrewrothstein.qdrant
+    version: "1.0.0"
+    description: "Qdrant vector database"
+    
+  - name: andrewrothstein.chromadb
+    version: "1.0.0"
+    description: "ChromaDB vector store"
+    
+  - name: andrewrothstein.jupyterhub
+    version: "1.0.0"
+    description: "JupyterHub voor data science"
+    
+  - name: andrewrothstein.mlflow
+    version: "1.0.0"
+    description: "MLflow voor experiment tracking"
+    
+  - name: andrewrothstein.airflow
+    version: "1.0.0"
+    description: "Apache Airflow voor pipelines"
+    
+  - name: andrewrothstein.superset
+    version: "1.0.0"
+    description: "Apache Superset BI"
+    
+  - name: andrewrothstein.stable-diffusion
+    version: "1.0.0"
+    description: "Stable Diffusion WebUI"
+    
+  - name: andrewrothstein.comfyui
+    version: "1.0.0"
+    description: "ComfyUI voor SD"
+    
+  - name: andrewrothstein.whisper
+    version: "1.0.0"
+    description: "OpenAI Whisper ASR"
+    
+  # ===== MEDIA SERVER ROLES =====
+  - name: andrewrothstein.jellyfin
+    version: "1.0.0"
+    description: "Jellyfin media server"
+    
+  - name: andrewrothstein.plex
+    version: "1.0.0"
+    description: "Plex media server"
+    
+  - name: andrewrothstein.immich
+    version: "1.0.0"
+    description: "Immich foto backup"
+    
+  - name: andrewrothstein.audiobookshelf
+    version: "1.0.0"
+    description: "Audiobookshelf server"
+    
+  # ===== DATABASE ROLES =====
+  - name: andrewrothstein.mongodb
+    version: "1.0.0"
+    description: "MongoDB voor AI"
+    
+  - name: andrewrothstein.clickhouse
+    version: "1.0.0"
+    description: "ClickHouse analytics"
+    
+  - name: andrewrothstein.cassandra
+    version: "1.0.0"
+    description: "Cassandra database"
+    
+  - name: andrewrothstein.timescaledb
+    version: "1.0.0"
+    description: "TimescaleDB voor metrics"
+    
+  # ===== MESSAGING ROLES =====
+  - name: andrewrothstein.rabbitmq
+    version: "1.0.0"
+    description: "RabbitMQ queue"
+    
+  - name: andrewrothstein.kafka
+    version: "1.0.0"
+    description: "Apache Kafka streaming"
+    
+  - name: andrewrothstein.benthos
+    version: "1.0.0"
+    description: "Benthos stream processor"
+    
+  # ===== TOOL-SPECIFIEKE ROLES =====
+  - name: andrewrothstein.n8n
+    version: "1.0.0"
+    description: "n8n workflow automation"
+    
+  - name: andrewrothstein.nocodb
+    version: "1.0.0"
+    description: "NocoDB spreadsheet"
+    
+  - name: andrewrothstein.appsmith
+    version: "1.0.0"
+    description: "Appsmith low-code"
+    
+  - name: andrewrothstein.baserow
+    version: "1.0.0"
+    description: "Baserow database"
+    
+  - name: andrewrothstein.bitwarden
+    version: "1.0.0"
+    description: "Bitwarden password manager"
+    
+  - name: andrewrothstein.calcom
+    version: "1.0.0"
+    description: "Cal.com scheduling"
+    
+  - name: andrewrothstein.chatwoot
+    version: "1.0.0"
+    description: "Chatwoot customer support"
+    
+  - name: andrewrothstein.zammad
+    version: "1.0.0"
+    description: "Zammad ticketing"
+    
+  - name: andrewrothstein.mattermost
+    version: "1.0.0"
+    description: "Mattermost chat"
+    
+  - name: andrewrothstein.rocketchat
+    version: "1.0.0"
+    description: "RocketChat team chat"
+    
+  - name: andrewrothstein.nextcloud
+    version: "1.0.0"
+    description: "Nextcloud collaboration"
+    
+  - name: andrewrothstein.odoo
+    version: "1.0.0"
+    description: "Odoo ERP"
+    
+  - name: andrewrothstein.erpnext
+    version: "1.0.0"
+    description: "ERPNext systeem"
+    
+  - name: andrewrothstein.paperless
+    version: "1.0.0"
+    description: "Paperless document management"
+    
+  - name: andrewrothstein.stirlingpdf
+    version: "1.0.0"
+    description: "Stirling-PDF editor"
+    
+  - name: andrewrothstein.homeassistant
+    version: "1.0.0"
+    description: "Home Assistant automation"
+    
+  - name: andrewrothstein.frigate
+    version: "1.0.0"
+    description: "Frigate NVR met AI"
+    
+  - name: andrewrothstein.traefik
+    version: "1.0.0"
+    description: "Traefik reverse proxy"
+    
+  - name: andrewrothstein.portainer
+    version: "1.0.0"
+    description: "Portainer Docker UI"
+    
+  - name: andrewrothstein.gitea
+    version: "1.0.0"
+    description: "Gitea Git service"
+    
+  - name: andrewrothstein.gitlab
+    version: "1.0.0"
+    description: "GitLab CE"
+    
+  - name: andrewrothstein.jenkins
+    version: "1.0.0"
+    description: "Jenkins CI/CD"
+    
+  - name: andrewrothstein.sonarqube
+    version: "1.0.0"
+    description: "SonarQube code quality"
+
+# -----------------------------------------------------------------------------
+# GEBRUIKSINSTRUCTIES
+# -----------------------------------------------------------------------------
+# Installeer alle dependencies:
+# $ ansible-galaxy collection install -r requirements.yml
+# $ ansible-galaxy role install -r requirements.yml
+#
+# Voor AI/ML tools (Ollama, LocalAI, Qdrant):
+# $ ansible-galaxy role install andrewrothstein.ollama
+#
+# Voor media servers (Jellyfin, Plex, Immich):
+# $ ansible-galaxy role install andrewrothstein.jellyfin
+#
+# Voor databases (PostgreSQL, MongoDB, ClickHouse):
+# $ ansible-galaxy collection install community.postgresql
+#
+# Voor monitoring (Prometheus, Grafana):
+# $ ansible-galaxy collection install community.prometheus
+
+# =============================================================================
+# EINDE REQUIREMENTS.YML
+# =============================================================================

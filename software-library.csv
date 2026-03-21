@@ -1,0 +1,313 @@
+Naam,Profiel-tag,Functie-tag,Beschrijving
+MeiliSearch,Affiliate,search,Razendsnelle zoekmachine voor prijsvergelijkingssites
+AffiliateEngine,Affiliate,tools,AI-gestuurde content generator voor niche websites
+Amoeba,Affiliate,tools,Automatische prijsvergelijker met AI-matching
+Grokker,AI-Data,data,Data discovery en classificatie tool
+JupyterHub,AI-Data,dev-tool,Multi-user platform voor Data Science en Python notebooks
+MLflow,AI-Data,dev-tool,Platform voor het beheren van de Machine Learning lifecycle
+Superset,AI-Data,data,Moderne data exploratie en visualisatie (BI)
+Airflow,AI-Data,automation,Workflow orchestratie voor complexe data-pipelines
+OpenMetadata,AI-Data,data,Centraal beheer van data-assets en lineage
+LabelStudio,AI-Data,data,Data-annotatie tool voor het trainen van eigen AI-modellen
+Tika,AI-Data,data,Content analyse en extractie voor grote datasets
+Weights-Biases,AI-Data,dev-tool,Tracking van machine learning experimenten
+Benthos,AI-Data,automation,Stream-processor voor complexe data-transformaties
+NocoDB,AI-Data,data,Smart spreadsheet (Airtable alternatief) op je eigen SQL
+VannaAI,AI-Data,data,SQL-generatie via natuurlijke taal (Text-to-SQL)
+AITable,AI-Data,data,AI-gestuurde database voor projectmanagement
+Ollama,AI-Ops,llm,Lokale runner voor grote taalmodellen (Llama 3, Mistral)
+Open-WebUI,AI-Ops,ui,ChatGPT-stijl interface voor lokaal gehoste LLM's
+AnythingLLM,AI-Ops,llm,Enterprise-grade RAG-systeem om documenten te chatten
+Qdrant,AI-Ops,database,Vector database voor AI-zoekopdrachten en geheugen
+ChromaDB,AI-Ops,database,Lichtgewicht vector store voor AI-agenten
+LocalAI,AI-Ops,api,Open-source OpenAI-compatibele API voor lokale modellen
+Flowise,AI-Ops,automation,Visuele drag-and-drop builder voor AI-workflows (LangChain)
+Langflow,AI-Ops,automation,Low-code UI voor het ontwerpen van complexe AI-pipelines
+Stirling-PDF-AI,AI-Ops,office,PDF-bewerking met AI-samenvattingen en OCR
+Whisper-ASR,AI-Ops,media,Spraak-naar-tekst transcriptie op basis van OpenAI Whisper
+Stable-Diffusion-WebUI,AI-Ops,media,AI-beeldgeneratie (Text-to-Image) op eigen hardware
+ComfyUI,AI-Ops,media,Geavanceerde knooppunt-gebaseerde UI voor Stable Diffusion
+Frigate,AI-Ops,security,NVR met AI-objectdetectie (mensen, auto's) voor camera's
+Danswer,AI-Ops,search,Enterprise AI-zoekmachine die al je bedrijfsbronnen koppelt
+HuggingFace-Inference,AI-Ops,api,Lokale inference endpoint voor transformer modellen
+DeepStack,AI-Ops,security,AI-server voor gezichts- en objectherkenning
+Facebox,AI-Ops,security,Gezichtsherkenning via een eenvoudige API
+TextSynth,AI-Ops,llm,Lichtgewicht server voor tekstgeneratie modellen
+PrivateGPT,AI-Ops,llm,Chat met je documenten zonder dat data je server verlaat
+BabyBuddy,Algemeen,lifestyle,Baby-tracking software
+Baserow,Algemeen,data,No-code database (Airtable kloon)
+Bitwarden,Algemeen,security,Wachtwoordbeheerder voor teams
+Cal.com,Algemeen,tools,Open-source alternatief voor Calendly (afspraken plannen)
+Cryptpad,Algemeen,office,Privacy-vriendelijke samenwerking
+Dashboard,Algemeen,ui,Centrale startpagina
+Discourse,Algemeen,community,Discussieplatform
+Element,Algemeen,chat,Matrix chat-cliënt
+Etherpad,Algemeen,office,Real-time teksteditor
+Flarum,Algemeen,community,Forumsoftware
+FreshRSS,Algemeen,media,RSS-feed aggregator
+Grocy,Algemeen,lifestyle,Huishoudbeheer
+Heimdall,Algemeen,ui,App-dashboard
+Homer,Algemeen,ui,Service dashboard
+Jitsi Meet,Algemeen,chat,Video-conferencing
+Linkding,Algemeen,tools,Bookmark manager
+Lychee,Algemeen,media,Foto-beheer
+Mattermost,Algemeen,chat,Team-chat platform
+Mumble,Algemeen,chat,Voice-chat
+Nextcloud,Algemeen,collaboration,Bestandshub en office
+OwnCloud,Algemeen,collaboration,Bestandsopslag
+OwnCloud_Infinite,Algemeen,storage,Next-gen cloud opslag (Go-based) voor enorme volumes
+RocketChat,Algemeen,chat,Team-chat
+Seafile,Algemeen,storage,Bestandssync
+Trilium,Algemeen,office,Notitiebeheer
+Ttrss,Algemeen,media,RSS-lezer
+Vikunja,Algemeen,collaboration,Takenlijst
+Wallabag,Algemeen,media,Read-it-later
+Zulip,Algemeen,chat,Threaded chat
+Hoarder,Algemeen,tools,Zelfgehoste bladwijzer-app met AI-tagging
+Immich,Algemeen,media,High-performance foto-backup met AI-gezichtsherkenning
+Audiobookshelf,Creators,media,Zelfgehoste server voor audioboeken en podcasts
+Castopod,Creators,media,Open-source hostingplatform voor podcasts met analytics
+Ghost,Creators,cms,Platform voor betaalde nieuwsbrieven en abonnementen
+AudioLDM,Creators,media,AI-generatie van geluidseffecten en muziek
+Synthesia-Local,Creators,video,AI-avatar video generatie tools
+Akeneo,Creative-Ops,pim,Product Informatie Management voor e-commerce catalogi
+ResourceSpace,Creative-Ops,dam,Digital Asset Management voor media en marketingbureaus
+Pinry,Creative-Ops,media,Inspiratieboard (Pinterest-kloon) voor designers
+DefectDojo,Cybersec,security,Vulnerability management platform voor security audits
+OpenCTI,Cybersec,security,Cyber Threat Intelligence platform voor dreigingsanalyse
+Wazuh,Cybersec,security,Enterprise EDR/XDR voor endpoint monitoring en compliance
+TheHive,Cybersec,security,Incident Response platform voor security teams
+Medusa,E-commerce,webshop,Headless commerce platform (Shopify alternatief)
+PrestaShop,E-commerce,webshop,Volledig zelfgehost e-commerce pakket
+Saleor,E-commerce,webshop,GraphQL-gebaseerd e-commerce platform
+WooCommerce,E-commerce,webshop,E-commerce via WordPress container
+BigBlueButton,Education,video,Web-conferencing specifiek voor online lesgeven
+Canvas,Education,lms,Modern leerbeheersysteem voor scholen en trainingen
+Moodle,Education,lms,Het meest gebruikte open-source leerplatform voor cursussen
+Guidde,Education,video,AI-gestuurde handleidingen en video-tutorials maken
+Akaunting,Financiën,finance,Online boekhoudsoftware
+BigCapital,Financiën,finance,Boekhouding met focus op retail-inventaris
+ClickHouse,Financiën,database,Analytische database voor rapportages
+Dolibarr,Financiën,erp,ERP en CRM voor MKB
+Firefly III,Financiën,finance,Persoonlijk financieel beheer
+InvoicePlane,Financiën,finance,Zelfgehost systeem voor offertes en facturatie
+Kimai,Financiën,time-tracking,Professionele urenregistratie voor facturatie en projecten
+Metabase,Financiën,data,Business Intelligence tool
+Odoo,Financiën,erp,ERP/CRM suite
+BookStack,HR,wiki,Documentatie en personeelshandboek
+ERPNext,HR,erp,Volledig HR en ERP systeem
+OrangeHRM,HR,erp,Gespecialiseerde suite voor werving en personeelsbeheer
+Paperless-ngx,HR,office,Digitaal archief (OCR)
+Stirling-PDF,HR,office,PDF-bewerkingstool
+Paperless-GPT,HR,office,Automatische classificatie van documenten via LLM
+AdGuardHome,IT,security,Netwerkbrede advertentieblocker
+AlmaLinux,IT,os,Linux distributie (RHEL)
+Alpine,IT,os,Lichtgewicht container OS
+AmazonLinux,IT,os,AWS geoptimalerde Linux
+Apache,IT,webserver,HTTP-webserver
+ApacheKafka,IT,data,Event-streaming platform
+Appsmith,IT,dev-tool,Low-code interne tools
+Appwrite,IT,dev-tool,Backend-as-a-service voor app-ontwikkelaars
+ArangoDB,IT,database,Multi-model database
+ArgoCD,IT,cicd,GitOps voor Kubernetes
+Atheos,IT,dev-tool,Web-gebaseerde IDE
+Authentik,IT,security,Identity Provider (SSO)
+Authelia,IT,security,2FA en SSO portaal
+Budibase,IT,dev-tool,Low-code app builder
+BusyBox,IT,os,Unix-utilities set
+Caddy,IT,webserver,Webserver met automatische HTTPS
+Cassandra,IT,database,Schaalbare NoSQL database
+CentOS,IT,os,Enterprise Linux OS
+Changedetection.io,IT,monitoring,Webpagina monitor
+Checkmk,IT,monitoring,IT-monitoring platform
+CockroachDB,IT,database,Gedistribueerde SQL database
+Consul,IT,network,Service discovery tool
+CouchDB,IT,database,NoSQL document database
+Dashy,IT,ui,Home lab dashboard
+Debian,IT,os,Stabiele Linux distributie
+Domoticz,IT,home-automation,Domotica-systeem
+dotNET,IT,dev-tool,Microsoft software framework
+Dozzle,IT,monitoring,Real-time Docker log-viewer
+Drone,IT,cicd,Container-based CI/CD
+Duplicati,IT,backup,Backup-software naar cloud
+Elasticsearch,IT,search,Zoek- en analytics engine
+Envoy,IT,proxy,Cloud-native proxy
+ESPHome,IT,home-automation,IoT beheer
+Fedora,IT,os,Linux voor developers
+FileBrowser,IT,data,Web-bestandsbeheerder
+Gitea,IT,git,Lichtgewicht Git-service
+GitLab,IT,git,DevOps en CI/CD platform
+GitLabRunner,IT,cicd,CI/CD execution agent
+Glances,IT,monitoring,Systeemmonitor
+Go,IT,dev-tool,Google programmeertaal
+Gogs,IT,git,Eenvoudige Git-service
+Gotify,IT,messaging,Push-notificatie server
+Grafana,IT,monitoring,Data-visualisatie dashboards
+Guacamole,IT,network,Remote desktop (RDP/SSH)
+HAProxy,IT,proxy,Load balancer
+Harbor,IT,registry,Container image registry
+Home Assistant,IT,home-automation,Smart home hub
+InfluxDB,IT,database,Time-series database
+ITtools,IT,dev-tool,Developer utilities
+Java-OpenJDK,IT,dev-tool,Java runtime
+Jenkins,IT,cicd,Automatisering server
+Kafka,IT,data,Message streaming
+Keycloak,IT,security,Identity Management
+Kibana,IT,monitoring,Elasticsearch visualisatie
+Kong,IT,proxy,API Gateway
+Kuma,IT,network,Service mesh
+Loggifly,IT,monitoring,Log-aggregatie
+Logstash,IT,monitoring,Log-verwerkingspipeline
+Loki,IT,monitoring,Log-opslag systeem
+Lumis,IT,monitoring,Metrics dashboard
+Mailcow,IT,mail,Mailserver suite
+MariaDB,IT,database,SQL database
+Meilisearch,IT,search,Zoekmachine voor apps
+Memcached,IT,database,Caching systeem
+MicrosoftSQLServer,IT,database,MS SQL database
+MinIO,IT,storage,Object storage (S3)
+MongoDB,IT,database,Document database
+Mosquitto,IT,home-automation,MQTT broker
+MySQL,IT,database,SQL database
+N8n,IT,automation,Workflow automation
+N8n_Enterprise,IT,automation,Geavanceerde workflow automatisering met RBAC
+Neo4j,IT,database,Graph database
+Netdata,IT,monitoring,Performance monitoring
+Nginx,IT,proxy,Webserver/Proxy
+Node-RED,IT,automation,Visuele automatisering
+NodeJS,IT,dev-tool,JS runtime
+Nomad,IT,orchestration,Workload manager
+NPM,IT,dev-tool,Node package manager
+OpenHAB,IT,home-automation,Domotica platform
+OpenSUSE,IT,os,Linux OS
+OpenVPN,IT,network,VPN server
+OracleLinux,IT,os,Enterprise Linux
+Perl,IT,dev-tool,Programmeertaal
+PHP,IT,dev-tool,Web-scripttaal
+Pi-hole,IT,security,Ad-blocker
+Pocketbase,IT,database,Open-source backend (Database/Auth/File storage)
+Portainer,IT,dev-tool,Docker management
+PostgreSQL,IT,database,Relationele database
+Prometheus,IT,monitoring,Time-series monitoring
+Python,IT,dev-tool,Programmeertaal
+RabbitMQ,IT,data,Message broker
+Redis,IT,database,In-memory database
+Registry,IT,registry,Image opslag
+RethinkDB,IT,database,Real-time database
+RockyLinux,IT,os,Enterprise Linux
+Roundcube,IT,mail,Webmail client
+Ruby,IT,dev-tool,Programmeertaal
+Rundeck,IT,automation,Job scheduler
+Rust,IT,dev-tool,Programmeertaal
+Semaphore,IT,automation,Ansible UI
+Solr,IT,search,Zoekplatform
+SonarQube,IT,cicd,Code kwaliteit check
+SQLite,IT,database,Embedded database
+Squid,IT,proxy,Webproxy
+Statping,IT,monitoring,Statuspagina
+Swarm,IT,orchestration,Docker Swarm
+Tasmota,IT,home-automation,IoT firmware
+Telegraf,IT,monitoring,Metric collector
+Tekton,IT,cicd,K8s CI/CD
+Theia,IT,dev-tool,Cloud IDE
+TimescaleDB,IT,database,Time-series SQL
+Tondersteun,IT,tools,Support tool
+ToolJet,IT,dev-tool,Low-code framework voor interne zakelijke applicaties
+Traefik,IT,proxy,Modern reverse proxy
+Typesense,IT,search,Zoekmachine
+Ubuntu,IT,os,Linux distributie
+Uptime-kuma,IT,monitoring,Uptime monitor
+Varnish,IT,proxy,Web-accelerator
+Vault,IT,security,Secrets management
+VictoriaMetrics,IT,monitoring,TSDB monitoring
+Watchtower,IT,dev-tool,Auto-update containers
+Webmin,IT,tools,Systeembeheer paneel
+WireGuard,IT,network,VPN-tunnel
+Woodpecker CI,IT,cicd,CI/CD engine
+Yacht,IT,dev-tool,Docker dashboard
+Zabbix,IT,monitoring,Enterprise monitoring
+Zigbee2MQTT,IT,home-automation,Zigbee bridge
+Zonas,IT,network,DNS manager
+Zoneminder,IT,security,Camerabeheer
+Zookeeper,IT,data,Orchestratie service
+Appsmith-AI,IT,dev-tool,Admin-panels bouwen met geïntegreerde AI
+Budibase-AI,IT,dev-tool,Interne tools genereren met AI-ondersteuning
+Zammad,Klantenservice,support,Modern ticketsysteem en helpdesk
+Docuseal,Legal,office,Open-source alternatief voor DocuSign
+LibreSign,Legal,office,Digitale handtekeningen geïntegreerd in Nextcloud
+Leantice,Legal,erp,Beheersysteem voor juridische dossiers en termijnen
+DocuMind,Legal,office,AI-analyse van juridische contracten
+EspoCRM,Marketing,crm,Modern CRM voor klant- en verkoopbeheer
+Excalidraw,Marketing,office,Whiteboard tool
+Ghost,Marketing,cms,Blog en publicatie platform
+Grav,Marketing,cms,Flat-file CMS
+Hugo,Marketing,dev-tool,Statische site generator
+Joomla,Marketing,cms,CMS platform
+KeystoneJS,Marketing,cms,Node.js CMS framework
+Listmonk,Marketing,automation,Nieuwsbrief- en mailinglijstbeheer
+Matomo,Marketing,analytics,Privacy-vriendelijke web-statistieken
+Mautic,Marketing,automation,Marketing automation voor e-mailcampagnes
+Plausible,Marketing,analytics,Lichtgewicht web-analytics
+Shlink,Marketing,tools,URL shortener
+Strapi,Marketing,cms,Headless CMS
+Umami,Marketing,analytics,Privacy analytics
+Wagtail,Marketing,cms,Python CMS
+WordPress,Marketing,cms,Website platform
+EspoCRM_Sales,Marketing/Sales,crm,Lichtgewicht CRM voor verkoop
+SuiteCRM,Marketing/Sales,crm,Enterprise Salesforce alternatief
+Airsonic,Media,media,Muziekstreamer
+AzuraCast,Media,media,Radio-beheersoftware
+Calibre-Web,Media,media,E-book bibliotheek
+Couchpotatoserver,Media,media,Film downloadmanager
+Deluge,Media,media,Torrent-cliënt
+Emby,Media,media,Mediaserver
+Invidious,Media,media,YouTube front-end
+Jackett,Media,media,Torrent indexer proxy
+Jellyfin,Media,media,Open-source mediaserver
+Kavita,Media,media,Manga/E-book reader
+Kodi,Media,media,Mediabediening
+Lidarr,Media,media,Muziek downloadmanager
+Navidrome,Media,media,Muziekstreamer
+Peertube,Media,media,Video-hosting
+Plex,Media,media,Mediaserver
+Prowlarr,Media,media,Indexer manager
+Pyload,Media,media,Downloadmanager
+qBittorrent,Media,media,Torrent-cliënt
+Radarr,Media,media,Film downloadmanager
+Sabnzbd,Media,media,Usenet manager
+Sonarr,Media,media,TV-serie manager
+Transmission,Media,media,Torrent-cliënt
+VLC,Media,media,Mediaspeler
+Leantime,Projectbeheer,collaboration,Projectmanagement met strategie en OKR's
+Taiga,Projectbeheer,collaboration,Agile en Scrum platform voor softwareteams
+OpenProject,Projectbeheer,collaboration,Enterprise projectmanagement
+Focalboard,Projectbeheer,collaboration,Open-source alternatief voor Trello
+Plane,Projectbeheer,collaboration,Moderne software planning tool (Linear alternatief)
+OpenProject-AI,Projectbeheer,collaboration,Project-planning en risicoanalyse via AI
+Alfresco,Proptech,office,Enterprise Content Management voor vastgoed
+Trantor,Proptech,inventory,Asset tracking voor facilitaire diensten
+Dolibarr_POS,Retail,pos,Kassa-interface gekoppeld aan Dolibarr ERP
+Homebox,Retail,inventory,Snelle inventaris-tool voor kleine magazijnen
+InvenTree,Retail,inventory,Krachtig voorraadbeheer voor fysieke producten
+OpenSourcePOS,Retail,pos,Web-gebaseerd kassasysteem met barcodesteun
+Asterisk,Support,voip,Volledige telefooncentrale in een container
+Chatwoot,Support,chat,Customer engagement platform (Omnichannel)
+Helpy,Support,support,Klantenservice platform met focus op privacy
+Freescout,Support,support,Helpdesk en gedeelde inbox (Zendesk alternatief)
+Zammad-AI,Support,support,Ticket-samenvattingen en antwoordsuggesties via AI
+Chatwoot-GPT,Support,chat,AI-chatbot voor automatische klantenservice
+Rasa,Support,chat,Open-source framework voor conversatie-AI en bots
+Hoppscotch,DevOps,api,Open-source API development tool (Postman alternatief)
+Nexus,DevOps,cicd,Artifact repository manager voor builds en packages
+Selenium,DevOps,testing,Selenium Grid voor browser automation testing
+Unleash,DevOps,release,Feature flag management voor canary releases en A/B testing
+Istio,DevOps,release,Service mesh voor canary deployments en traffic management
+OpenTofu,DevOps,deploy,Open-source Infrastructure as Code (Terraform fork)
+Helm,DevOps,deploy,Kubernetes package manager voor applicaties en charts
+Vagrant,DevOps,deploy,Development environment management tool
+Packer,DevOps,deploy,Machine image builder voor meerdere platforms
+Terraform,DevOps,deploy,Infrastructure as Code tool (Hashicorp)
+Ansible-Control,DevOps,deploy,Ansible control node setup
+Chef,DevOps,deploy,Chef configuration management
+Puppet,DevOps,deploy,Puppet configuration management
+Salt,DevOps,deploy,Salt configuration management
