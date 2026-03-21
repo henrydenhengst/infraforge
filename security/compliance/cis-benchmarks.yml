@@ -1,0 +1,33 @@
+---
+# CIS Benchmarks per OS
+
+cis_level: 2  # 1 = basis, 2 = uitgebreid
+
+benchmarks:
+  Debian:
+    - id: 1.1.1.1
+      description: "Ensure mounting of cramfs filesystems is disabled"
+      enabled: true
+    - id: 1.1.1.2
+      description: "Ensure mounting of freevxfs filesystems is disabled"
+      enabled: true
+    - id: 1.1.1.3
+      description: "Ensure mounting of jffs2 filesystems is disabled"
+      enabled: true
+      
+  RedHat:
+    - id: 1.1.1.1
+      description: "Ensure mounting of cramfs filesystems is disabled"
+      enabled: true
+      
+  Suse:
+    - id: 1.1.1
+      description: "Ensure filesystem partitioning is correct"
+      enabled: true
+
+compliance_scanning:
+  enabled: true
+  schedule: "0 2 * * 0"  # Wekelijks op zondag
+  tools:
+    - lynis
+    - oscap

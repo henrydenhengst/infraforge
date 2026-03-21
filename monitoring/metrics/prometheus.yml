@@ -1,11 +1,42 @@
-# Prometheus configuratie
 ---
 # Prometheus configuratie
+
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    environment: production
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['localhost:9093']
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
 
 scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ['localhost:9090']
+      
+  - job_name: node
+    static_configs:
+      - targets:
+        - docker-01:9100
+        - docker-02:9100
+        - postgres-01:9100
+        - monitoring-01:9100
+        - backup-01:9100
+        
+  - job_name: docker
+    static_configs:
+      - targets:
+        - docker-01:9323
+        - docker-02:9323
+        - docker-03:9323
+        
+  - job_name: postgres
+    static_configs:
+      - targets:
+        - postgres-01:9187

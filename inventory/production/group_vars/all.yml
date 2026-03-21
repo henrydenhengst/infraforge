@@ -1,1 +1,66 @@
 # Algemene variabelen voor alle servers
+---
+# Algemene variabelen voor alle servers
+
+# Domein
+domain: company.local
+timezone: Europe/Amsterdam
+
+# DNS
+dns_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+dns_search: "{{ domain }}"
+
+# NTP
+ntp_servers:
+  - 0.nl.pool.ntp.org
+  - 1.nl.pool.ntp.org
+  - 2.nl.pool.ntp.org
+
+# Monitoring
+monitoring_enabled: true
+monitoring_server: 10.10.10.10
+monitoring_port: 9090
+metrics_retention_days: 30
+
+# Logging
+logging_enabled: true
+log_server: 10.10.10.10
+log_port: 514
+
+# Backups
+backup_enabled: true
+backup_server: 10.10.10.20
+backup_schedule: "0 2 * * *"
+backup_retention_days: 30
+backup_encryption: true
+
+# Updates
+security_updates: true
+automatic_reboot: false
+reboot_time: "03:00"
+
+# Gebruikers
+ansible_user: ansible
+ansible_user_groups: sudo,docker
+create_ansible_user: true
+
+# SSH
+ssh_port: 22
+ssh_permit_root_login: false
+ssh_password_authentication: false
+ssh_max_auth_retries: 3
+
+# Firewall
+firewall_enabled: true
+firewall_default_policy: deny
+firewall_allowed_ports:
+  - 22/tcp
+  - 80/tcp
+  - 443/tcp
+
+# Fail2ban
+fail2ban_enabled: true
+fail2ban_max_retry: 5
+fail2ban_bantime: 3600

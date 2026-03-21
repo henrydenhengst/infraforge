@@ -61,3 +61,12 @@ temp/
 # Lokale scripts
 update_git.sh
 reset_git_lastknowngood.sh
+
+# Secrets - NOOIT in Git!
+**/secrets/vault/*.yml
+!**/secrets/vault/README.md
+!**/secrets/vault/example-*.yml
+**/vault_pass.txt
+**/.vault_pass
+**/*.vault
+EOF

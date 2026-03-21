@@ -1,1 +1,40 @@
 # Hardware assets - Servers
+---
+# Server inventaris
+
+servers:
+  - hostname: docker-01
+    asset_tag: SRV001
+    model: Dell PowerEdge R760
+    location: RACK-001-U20
+    ipmi: 10.10.100.11
+    specs:
+      cpu_cores: 32
+      ram_gb: 512
+      storage:
+        - type: SSD, 480GB, RAID1
+        - type: NVMe, 1.9TB, RAID10
+        
+  - hostname: docker-02
+    asset_tag: SRV002
+    model: Dell PowerEdge R760
+    location: RACK-001-U24
+    ipmi: 10.10.100.12
+    
+  - hostname: postgres-01
+    asset_tag: SRV003
+    model: Dell PowerEdge R760
+    location: RACK-002-U10
+    ipmi: 10.10.100.21
+    
+  - hostname: monitoring-01
+    asset_tag: SRV004
+    model: Dell PowerEdge R660
+    location: RACK-001-U28
+    ipmi: 10.10.100.31
+    
+  - hostname: backup-01
+    asset_tag: SRV005
+    model: Dell PowerVault ME5084
+    location: RACK-002-U30
+    ipmi: 10.10.100.41

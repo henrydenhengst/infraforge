@@ -1,0 +1,39 @@
+---
+# VLAN definities
+
+vlans:
+  - id: 10
+    name: management
+    subnet: 10.10.10.0/24
+    gateway: 10.10.10.1
+    description: "Beheer toegang - SSH, monitoring"
+    
+  - id: 20
+    name: dmz
+    subnet: 10.10.20.0/24
+    gateway: 10.10.20.1
+    description: "Publieke services - web, api"
+    
+  - id: 30
+    name: application
+    subnet: 10.10.30.0/24
+    gateway: 10.10.30.1
+    description: "Applicatie laag - backend services"
+    
+  - id: 40
+    name: database
+    subnet: 10.10.40.0/24
+    gateway: 10.10.40.1
+    description: "Databases - gevoelige data"
+    
+  - id: 50
+    name: storage
+    subnet: 10.10.50.0/24
+    gateway: 10.10.50.1
+    description: "Storage netwerk - backups, nas"
+    
+  - id: 99
+    name: staging
+    subnet: 10.10.99.0/24
+    gateway: 10.10.99.1
+    description: "Staging omgeving"
