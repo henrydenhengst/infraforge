@@ -1,0 +1,126 @@
+---
+# =============================================================================
+# CADDY - WEBSERVER MET AUTOMATISCHE HTTPS
+# =============================================================================
+# Beschrijving: Webserver en reverse proxy met automatische SSL certificaten
+# Website: https://caddyserver.com
+# =============================================================================
+
+application:
+  name: caddy
+  version: 2.7.6
+  description: "Caddy - Webserver met automatische HTTPS"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: web-team
+    contact: web@company.local
+    slack: "#web"
+    documentation: "https://caddyserver.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: html
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /usr/share/caddy
+        
+  network_requirements:
+    vlans:
+      - dmz
+      - internal
+    ports:
+      - container: 80
+        host: 80
+        protocol: tcp
+        public: true
+        description: "HTTP (redirect naar HTTPS)"
+      - container: 443
+        host: 443
+        protocol: tcp
+        public: true
+        description: "HTTPS"
+      - container: 2019
+        host: 2019
+        protocol: tcp
+        public: false
+        description: "Admin API"
+    dns:
+      - "caddy.{{ domain }}"
+      - "*.{{ domain }}"
+      
+  container:
+    image: caddy:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: ACME_AGREE
+      value: "true"
+      secret: false
+    - name: CADDY_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+      
+  caddyfile: |
+    {{ domain }} {
+        root * /usr/share/caddy/{{ domain }}
+        file_server
+        encode gzip zstd
+        
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            X-XSS-Protection "1; mode=block"
+            Referrer-Policy strict-origin-when-cross-origin
+        }
+        
+        log {
+            output file /data/logs/{{ domain }}.log
+            level INFO
+        }
+        
+        metrics /metrics
+        
+        handle /health {
+            respond "OK" 200
+        }
+    }
+    
+    api.{{ domain }} {
+        reverse_proxy api:3000
+    }
+    
+    *.apps.{{ domain }} {
+        reverse_proxy {{ "http://" + "{$APP_HOST}" }}:{$APP_PORT}
+    }
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 80

@@ -1,0 +1,4 @@
+---
+environment: production
+domain: company.local
+timezone: Europe/Amsterdam

@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  {{ app_name }}:
+    image: {{ image }}
+    environment:
+      DOMAIN: {{ domain }}
+    ports:
+      - "{{ host_port }}:{{ container_port }}"

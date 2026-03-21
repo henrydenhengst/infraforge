@@ -1,0 +1,17 @@
+---
+- name: Genereer Docker Compose
+  hosts: localhost
+  gather_facts: no
+  become: no
+  vars_files:
+    - ../vars/common.yml
+  tasks:
+    - name: Template docker-compose
+      template:
+        src: ../templates/docker-compose.yml.j2
+        dest: ./generated-docker-compose.yml
+      vars:
+        app_name: test-app
+        image: nginx:alpine
+        host_port: 8080
+        container_port: 80

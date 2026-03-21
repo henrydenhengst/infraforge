@@ -1,0 +1,15 @@
+---
+- name: Genereer K8s manifests
+  hosts: localhost
+  gather_facts: no
+  become: no
+  vars_files:
+    - ../vars/common.yml
+    - ../vars/kubernetes/configmaps.yml
+  tasks:
+    - name: Template ConfigMap
+      template:
+        src: ../templates/kubernetes/configmap.yml.j2
+        dest: ./generated-k8s-configmap.yml
+      vars:
+        configmap: "{{ configmaps[0] }}"

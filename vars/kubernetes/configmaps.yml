@@ -1,0 +1,7 @@
+---
+configmaps:
+  - name: app-config
+    namespace: default
+    data:
+      DOMAIN: "{{ domain }}"
+      ENVIRONMENT: "{{ environment }}"
