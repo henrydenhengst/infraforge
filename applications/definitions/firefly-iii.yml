@@ -1,0 +1,84 @@
+---
+# =============================================================================
+# TYPESENSE - TYP0-TOLERANTE ZOEKMACHINE
+# =============================================================================
+# Beschrijving: Snelle, typo-tolerante zoekmachine
+# Website: https://typesense.org
+# =============================================================================
+
+application:
+  name: typesense
+  version: 26.0
+  description: "Typesense - Typo-tolerante zoekmachine"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://typesense.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - search
+      - internal
+    ports:
+      - container: 8108
+        host: 8108
+        protocol: tcp
+        public: false
+        description: "Typesense API"
+    dns:
+      - "typesense.{{ domain }}"
+      - "typo.{{ domain }}"
+      
+  container:
+    image: typesense/typesense:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: TYPESENSE_DATA_DIR
+      value: "/data"
+      secret: false
+    - name: TYPESENSE_API_KEY
+      value: "{{ vault_typesense_api_key }}"
+      secret: true
+    - name: TYPESENSE_SEARCH_ONLY_API_KEY
+      value: "{{ vault_typesense_search_key }}"
+      secret: true
+    - name: TYPESENSE_ENABLE_CORS
+      value: "true"
+      secret: false
+    - name: TYPESENSE_SSL_ENABLED
+      value: "false"
+      secret: false
+    - name: TYPESENSE_LOG_DIR
+      value: "/data/logs"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8108

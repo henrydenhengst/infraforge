@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# EXCALIDRAW - WHITEBOARD TOOL
+# =============================================================================
+# Beschrijving: Whiteboard tool voor diagrammen en wireframes
+# Website: https://excalidraw.com
+# =============================================================================
+
+application:
+  name: excalidraw
+  version: 0.17.0
+  description: "Excalidraw - Whiteboard tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: creative-team
+    contact: creative@company.local
+    slack: "#creative"
+    documentation: "https://docs.excalidraw.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - creative
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Excalidraw web interface"
+    dns:
+      - "draw.{{ domain }}"
+      - "excalidraw.{{ domain }}"
+      
+  container:
+    image: excalidraw/excalidraw:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: EXCALIDRAW_BACKEND_URL
+      value: "https://excalidraw.{{ domain }}"
+      secret: false
+    - name: EXCALIDRAW_WS_URL
+      value: "wss://excalidraw.{{ domain }}"
+      secret: false
+    - name: EXCALIDRAW_STORAGE_BACKEND
+      value: "filesystem"
+      secret: false
+    - name: EXCALIDRAW_STORAGE_PATH
+      value: "/data"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

@@ -1,0 +1,4 @@
+---
+bitwarden_data_path: /opt/bitwarden
+bitwarden_signups_allowed: false
+bitwarden_invitations_allowed: true

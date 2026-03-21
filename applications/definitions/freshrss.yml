@@ -1,0 +1,75 @@
+---
+# =============================================================================
+# DASHY - MODERN HOME LAB DASHBOARD
+# =============================================================================
+# Beschrijving: Modern home lab dashboard met veel functies
+# Website: https://dashy.to
+# =============================================================================
+
+application:
+  name: dashy
+  version: 3.0.0
+  description: "Dashy - Modern home lab dashboard"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: tools-team
+    contact: tools@company.local
+    slack: "#tools"
+    documentation: "https://dashy.to/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /app/public/conf.yml
+        
+  network_requirements:
+    vlans:
+      - tools
+      - internal
+    ports:
+      - container: 80
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Dashy web interface"
+    dns:
+      - "start.{{ domain }}"
+      - "dashy.{{ domain }}"
+      
+  container:
+    image: lissy93/dashy:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: NODE_ENV
+      value: "production"
+      secret: false
+    - name: UID
+      value: "1000"
+      secret: false
+    - name: GID
+      value: "1000"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

@@ -1,0 +1,5 @@
+---
+vault_listen_address: "0.0.0.0:8200"
+vault_storage_backend: "file"
+vault_storage_path: "/opt/vault/data"
+vault_initialize: true

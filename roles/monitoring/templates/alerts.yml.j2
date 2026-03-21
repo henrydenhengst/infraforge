@@ -1,0 +1,162 @@
+# {{ ansible_managed }}
+# Prometheus alert rules
+
+groups:
+  - name: node_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ '{{ $labels.instance }}' }}"
+          description: "CPU usage is above 80% (current: {{ '{{ $value }}' }}%)"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ '{{ $labels.instance }}' }}"
+          description: "Memory usage is above 90% (current: {{ '{{ $value }}' }}%)"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space on {{ '{{ $labels.instance }}' }}"
+          description: "Disk space is below 10% (current: {{ '{{ $value }}' }}%)"
+
+      - alert: DiskSpaceFull
+        expr: (node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical low disk space on {{ '{{ $labels.instance }}' }}"
+          description: "Disk space is below 5% (current: {{ '{{ $value }}' }}%)"
+
+      - alert: HighLoadAverage
+        expr: node_load5 > 8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High load average on {{ '{{ $labels.instance }}' }}"
+          description: "Load average is above 8 (current: {{ '{{ $value }}' }})"
+
+      - alert: NodeDown
+        expr: up{job="node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node is down on {{ '{{ $labels.instance }}' }}"
+          description: "Node {{ '{{ $labels.instance }}' }} has been down for more than 1 minute"
+
+      - alert: NodeExporterDown
+        expr: up{job="node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node Exporter is down on {{ '{{ $labels.instance }}' }}"
+          description: "Node Exporter is not responding"
+
+  - name: container_alerts
+    interval: 30s
+    rules:
+      - alert: ContainerDown
+        expr: count(container_last_seen) by (name) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ '{{ $labels.name }}' }} is down"
+          description: "Container has been stopped for more than 1 minute"
+
+      - alert: HighContainerCPU
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage in container {{ '{{ $labels.name }}' }}"
+          description: "CPU usage is above 80% (current: {{ '{{ $value }}' }})"
+
+      - alert: HighContainerMemory
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage in container {{ '{{ $labels.name }}' }}"
+          description: "Memory usage is above 90% of limit"
+
+  - name: prometheus_alerts
+    interval: 30s
+    rules:
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus is down on {{ '{{ $labels.instance }}' }}"
+          description: "Prometheus is not responding"
+
+      - alert: PrometheusTargetMissing
+        expr: count(up) < count(up offset 5m)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus targets missing"
+          description: "Some targets have disappeared from Prometheus"
+
+  - name: docker_alerts
+    interval: 30s
+    rules:
+      - alert: DockerDown
+        expr: count(container_last_seen) < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Docker daemon is down"
+          description: "Docker daemon is not responding"
+
+      - alert: FailedContainers
+        expr: count(container_last_seen{state="exited"}) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Multiple failed containers"
+          description: "More than 5 containers have failed in the last 5 minutes"
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      - alert: HighNumberOfProcesses
+        expr: node_procs_running > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of running processes on {{ '{{ $labels.instance }}' }}"
+          description: "More than 500 processes are running"
+
+      - alert: NetworkPacketLoss
+        expr: rate(node_network_receive_drop_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network packet loss detected on {{ '{{ $labels.instance }}' }}"
+          description: "Packet loss detected on network interface"

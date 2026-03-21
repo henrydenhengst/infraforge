@@ -1,0 +1,24 @@
+---
+- name: Maak applications backup directory
+  ansible.builtin.file:
+    path: "{{ backup_base_dir }}/applications"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  tags: [application]
+
+- name: Configureer application backups
+  ansible.builtin.template:
+    src: backup_applications.sh.j2
+    dest: /backup/scripts/backup_applications.sh
+    mode: '0750'
+  tags: [application]
+
+- name: Voeg applications backup cron job toe
+  ansible.builtin.cron:
+    name: "applications-backup"
+    minute: "45"
+    hour: "2"
+    job: "/backup/scripts/backup_applications.sh >> /var/log/backup/applications.log 2>&1"
+  tags: [application, cron]

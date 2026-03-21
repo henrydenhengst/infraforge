@@ -1,0 +1,104 @@
+---
+# =============================================================================
+# DIRECTUS - HEADLESS CMS MET REST API
+# =============================================================================
+# Beschrijving: Headless CMS met REST API en real-time WebSockets
+# Website: https://directus.io
+# =============================================================================
+
+application:
+  name: directus
+  version: 10.0.0
+  description: "Directus - Headless CMS"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://docs.directus.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /directus/uploads
+      - name: database
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /directus/database
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 8055
+        host: 8055
+        protocol: tcp
+        public: false
+        description: "Directus API"
+    dns:
+      - "directus.{{ domain }}"
+      - "cms-api.{{ domain }}"
+      
+  container:
+    image: directus/directus:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: KEY
+      value: "{{ vault_directus_key }}"
+      secret: true
+    - name: SECRET
+      value: "{{ vault_directus_secret }}"
+      secret: true
+    - name: DB_CLIENT
+      value: "pg"
+      secret: false
+    - name: DB_HOST
+      value: "postgres"
+      secret: false
+    - name: DB_PORT
+      value: "5432"
+      secret: false
+    - name: DB_DATABASE
+      value: "directus"
+      secret: false
+    - name: DB_USER
+      value: "directus"
+      secret: false
+    - name: DB_PASSWORD
+      value: "{{ vault_directus_password }}"
+      secret: true
+    - name: ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: ADMIN_PASSWORD
+      value: "{{ vault_directus_admin_password }}"
+      secret: true
+    - name: PUBLIC_URL
+      value: "https://directus.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /server/health
+      port: 8055

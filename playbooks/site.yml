@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# SITE PLAYBOOK - Volledige infrastructuur configuratie
+# =============================================================================
+
+- name: Basis configuratie voor alle servers
+  hosts: all
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: base
+      tags: [base, always]
+      
+    - role: security
+      tags: [security, always]
+      
+    - role: networking
+      tags: [network, always]
+
+- name: Docker platform installatie
+  hosts: docker_hosts
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: docker
+      tags: [docker, platform]
+
+- name: Database servers configuratie
+  hosts: database_servers
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: postgresql
+      when: "'postgresql' in group_names"
+      tags: [database, postgresql]
+      
+    - role: redis
+      when: "'redis' in group_names"
+      tags: [database, redis]
+
+- name: Monitoring stack configuratie
+  hosts: monitoring_servers
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: monitoring
+      tags: [monitoring]
+
+- name: Web servers configuratie
+  hosts: webservers
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: nginx
+      when: "'nginx' in group_names"
+      tags: [web, nginx]
+
+- name: Applicaties deployen
+  hosts: application_servers
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: application
+      tags: [applications]
+
+- name: Backup configuratie
+  hosts: backup_servers
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: backup
+      tags: [backup]

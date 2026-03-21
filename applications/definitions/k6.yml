@@ -1,0 +1,88 @@
+---
+# =============================================================================
+# MIMIR - SCALABLE PROMETHEUS
+# =============================================================================
+# Beschrijving: Horizontally scalable Prometheus (Grafana's fork of Cortex)
+# Website: https://grafana.com/oss/mimir
+# =============================================================================
+
+application:
+  name: mimir
+  version: 2.10.0
+  description: "Mimir - Scalable Prometheus"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://grafana.com/docs/mimir"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Mimir API"
+      - container: 9095
+        host: 9095
+        protocol: tcp
+        public: false
+        description: "Mimir gRPC"
+    dns:
+      - "mimir.{{ domain }}"
+      
+  container:
+    image: grafana/mimir:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: MIMIR_AUTH_ENABLED
+      value: "false"
+      secret: false
+    - name: MIMIR_STORAGE_BACKEND
+      value: "filesystem"
+      secret: false
+    - name: MIMIR_STORAGE_FILESYSTEM_DIRECTORY
+      value: "/data"
+      secret: false
+    - name: MIMIR_DISTRIBUTOR_RING_STORE
+      value: "memberlist"
+      secret: false
+    - name: MIMIR_INGESTER_RING_STORE
+      value: "memberlist"
+      secret: false
+    - name: MIMIR_QUERIER_FRONTEND_ADDRESS
+      value: "mimir-query-frontend:9095"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /ready
+      port: 8080

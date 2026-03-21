@@ -1,0 +1,24 @@
+---
+- name: Maak config backup directory
+  ansible.builtin.file:
+    path: "{{ backup_base_dir }}/config"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  tags: [config]
+
+- name: Configureer config backup script
+  ansible.builtin.template:
+    src: backup_config.sh.j2
+    dest: /backup/scripts/backup_config.sh
+    mode: '0750'
+  tags: [config]
+
+- name: Voeg config backup cron job toe
+  ansible.builtin.cron:
+    name: "config-backup"
+    minute: "15"
+    hour: "3"
+    job: "/backup/scripts/backup_config.sh >> /var/log/backup/config.log 2>&1"
+  tags: [config, cron]

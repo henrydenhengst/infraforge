@@ -1,0 +1,104 @@
+---
+# =============================================================================
+# FRESHRSS - RSS-FEED AGGREGATOR
+# =============================================================================
+# Beschrijving: RSS-feed aggregator
+# Website: https://freshrss.org
+# =============================================================================
+
+application:
+  name: freshrss
+  version: 1.23.0
+  description: "FreshRSS - RSS-feed aggregator"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://freshrss.org/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/FreshRSS/data
+      - name: extensions
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/FreshRSS/extensions
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "FreshRSS web interface"
+    dns:
+      - "feeds.{{ domain }}"
+      - "freshrss.{{ domain }}"
+      
+  container:
+    image: freshrss/freshrss:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: CRON_MIN
+      value: "*/15"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: FRESHRSS_ENV
+      value: "production"
+      secret: false
+    - name: FRESHRSS_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: FRESHRSS_DB_PORT
+      value: "5432"
+      secret: false
+    - name: FRESHRSS_DB_USER
+      value: "freshrss"
+      secret: false
+    - name: FRESHRSS_DB_PASSWORD
+      value: "{{ vault_freshrss_password }}"
+      secret: true
+    - name: FRESHRSS_DB_BASE
+      value: "freshrss"
+      secret: false
+    - name: FRESHRSS_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: FRESHRSS_ADMIN_PASSWORD
+      value: "{{ vault_freshrss_admin_password }}"
+      secret: true
+    - name: FRESHRSS_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

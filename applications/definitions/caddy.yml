@@ -1,0 +1,135 @@
+---
+# =============================================================================
+# GRAFANA - DATA VISUALISATIE
+# =============================================================================
+# Beschrijving: Data visualisatie dashboards voor metrics en logs
+# Website: https://grafana.com
+# =============================================================================
+
+application:
+  name: grafana
+  version: 10.2.3
+  description: "Grafana - Data visualisatie dashboards"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://grafana.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/grafana
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/grafana
+      - name: dashboards
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/grafana/provisioning/dashboards
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Grafana web UI"
+    dns:
+      - "grafana.{{ domain }}"
+      - "monitoring.{{ domain }}"
+      
+  container:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: GF_SECURITY_ADMIN_USER
+      value: admin
+      secret: false
+    - name: GF_SECURITY_ADMIN_PASSWORD
+      value: "{{ vault_grafana_password }}"
+      secret: true
+    - name: GF_SERVER_ROOT_URL
+      value: "https://grafana.{{ domain }}"
+      secret: false
+    - name: GF_SERVER_DOMAIN
+      value: "grafana.{{ domain }}"
+      secret: false
+    - name: GF_INSTALL_PLUGINS
+      value: "grafana-piechart-panel,grafana-worldmap-panel,grafana-clock-panel"
+      secret: false
+    - name: GF_AUTH_ANONYMOUS_ENABLED
+      value: "false"
+      secret: false
+    - name: GF_AUTH_BASIC_ENABLED
+      value: "true"
+      secret: false
+    - name: GF_USERS_ALLOW_SIGN_UP
+      value: "false"
+      secret: false
+    - name: GF_SECURITY_ALLOW_EMBEDDING
+      value: "true"
+      secret: false
+      
+  datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus:9090
+      access: proxy
+      isDefault: true
+    - name: Loki
+      type: loki
+      url: http://loki:3100
+      access: proxy
+      
+  dashboards:
+    - name: Node Exporter
+      id: 1860
+      revision: 34
+      datasource: Prometheus
+    - name: Docker Monitoring
+      id: 893
+      revision: 26
+    - name: Prometheus Stats
+      id: 3662
+      revision: 7
+    - name: Kubernetes
+      id: 315
+      revision: 4
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 3000
+      
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    volumes:
+      - data

@@ -1,0 +1,17 @@
+[Unit]
+Description=Redis Exporter
+After=redis.service
+
+[Service]
+Type=simple
+User=redis
+Group=redis
+Environment="REDIS_ADDR=localhost:{{ redis_port }}"
+Environment="REDIS_PASSWORD={{ redis_password }}"
+ExecStart=/usr/local/bin/redis_exporter --web.listen-address=:{{ redis_monitoring_port }}
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

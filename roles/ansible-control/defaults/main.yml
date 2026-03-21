@@ -1,0 +1,12 @@
+---
+ansible_version: "9.0.0"
+ansible_config_dir: /etc/ansible
+ansible_playbooks_dir: /opt/ansible/playbooks
+ansible_roles_dir: /opt/ansible/roles
+ansible_collections:
+  - community.docker
+  - community.kubernetes
+  - ansible.posix
+ansible_roles:
+  - geerlingguy.docker
+  - geerlingguy.kubernetes

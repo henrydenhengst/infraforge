@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# KUBEVIOUS - KUBERNETES VISUALIZATION
+# =============================================================================
+# Beschrijving: Kubernetes cluster visualization and configuration validation
+# Website: https://kubevious.io
+# =============================================================================
+
+application:
+  name: kubevious
+  version: 1.0.0
+  description: "Kubevious - Kubernetes visualization"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://kubevious.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Kubevious UI"
+      - container: 4000
+        host: 4000
+        protocol: tcp
+        public: false
+        description: "Kubevious API"
+    dns:
+      - "kubevious.{{ domain }}"
+      
+  container:
+    image: kubevious/kubevious:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: KUBEVIOUS_APP_PORT
+      value: "3000"
+      secret: false
+    - name: KUBEVIOUS_API_PORT
+      value: "4000"
+      secret: false
+    - name: KUBEVIOUS_KUBERNETES_SERVER
+      value: "https://kubernetes.default.svc"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

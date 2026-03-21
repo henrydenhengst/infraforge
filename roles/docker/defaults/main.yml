@@ -1,0 +1,29 @@
+---
+# =============================================================================
+# DOCKER ROLE DEFAULTS
+# =============================================================================
+
+# Docker daemon configuratie
+docker_daemon_config:
+  log-driver: json-file
+  log-opts:
+    max-size: 10m
+    max-file: 3
+  storage-driver: overlay2
+  live-restore: true
+  iptables: true
+  ip-forward: true
+  ip-masq: true
+  userland-proxy: false
+  experimental: false
+  metrics-addr: 0.0.0.0:9323
+  registry-mirrors: []
+
+# Gebruiker toevoegen aan docker groep
+add_user_to_docker_group: true
+
+# Docker versie (specifiek voor sommige installaties)
+docker_version: latest
+
+# Package cache update
+package_cache_update: true

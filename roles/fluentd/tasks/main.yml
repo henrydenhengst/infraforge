@@ -1,0 +1,47 @@
+---
+- name: '{{ ansible_os_family }} | Maak Fluentd directories'
+  ansible.builtin.file:
+    path: "{{ fluentd_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Fluentd container'
+  ansible.builtin.docker_container:
+    name: fluentd
+    image: fluent/fluentd:latest
+    restart_policy: unless-stopped
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+      - "9880:9880"
+    volumes:
+      - "{{ fluentd_data_path }}:/fluentd/log"
+      - /var/log:/var/log:ro
+    environment:
+      FLUENTD_CONF: fluent.conf
+    command: -c /fluentd/etc/fluent.conf
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.fluentd.rule: "Host(`fluentd.{{ domain }}`)"
+      traefik.http.services.fluentd.loadbalancer.server.port: "9880"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Configureer Fluentd'
+  ansible.builtin.template:
+    src: fluent.conf.j2
+    dest: /etc/fluentd/fluent.conf
+    mode: '0644'
+  notify: restart fluentd
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Wacht tot Fluentd actief is'
+  ansible.builtin.wait_for:
+    port: 9880
+    timeout: 60
+  tags: [validate]
+
+- name: Toon Fluentd URL
+  ansible.builtin.debug:
+    msg: "Fluentd: https://fluentd.{{ domain }}"
+  tags: [validate]

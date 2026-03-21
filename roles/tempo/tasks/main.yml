@@ -1,0 +1,48 @@
+---
+- name: '{{ ansible_os_family }} | Maak Tempo directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ tempo_data_path }}"
+    - "{{ tempo_data_path }}/wal"
+    - "{{ tempo_data_path }}/blocks"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Tempo container'
+  ansible.builtin.docker_container:
+    name: tempo
+    image: grafana/tempo:latest
+    restart_policy: unless-stopped
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - "{{ tempo_data_path }}:/var/lib/tempo"
+    command: -config.file=/etc/tempo.yml
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.tempo.rule: "Host(`tempo.{{ domain }}`)"
+      traefik.http.services.tempo.loadbalancer.server.port: "3200"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Configureer Tempo'
+  ansible.builtin.template:
+    src: tempo.yml.j2
+    dest: /etc/tempo.yml
+    mode: '0644'
+  notify: restart tempo
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Wacht tot Tempo actief is'
+  ansible.builtin.wait_for:
+    port: 3200
+    timeout: 60
+  tags: [validate]
+
+- name: Toon Tempo URL
+  ansible.builtin.debug:
+    msg: "Tempo: https://tempo.{{ domain }}"
+  tags: [validate]

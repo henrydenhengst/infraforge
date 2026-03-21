@@ -1,0 +1,10 @@
+---
+- name: Installeer Helm via package manager
+  ansible.builtin.package:
+    name: helm
+    state: present
+  ignore_errors: yes
+
+- name: Fallback naar script installatie
+  ansible.builtin.include_tasks: install_debian.yml
+  when: helm_install_failed | default(false)

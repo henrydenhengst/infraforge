@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "Salt configuration management"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [salt, configuration-management]
+dependencies: []

@@ -1,0 +1,70 @@
+---
+# =============================================================================
+# TRIVY - VULNERABILITY SCANNER
+# =============================================================================
+# Beschrijving: Comprehensive vulnerability scanner for containers
+# Website: https://aquasecurity.github.io/trivy
+# =============================================================================
+
+application:
+  name: trivy
+  version: 0.48.0
+  description: "Trivy - Vulnerability scanner"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://aquasecurity.github.io/trivy"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /cache
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: aquasec/trivy:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: TRIVY_CACHE_DIR
+      value: "/cache"
+      secret: false
+    - name: TRIVY_DEBUG
+      value: "false"
+      secret: false
+    - name: TRIVY_IGNORE_UNFIXED
+      value: "false"
+      secret: false
+    - name: TRIVY_SEVERITY
+      value: "CRITICAL,HIGH"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["trivy", "--version"]

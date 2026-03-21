@@ -1,0 +1,85 @@
+---
+# =============================================================================
+# THANOS - PROMETHEUS SCALING
+# =============================================================================
+# Beschrijving: Prometheus HA en long-term storage
+# Website: https://thanos.io
+# =============================================================================
+
+application:
+  name: thanos
+  version: 0.34.0
+  description: "Thanos - Prometheus HA en long-term storage"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://thanos.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 500
+        performance: ssd
+        backup_required: true
+        mount_path: /thanos-data
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 10902
+        host: 10902
+        protocol: tcp
+        public: false
+        description: "Thanos query"
+      - container: 10901
+        host: 10901
+        protocol: tcp
+        public: false
+        description: "Thanos store"
+    dns:
+      - "thanos.{{ domain }}"
+      
+  container:
+    image: thanosio/thanos:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: THANOS_QUERY_HTTP_ADDRESS
+      value: "0.0.0.0:10902"
+      secret: false
+    - name: THANOS_STORE_HTTP_ADDRESS
+      value: "0.0.0.0:10901"
+      secret: false
+    - name: THANOS_STORE_GRPC_ADDRESS
+      value: "0.0.0.0:10901"
+      secret: false
+    - name: THANOS_STORE_OBJECT_STORE_CONFIG
+      value: "/config/thanos.yaml"
+      secret: false
+    - name: THANOS_QUERY_STORES
+      value: "thanos-store:10901"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /-/healthy
+      port: 10902

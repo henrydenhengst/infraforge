@@ -1,0 +1,99 @@
+---
+# =============================================================================
+# LISTMONK - NIEUWSBRIEF- EN MAILINGLIJSTBEHEER
+# =============================================================================
+# Beschrijving: Nieuwsbrief- en mailinglijstbeheer
+# Website: https://listmonk.app
+# =============================================================================
+
+application:
+  name: listmonk
+  version: 2.5.0
+  description: "Listmonk - Nieuwsbriefbeheer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: marketing-team
+    contact: marketing@company.local
+    slack: "#marketing"
+    documentation: "https://listmonk.app/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - marketing
+      - internal
+    ports:
+      - container: 9000
+        host: 9000
+        protocol: tcp
+        public: false
+        description: "Listmonk web interface"
+    dns:
+      - "listmonk.{{ domain }}"
+      - "newsletter.{{ domain }}"
+      
+  container:
+    image: listmonk/listmonk:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: LISTMONK_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: LISTMONK_DB_PORT
+      value: "5432"
+      secret: false
+    - name: LISTMONK_DB_USER
+      value: "listmonk"
+      secret: false
+    - name: LISTMONK_DB_PASSWORD
+      value: "{{ vault_listmonk_password }}"
+      secret: true
+    - name: LISTMONK_DB_DATABASE
+      value: "listmonk"
+      secret: false
+    - name: LISTMONK_ADMIN_USERNAME
+      value: "admin"
+      secret: false
+    - name: LISTMONK_ADMIN_PASSWORD
+      value: "{{ vault_listmonk_admin_password }}"
+      secret: true
+    - name: LISTMONK_SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: LISTMONK_SMTP_PORT
+      value: "587"
+      secret: false
+    - name: LISTMONK_SMTP_USER
+      value: "listmonk@{{ domain }}"
+      secret: false
+    - name: LISTMONK_SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 9000

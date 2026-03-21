@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# ARANGODB - MULTI-MODEL DATABASE
+# =============================================================================
+# Beschrijving: Multi-model database (document, graph, key-value)
+# Website: https://www.arangodb.com
+# =============================================================================
+
+application:
+  name: arangodb
+  version: 3.11.0
+  description: "ArangoDB - Multi-model database"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://www.arangodb.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/arangodb3
+      - name: apps
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/arangodb3-apps
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8529
+        host: 8529
+        protocol: tcp
+        public: false
+        description: "ArangoDB HTTP API"
+    dns:
+      - "arangodb.{{ domain }}"
+      
+  container:
+    image: arangodb:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: ARANGO_ROOT_PASSWORD
+      value: "{{ vault_arangodb_password }}"
+      secret: true
+    - name: ARANGO_STORAGE_ENGINE
+      value: "rocksdb"
+      secret: false
+    - name: ARANGO_NO_AUTH
+      value: "0"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /_api/version
+      port: 8529

@@ -1,0 +1,67 @@
+---
+# =============================================================================
+# VAGRANT - DEVELOPMENT ENVIRONMENT MANAGEMENT
+# =============================================================================
+# Beschrijving: Development environment management tool
+# Website: https://www.vagrantup.com
+# =============================================================================
+
+application:
+  name: vagrant
+  version: 2.4.0
+  description: "Vagrant - Development environment management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://www.vagrantup.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: workspace
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/vagrant
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: hashicorp/vagrant:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  command: ["tail", "-f", "/dev/null"]
+  
+  environment_variables:
+    - name: VAGRANT_HOME
+      value: "/opt/vagrant"
+      secret: false
+    - name: VAGRANT_DEFAULT_PROVIDER
+      value: "virtualbox"
+      secret: false
+      
+  plugins:
+    - vagrant-vbguest
+    - vagrant-hostmanager
+    - vagrant-docker-compose
+    - vagrant-scp

@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# ESPOCRM - MODERN CRM
+# =============================================================================
+# Beschrijving: Modern CRM voor klant- en verkoopbeheer
+# Website: https://www.espocrm.com
+# =============================================================================
+
+application:
+  name: espocrm
+  version: 8.0.0
+  description: "EspoCRM - Modern CRM"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: sales-team
+    contact: sales@company.local
+    slack: "#sales"
+    documentation: "https://docs.espocrm.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        
+  network_requirements:
+    vlans:
+      - sales
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "EspoCRM web UI"
+    dns:
+      - "crm.{{ domain }}"
+      - "espocrm.{{ domain }}"
+      
+  container:
+    image: espocrm/espocrm:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: ESPOCRM_DATABASE_HOST
+      value: "postgres"
+      secret: false
+    - name: ESPOCRM_DATABASE_NAME
+      value: "espocrm"
+      secret: false
+    - name: ESPOCRM_DATABASE_USER
+      value: "espocrm"
+      secret: false
+    - name: ESPOCRM_DATABASE_PASSWORD
+      value: "{{ vault_espocrm_password }}"
+      secret: true
+    - name: ESPOCRM_ADMIN_USERNAME
+      value: "admin"
+      secret: false
+    - name: ESPOCRM_ADMIN_PASSWORD
+      value: "{{ vault_espocrm_admin_password }}"
+      secret: true
+    - name: ESPOCRM_SITE_URL
+      value: "https://crm.{{ domain }}"
+      secret: false
+    - name: ESPOCRM_WEBSOCKET_URL
+      value: "wss://crm.{{ domain }}:8080"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

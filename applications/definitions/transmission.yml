@@ -1,0 +1,107 @@
+---
+# =============================================================================
+# DISCOURSE - MODERN DISCUSSIE PLATFORM
+# =============================================================================
+# Beschrijving: Modern discussieplatform voor communities
+# Website: https://www.discourse.org
+# =============================================================================
+
+application:
+  name: discourse
+  version: 3.2.0
+  description: "Discourse - Modern discussieplatform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: community-team
+    contact: community@company.local
+    slack: "#community"
+    documentation: "https://meta.discourse.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/discourse/public/uploads
+      - name: backups
+        size_gb: 50
+        performance: hdd
+        backup_required: false
+        mount_path: /var/www/discourse/backups
+        
+  network_requirements:
+    vlans:
+      - community
+      - dmz
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "Discourse HTTP"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: true
+        description: "Discourse HTTPS"
+    dns:
+      - "forum.{{ domain }}"
+      - "discourse.{{ domain }}"
+      - "community.{{ domain }}"
+      
+  container:
+    image: discourse/discourse:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: DISCOURSE_HOSTNAME
+      value: "discourse.{{ domain }}"
+      secret: false
+    - name: DISCOURSE_DEVELOPER_EMAILS
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: DISCOURSE_SMTP_ADDRESS
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: DISCOURSE_SMTP_PORT
+      value: "587"
+      secret: false
+    - name: DISCOURSE_SMTP_USER_NAME
+      value: "discourse@{{ domain }}"
+      secret: false
+    - name: DISCOURSE_SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: DISCOURSE_SMTP_ENABLE_START_TLS
+      value: "true"
+      secret: false
+    - name: DISCOURSE_SMTP_DOMAIN
+      value: "{{ domain }}"
+      secret: false
+    - name: LANG
+      value: "nl_NL.UTF-8"
+      secret: false
+    - name: DISCOURSE_MAXMIND_LICENSE_KEY
+      value: "{{ vault_maxmind_key }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /srv/status
+      port: 80

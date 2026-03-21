@@ -1,0 +1,4 @@
+---
+- name: Kubernetes packages zijn beschikbaar in Arch Linux repositories
+  ansible.builtin.debug:
+    msg: "Kubernetes packages are available in default Arch Linux repositories"

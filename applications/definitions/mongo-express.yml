@@ -1,0 +1,71 @@
+---
+# =============================================================================
+# DBEAVER - DATABASE CLIENT
+# =============================================================================
+# Beschrijving: Universal database client voor developers
+# Website: https://dbeaver.io
+# =============================================================================
+
+application:
+  name: dbeaver
+  version: 23.4.0
+  description: "DBeaver - Universal database client"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://dbeaver.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /root/.dbeaver4
+        
+  network_requirements:
+    vlans:
+      - database
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "DBeaver web UI"
+    dns:
+      - "dbeaver.{{ domain }}"
+      
+  container:
+    image: dbeaver/cloudbeaver:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: CB_ADMIN_NAME
+      value: "admin"
+      secret: false
+    - name: CB_ADMIN_PASSWORD
+      value: "{{ vault_dbeaver_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

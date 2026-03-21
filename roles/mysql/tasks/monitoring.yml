@@ -1,0 +1,53 @@
+---
+- name: Installeer MySQL Exporter
+  ansible.builtin.get_url:
+    url: "https://github.com/prometheus/mysqld_exporter/releases/download/v0.15.1/mysqld_exporter-0.15.1.linux-{{ arch_map[ansible_architecture] }}.tar.gz"
+    dest: "/tmp/mysqld_exporter.tar.gz"
+  tags: [monitoring]
+
+- name: Extract MySQL Exporter
+  ansible.builtin.unarchive:
+    src: "/tmp/mysqld_exporter.tar.gz"
+    dest: /tmp/
+    remote_src: yes
+  tags: [monitoring]
+
+- name: Install MySQL Exporter
+  ansible.builtin.copy:
+    src: "/tmp/mysqld_exporter-0.15.1.linux-{{ arch_map[ansible_architecture] }}/mysqld_exporter"
+    dest: "/usr/local/bin/mysqld_exporter"
+    mode: '0755'
+    remote_src: yes
+  tags: [monitoring]
+
+- name: Create MySQL Exporter systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/mysqld_exporter.service
+    content: |
+      [Unit]
+      Description=MySQL Exporter
+      After=mysql.service
+
+      [Service]
+      Type=simple
+      User=mysql
+      Group=mysql
+      Environment="DATA_SOURCE_NAME=root:{{ mysql_root_password }}@(localhost:{{ mysql_port }})/"
+      ExecStart=/usr/local/bin/mysqld_exporter --web.listen-address=:{{ mysql_monitoring_port }}
+
+      Restart=always
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  notify: restart mysqld_exporter
+  tags: [monitoring]
+
+- name: Start and enable MySQL Exporter
+  ansible.builtin.systemd:
+    name: mysqld_exporter
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [monitoring]

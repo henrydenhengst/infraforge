@@ -1,0 +1,85 @@
+---
+# =============================================================================
+# VECTOR - OBSERVABILITY PIPELINE
+# =============================================================================
+# Beschrijving: High-performance observability data pipeline
+# Website: https://vector.dev
+# =============================================================================
+
+application:
+  name: vector
+  version: 0.35.0
+  description: "Vector - Observability data pipeline"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://vector.dev/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /vector-data
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 8686
+        host: 8686
+        protocol: tcp
+        public: false
+        description: "Vector API"
+      - container: 9000
+        host: 9000
+        protocol: tcp
+        public: false
+        description: "Vector metrics"
+    dns:
+      - "vector.{{ domain }}"
+      
+  container:
+    image: timberio/vector:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: VECTOR_CONFIG
+      value: |
+        sources:
+          internal_metrics:
+            type: internal_metrics
+        sinks:
+          prometheus:
+            type: prometheus_exporter
+            inputs: ["internal_metrics"]
+            address: 0.0.0.0:9000
+            default_namespace: vector
+        api:
+          enabled: true
+          address: 0.0.0.0:8686
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8686

@@ -1,0 +1,130 @@
+---
+# =============================================================================
+# PROMETHEUS - MONITORING
+# =============================================================================
+# Beschrijving: Time-series monitoring voor metrics en alerts
+# Website: https://prometheus.io
+# =============================================================================
+
+application:
+  name: prometheus
+  version: 2.48.0
+  description: "Prometheus - Time-series monitoring systeem"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://prometheus.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /prometheus
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/prometheus
+      - name: rules
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/prometheus/rules
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 9090
+        host: 9090
+        protocol: tcp
+        public: false
+        description: "Prometheus web UI en API"
+    dns:
+      - "prometheus.{{ domain }}"
+      
+  container:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --storage.tsdb.path=/prometheus
+    - --storage.tsdb.retention.time=30d
+    - --web.enable-lifecycle
+    - --web.enable-admin-api
+    
+  scrape_configs:
+    - job_name: prometheus
+      static_configs:
+        - targets: ["localhost:9090"]
+    - job_name: node
+      scrape_interval: 30s
+      static_configs:
+        - targets: ["node-exporter:9100"]
+    - job_name: docker
+      scrape_interval: 30s
+      static_configs:
+        - targets: ["cadvisor:8080"]
+        
+  alert_rules:
+    - name: node_rules
+      rules:
+        - alert: HighCPULoad
+          expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU load ({{ $value }}%)"
+        - alert: HighMemoryLoad
+          expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+          for: 5m
+          labels:
+            severity: warning
+        - alert: DiskSpaceLow
+          expr: (node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+          for: 5m
+          labels:
+            severity: critical
+            
+  health_checks:
+    liveness:
+      type: http
+      path: /-/healthy
+      port: 9090
+    readiness:
+      type: http
+      path: /-/ready
+      port: 9090
+      
+  monitoring:
+    alerts:
+      - name: prometheus_down
+        condition: up{job="prometheus"} == 0
+        severity: critical
+        
+  backup:
+    enabled: true
+    type: snapshot
+    schedule: "0 3 * * *"
+    retention_days: 30

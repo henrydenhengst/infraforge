@@ -1,0 +1,151 @@
+---
+# =============================================================================
+# SECURITY PLAYBOOK - Security hardening
+# =============================================================================
+# Dit playbook voert alleen security hardening uit op alle servers.
+# Gebruik: ansible-playbook playbooks/security.yml
+# =============================================================================
+
+- name: Security hardening - Alle servers
+  hosts: all
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: security
+      tags: [security, always]
+
+- name: Extra security - Management servers
+  hosts: management
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+    - name: Installeer extra auditing tools
+      ansible.builtin.package:
+        name: "{{ audit_packages[ansible_os_family] }}"
+        state: present
+      vars:
+        audit_packages:
+          Debian:
+            - lynis
+            - tiger
+            - chkrootkit
+            - rkhunter
+            - aide
+          RedHat:
+            - lynis
+            - tiger
+            - chkrootkit
+            - rkhunter
+            - aide
+          Suse:
+            - lynis
+            - tiger
+            - chkrootkit
+            - rkhunter
+            - aide
+          Archlinux:
+            - lynis
+            - tiger
+            - rkhunter
+            - aide
+          Alpine:
+            - lynis
+            - tiger
+            - rkhunter
+            - aide
+      tags: [audit]
+
+    - name: Voer security scan uit
+      ansible.builtin.shell: |
+        lynis audit system
+      register: lynis_result
+      ignore_errors: yes
+      tags: [scan]
+
+    - name: Toon security scan resultaten
+      ansible.builtin.debug:
+        var: lynis_result.stdout_lines
+      when: lynis_result.stdout is defined
+      tags: [scan]
+
+- name: Fail2ban configuratie
+  hosts: all
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+    - name: Configureer fail2ban
+      ansible.builtin.template:
+        src: security/jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart fail2ban
+      tags: [fail2ban]
+
+- name: Auditd configuratie
+  hosts: all
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+    - name: Configureer auditd
+      ansible.builtin.template:
+        src: security/audit.rules.j2
+        dest: /etc/audit/rules.d/audit.rules
+        owner: root
+        group: root
+        mode: '0640'
+      notify: restart auditd
+      when: auditd_enabled | default(true)
+      tags: [auditd]
+
+- name: Valideer security configuratie
+  hosts: all
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+    - name: Controleer SSH configuratie
+      ansible.builtin.shell: |
+        sshd -T | grep -E "PermitRootLogin|PasswordAuthentication|Protocol"
+      register: ssh_check
+      changed_when: false
+      tags: [validate]
+
+    - name: Toon SSH configuratie
+      ansible.builtin.debug:
+        var: ssh_check.stdout_lines
+      tags: [validate]
+
+    - name: Controleer firewall status
+      ansible.builtin.shell: |
+        {% if ansible_os_family == 'Debian' %}
+        ufw status
+        {% elif ansible_os_family == 'RedHat' %}
+        firewall-cmd --state
+        {% else %}
+        iptables -L -n
+        {% endif %}
+      register: firewall_check
+      changed_when: false
+      tags: [validate]
+
+    - name: Toon firewall status
+      ansible.builtin.debug:
+        var: firewall_check.stdout_lines
+      tags: [validate]
+
+  handlers:
+    - name: restart fail2ban
+      ansible.builtin.service:
+        name: fail2ban
+        state: restarted
+
+    - name: restart auditd
+      ansible.builtin.service:
+        name: auditd
+        state: restarted

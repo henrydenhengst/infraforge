@@ -1,0 +1,64 @@
+---
+# =============================================================================
+# K9S - KUBERNETES CLI MANAGEMENT
+# =============================================================================
+# Beschrijving: Terminal-based Kubernetes management UI
+# Website: https://k9scli.io
+# =============================================================================
+
+application:
+  name: k9s
+  version: 0.32.0
+  description: "k9s - Kubernetes CLI management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://k9scli.io/topics/install"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 0.5
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: config
+        size_gb: 0.1
+        performance: ssd
+        backup_required: true
+        mount_path: /root/.k9s
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports: []
+    dns: []
+    
+  container:
+    image: derailed/k9s:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  volumes:
+    - ~/.kube:/root/.kube:ro
+    
+  environment_variables:
+    - name: KUBECONFIG
+      value: "/root/.kube/config"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["k9s", "version"]

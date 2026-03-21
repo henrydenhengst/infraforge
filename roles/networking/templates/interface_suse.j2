@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+STARTMODE='auto'
+BOOTPROTO='{{ family | default("static") }}'
+{% if family == 'static' %}
+IPADDR='{{ address }}/{{ cidr | default(24) }}'
+{% endif %}
+{% if gateway is defined %}
+GATEWAY='{{ gateway }}'
+{% endif %}
+{% if mtu is defined %}
+MTU='{{ mtu }}'
+{% endif %}
+{% if dns_servers is defined %}
+DNS='{{ dns_servers | join(" ") }}'
+{% endif %}

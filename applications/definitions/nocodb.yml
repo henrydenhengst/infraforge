@@ -1,0 +1,94 @@
+---
+# =============================================================================
+# AFFILIATEENGINE - AI-GESTUURDE CONTENT GENERATOR
+# =============================================================================
+# Beschrijving: AI-gestuurde content generator voor niche websites
+# Website: https://affiliateengine.com
+# =============================================================================
+
+application:
+  name: affiliateengine
+  version: 1.0.0
+  description: "AffiliateEngine - AI-gestuurde content generator"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: affiliate-team
+    contact: affiliate@company.local
+    slack: "#affiliate"
+    documentation: "https://affiliateengine.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /app/config
+        
+  network_requirements:
+    vlans:
+      - affiliate
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "AffiliateEngine web interface"
+    dns:
+      - "affiliate.{{ domain }}"
+      
+  container:
+    image: affiliate/engine:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: AFFILIATE_ENGINE_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: AFFILIATE_ENGINE_DB_NAME
+      value: "affiliate_engine"
+      secret: false
+    - name: AFFILIATE_ENGINE_DB_USER
+      value: "affiliate_engine"
+      secret: false
+    - name: AFFILIATE_ENGINE_DB_PASSWORD
+      value: "{{ vault_affiliate_engine_password }}"
+      secret: true
+    - name: AFFILIATE_ENGINE_OPENAI_KEY
+      value: "{{ vault_openai_key }}"
+      secret: true
+    - name: AFFILIATE_ENGINE_MODEL
+      value: "gpt-4"
+      secret: false
+    - name: AFFILIATE_ENGINE_TEMPERATURE
+      value: "0.7"
+      secret: false
+    - name: AFFILIATE_ENGINE_MAX_TOKENS
+      value: "2000"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

@@ -1,0 +1,8 @@
+---
+- name: Docker is in community repository (Alpine)
+  ansible.builtin.lineinfile:
+    path: /etc/apk/repositories
+    regexp: '^.*/community$'
+    line: "http://dl-cdn.alpinelinux.org/alpine/v{{ ansible_distribution_version }}/community"
+    state: present
+  when: ansible_distribution_version is defined

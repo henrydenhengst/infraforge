@@ -1,0 +1,73 @@
+---
+# =============================================================================
+# VELERO - KUBERNETES BACKUP
+# =============================================================================
+# Beschrijving: Backup en restore voor Kubernetes clusters
+# Website: https://velero.io
+# =============================================================================
+
+application:
+  name: velero
+  version: 1.13.0
+  description: "Velero - Kubernetes backup en restore"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://velero.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - platform
+      - storage
+    ports: []
+    dns: []
+    
+  container:
+    image: velero/velero:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: AWS_ACCESS_KEY_ID
+      value: "minioadmin"
+      secret: false
+    - name: AWS_SECRET_ACCESS_KEY
+      value: "{{ vault_minio_password }}"
+      secret: true
+    - name: AWS_DEFAULT_REGION
+      value: "us-east-1"
+      secret: false
+    - name: BACKUP_STORAGE_LOCATION
+      value: "s3://velero-backups"
+      secret: false
+    - name: VELERO_NAMESPACE
+      value: "velero"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["velero", "version"]

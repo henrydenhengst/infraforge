@@ -1,0 +1,75 @@
+---
+# =============================================================================
+# PROWLARR - INDEXER MANAGER
+# =============================================================================
+# Beschrijving: Indexer manager voor Sonarr, Radarr, Lidarr
+# Website: https://prowlarr.com
+# =============================================================================
+
+application:
+  name: prowlarr
+  version: 1.11.0
+  description: "Prowlarr - Indexer manager"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://wiki.servarr.com/Prowlarr"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 9696
+        host: 9696
+        protocol: tcp
+        public: false
+        description: "Prowlarr web interface"
+    dns:
+      - "prowlarr.{{ domain }}"
+      - "indexers.{{ domain }}"
+      
+  container:
+    image: linuxserver/prowlarr:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 9696

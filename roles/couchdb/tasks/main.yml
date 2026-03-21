@@ -1,0 +1,39 @@
+---
+- name: '{{ ansible_os_family }} | Maak CouchDB directories'
+  ansible.builtin.file:
+    path: "{{ couchdb_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start CouchDB container'
+  ansible.builtin.docker_container:
+    name: couchdb
+    image: couchdb:3
+    restart_policy: unless-stopped
+    ports:
+      - "5984:5984"
+      - "5986:5986"
+    volumes:
+      - "{{ couchdb_data_path }}:/opt/couchdb/data"
+    environment:
+      COUCHDB_USER: "{{ couchdb_admin_user }}"
+      COUCHDB_PASSWORD: "{{ couchdb_admin_password }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.couchdb.rule: "Host(`couchdb.{{ domain }}`)"
+      traefik.http.services.couchdb.loadbalancer.server.port: "5984"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot CouchDB actief is'
+  ansible.builtin.wait_for:
+    port: 5984
+    timeout: 60
+  tags: [validate]
+
+- name: Toon CouchDB informatie
+  ansible.builtin.debug:
+    msg:
+      - "CouchDB: https://couchdb.{{ domain }}"
+      - "Admin user: {{ couchdb_admin_user }}"
+  tags: [validate]

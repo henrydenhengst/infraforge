@@ -1,0 +1,66 @@
+# {{ ansible_managed }}
+# SSH daemon configuration
+
+# Network
+Port {{ ssh_port }}
+AddressFamily any
+ListenAddress 0.0.0.0
+
+# Protocol
+Protocol 2
+
+# Host keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+
+# Authentication
+LoginGraceTime 2m
+PermitRootLogin {{ ssh_permit_root_login | lower }}
+StrictModes yes
+MaxAuthTries {{ ssh_max_auth_retries }}
+MaxSessions 10
+PubkeyAuthentication {{ ssh_pubkey_authentication | lower }}
+PasswordAuthentication {{ ssh_password_authentication | lower }}
+ChallengeResponseAuthentication no
+KerberosAuthentication no
+GSSAPIAuthentication no
+
+# Authorized keys
+AuthorizedKeysFile .ssh/authorized_keys
+
+# Privilege separation
+UsePrivilegeSeparation yes
+
+# Compression
+Compression delayed
+
+# Client alive
+ClientAliveInterval {{ ssh_client_alive_interval }}
+ClientAliveCountMax {{ ssh_client_alive_count_max }}
+
+# Allow/Deny users
+{% if ssh_allow_users | length > 0 %}
+AllowUsers {{ ssh_allow_users | join(' ') }}
+{% endif %}
+{% if ssh_deny_users | length > 0 %}
+DenyUsers {{ ssh_deny_users | join(' ') }}
+{% endif %}
+
+# Banner
+Banner /etc/motd
+
+# Accept environment
+AcceptEnv LANG LC_*
+
+# Subsystem
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+# Ciphers and MACs (hardened)
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
+KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256

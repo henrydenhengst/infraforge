@@ -1,0 +1,40 @@
+---
+- name: Controleer cluster status
+  ansible.builtin.shell: |
+    kubectl get nodes
+  register: nodes_status
+  changed_when: false
+  tags: [validate]
+
+- name: Toon cluster nodes
+  ansible.builtin.debug:
+    var: nodes_status.stdout_lines
+  when: nodes_status.stdout is defined
+  tags: [validate]
+
+- name: Controleer pod status in kube-system
+  ansible.builtin.shell: |
+    kubectl get pods -n kube-system
+  register: pods_status
+  changed_when: false
+  tags: [validate]
+
+- name: Toon pod status
+  ansible.builtin.debug:
+    var: pods_status.stdout_lines
+  when: pods_status.stdout is defined
+  tags: [validate]
+
+- name: Controleer cluster componenten
+  ansible.builtin.shell: |
+    kubectl get componentstatuses
+  register: component_status
+  changed_when: false
+  ignore_errors: yes
+  tags: [validate]
+
+- name: Toon cluster component status
+  ansible.builtin.debug:
+    var: component_status.stdout_lines
+  when: component_status.stdout is defined
+  tags: [validate]

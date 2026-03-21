@@ -1,0 +1,12 @@
+---
+- name: Laad bonding kernel module
+  ansible.builtin.modprobe:
+    name: bonding
+    state: present
+
+- name: Configureer bond interface
+  ansible.builtin.template:
+    src: bond_alpine.j2
+    dest: /etc/network/interfaces
+    mode: '0644'
+  notify: restart networking

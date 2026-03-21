@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "Dozzle Docker log viewer"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [dozzle, logs, docker]
+dependencies:
+  - docker

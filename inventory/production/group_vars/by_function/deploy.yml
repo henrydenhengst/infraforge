@@ -1,0 +1,137 @@
+---
+# =============================================================================
+# TESTING TOOLS
+# =============================================================================
+# Functie: testing
+# Beschrijving: Tools voor automated testing, browser automation en testmanagement
+# =============================================================================
+
+testing_tools:
+  # ---------------------------------------------------------------------------
+  # BROWSER AUTOMATION
+  # ---------------------------------------------------------------------------
+  - name: Selenium
+    profiel_tag: DevOps
+    functie_tag: testing
+    beschrijving: "Selenium Grid voor browser automation testing"
+    categorie: browser_automation
+    docker_image: selenium/hub:latest
+    ports:
+      - "4444:4444"
+      - "4442:4442"
+      - "4443:4443"
+    url: "https://www.selenium.dev"
+    components:
+      - hub
+      - chrome-node
+      - firefox-node
+      - edge-node
+    browsers:
+      - Chrome
+      - Firefox
+      - Edge
+    languages:
+      - Java
+      - Python
+      - JavaScript
+      - C#
+      - Ruby
+      
+  # ---------------------------------------------------------------------------
+  # PERFORMANCE TESTING
+  # ---------------------------------------------------------------------------
+  - name: k6
+    profiel_tag: DevOps
+    functie_tag: testing
+    beschrijving: "Modern performance testing tool"
+    categorie: performance
+    docker_image: grafana/k6:latest
+    ports:
+      - "6565:6565"
+    url: "https://k6.io"
+    
+  - name: Locust
+    profiel_tag: DevOps
+    functie_tag: testing
+    beschrijving: "Python-based load testing tool"
+    categorie: performance
+    docker_image: locustio/locust:latest
+    ports:
+      - "8089:8089"
+    url: "https://locust.io"
+    
+  - name: Artillery
+    profiel_tag: DevOps
+    functie_tag: testing
+    beschrijving: "Modern load testing toolkit"
+    categorie: performance
+    docker_image: artilleryio/artillery:latest
+    ports:
+      - "8080:8080"
+    url: "https://www.artillery.io"
+    
+  - name: JMeter
+    profiel_tag: DevOps
+    functie_tag: testing
+    beschrijving: "Apache JMeter performance testing"
+    categorie: performance
+    docker_image: justb4/jmeter:latest
+    ports:
+      - "60000:60000"
+    url: "https://jmeter.apache.org"
+    
+  - name: Gatling
+    profiel_tag: DevOps
+    functie_tag: testing
+    beschrijving: "Load testing for web applications"
+    categorie: performance
+    docker_image: denvazh/gatling:latest
+    ports:
+      - "8080:8080"
+    url: "https://gatling.io"
+    
+  - name: Vegeta
+    profiel_tag: DevOps
+    functie_tag: testing
+    beschrijving: "HTTP load testing tool"
+    categorie: performance
+    docker_image: peterevans/vegeta:latest
+    url: "https://github.com/tsenart/vegeta"
+    
+  # ---------------------------------------------------------------------------
+  # CODE QUALITY
+  # ---------------------------------------------------------------------------
+  - name: SonarQube
+    profiel_tag: DevOps
+    functie_tag: testing
+    beschrijving: "Code kwaliteit en security check"
+    categorie: code_quality
+    docker_image: sonarqube:community
+    ports:
+      - "9000:9000"
+    database: postgresql
+    url: "https://www.sonarqube.org"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+testing_defaults:
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  selenium:
+    max_sessions: 10
+    timeout: 300
+    video_recording: false
+    
+  performance:
+    default_duration: 60
+    default_users: 10
+    default_ramp_up: 30
+    results_retention_days: 30
+    
+  code_quality:
+    quality_gate_fail_on: critical
+    coverage_threshold: 80

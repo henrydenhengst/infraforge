@@ -1,0 +1,122 @@
+---
+# =============================================================================
+# MINIO - OBJECT STORAGE (S3-COMPATIBLE)
+# =============================================================================
+# Beschrijving: High-performance object storage (S3-compatible)
+# Website: https://min.io
+# =============================================================================
+
+application:
+  name: minio
+  version: 2024.2.26
+  description: "MinIO - S3-compatible object storage"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: storage-team
+    contact: storage@company.local
+    slack: "#storage"
+    documentation: "https://min.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 1000
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        description: "Object storage data"
+        
+  network_requirements:
+    vlans:
+      - storage
+      - internal
+    ports:
+      - container: 9000
+        host: 9000
+        protocol: tcp
+        public: false
+        description: "MinIO API (S3)"
+      - container: 9001
+        host: 9001
+        protocol: tcp
+        public: false
+        description: "MinIO Console"
+    dns:
+      - "minio.{{ domain }}"
+      - "s3.{{ domain }}"
+      - "*.minio.{{ domain }}"
+      
+  container:
+    image: minio/minio:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  command: server /data --console-address ":9001"
+  
+  environment_variables:
+    - name: MINIO_ROOT_USER
+      value: minioadmin
+      secret: false
+    - name: MINIO_ROOT_PASSWORD
+      value: "{{ vault_minio_password }}"
+      secret: true
+    - name: MINIO_PROMETHEUS_AUTH_TYPE
+      value: "public"
+      secret: false
+    - name: MINIO_BROWSER
+      value: "on"
+      secret: false
+    - name: MINIO_DOMAIN
+      value: "minio.{{ domain }}"
+      secret: false
+      
+  buckets:
+    - name: backups
+      policy: private
+      versioning: true
+      quota: 1TB
+    - name: data
+      policy: private
+      versioning: true
+      quota: 5TB
+    - name: logs
+      policy: private
+      versioning: false
+      quota: 500GB
+    - name: public
+      policy: public
+      versioning: false
+      quota: 100GB
+      
+  users:
+    - name: backup-user
+      password: "{{ vault_minio_backup_user }}"
+      policy: readwrite
+    - name: app-user
+      password: "{{ vault_minio_app_user }}"
+      policy: readonly
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /minio/health/live
+      port: 9000
+      
+  monitoring:
+    metrics:
+      enabled: true
+      port: 9000
+      path: /minio/v2/metrics/cluster

@@ -1,0 +1,127 @@
+---
+# =============================================================================
+# BIGBLUEBUTTON - WEB-CONFERENCING VOOR ONDERWIJS
+# =============================================================================
+# Beschrijving: Web-conferencing specifiek voor online lesgeven
+# Website: https://bigbluebutton.org
+# =============================================================================
+
+application:
+  name: bigbluebutton
+  version: 2.7.0
+  description: "BigBlueButton - Web-conferencing voor onderwijs"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: education-team
+    contact: education@company.local
+    slack: "#education"
+    documentation: "https://docs.bigbluebutton.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /var/bigbluebutton
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/bigbluebutton
+      - name: recordings
+        size_gb: 200
+        performance: hdd
+        backup_required: true
+        mount_path: /var/bigbluebutton/recordings
+        
+  network_requirements:
+    vlans:
+      - education
+      - dmz
+    ports:
+      - container: 80
+        host: 80
+        protocol: tcp
+        public: true
+        description: "BigBlueButton HTTP"
+      - container: 443
+        host: 443
+        protocol: tcp
+        public: true
+        description: "BigBlueButton HTTPS"
+      - container: 1935
+        host: 1935
+        protocol: tcp
+        public: true
+        description: "RTMP streaming"
+      - container: 5066
+        host: 5066
+        protocol: tcp
+        public: false
+        description: "FreeSWITCH SIP"
+    dns:
+      - "bbb.{{ domain }}"
+      - "bigbluebutton.{{ domain }}"
+      - "meet.{{ domain }}"
+      
+  container:
+    image: bigbluebutton/bbb:latest
+    restart: unless-stopped
+    privileged: true
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: BBB_SERVER_URL
+      value: "https://bbb.{{ domain }}"
+      secret: false
+    - name: BBB_SECRET
+      value: "{{ vault_bbb_secret }}"
+      secret: true
+    - name: SMTP_SERVER
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: SMTP_USERNAME
+      value: "bbb@{{ domain }}"
+      secret: false
+    - name: SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: SMTP_DOMAIN
+      value: "{{ domain }}"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: LANGUAGE
+      value: "nl"
+      secret: false
+      
+  components:
+    - bbb-web
+    - bbb-apps
+    - bbb-webrtc-sfu
+    - bbb-html5
+    - bbb-fsesl-akka
+    - bbb-record-core
+    - bbb-lti
+    - bbb-graphql-server
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /bigbluebutton/api/health
+      port: 80

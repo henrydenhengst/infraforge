@@ -1,0 +1,136 @@
+---
+# =============================================================================
+# TRAEFIK - REVERSE PROXY
+# =============================================================================
+# Beschrijving: Modern reverse proxy met automatische SSL certificaten
+# Website: https://traefik.io
+# =============================================================================
+
+application:
+  name: traefik
+  version: 2.10.7
+  description: "Traefik - Reverse proxy met automatische SSL"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://doc.traefik.io/traefik"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/traefik
+      - name: certs
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/certs
+        
+  network_requirements:
+    vlans:
+      - dmz
+      - management
+    ports:
+      - container: 80
+        host: 80
+        protocol: tcp
+        public: true
+        description: "HTTP (redirect naar HTTPS)"
+      - container: 443
+        host: 443
+        protocol: tcp
+        public: true
+        description: "HTTPS"
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Traefik dashboard"
+    dns:
+      - "traefik.{{ domain }}"
+      - "*.{{ domain }}"
+      
+  container:
+    image: traefik:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  entrypoints:
+    web:
+      address: ":80"
+      http:
+        redirections:
+          entrypoint:
+            to: websecure
+            scheme: https
+    websecure:
+      address: ":443"
+    traefik:
+      address: ":8080"
+      
+  providers:
+    docker:
+      endpoint: "unix:///var/run/docker.sock"
+      exposedByDefault: false
+      network: traefik-public
+    file:
+      directory: /etc/traefik/dynamic
+      
+  certificates_resolvers:
+    letsencrypt:
+      acme:
+        email: admin@{{ domain }}
+        storage: /etc/certs/acme.json
+        httpChallenge:
+          entryPoint: web
+    cloudflare:
+      acme:
+        email: admin@{{ domain }}
+        storage: /etc/certs/acme-cloudflare.json
+        dnsChallenge:
+          provider: cloudflare
+          delayBeforeCheck: 0
+          
+  middlewares:
+    - name: rate-limit
+      rateLimit:
+        average: 100
+        burst: 50
+    - name: security-headers
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+    - name: auth
+      basicAuth:
+        users:
+          - "admin:$2y$10$..."
+        
+  health_checks:
+    liveness:
+      type: http
+      path: /ping
+      port: 8080
+      initial_delay: 10

@@ -1,0 +1,147 @@
+---
+# =============================================================================
+# SECURITY ROLE VARIABELEN
+# =============================================================================
+
+# Security packages per OS
+security_packages:
+  Debian:
+    - fail2ban
+    - ufw
+    - rkhunter
+    - aide
+    - unattended-upgrades
+    - auditd
+    - apparmor
+    - apparmor-profiles
+    - libpam-pwquality
+    - cracklib-runtime
+  RedHat:
+    - fail2ban
+    - firewalld
+    - rkhunter
+    - aide
+    - dnf-automatic
+    - audit
+    - selinux-policy-targeted
+    - policycoreutils
+    - setroubleshoot
+    - libselinux-utils
+    - libsemanage-python
+    - libseccomp
+    - pam_pwquality
+    - cracklib
+  Suse:
+    - fail2ban
+    - SuSEfirewall2
+    - rkhunter
+    - aide
+    - autoyast2
+    - audit
+    - apparmor-parser
+    - apparmor-profiles
+    - pam_pwquality
+    - cracklib
+  Archlinux:
+    - fail2ban
+    - iptables-nft
+    - rkhunter
+    - aide
+    - audit
+    - apparmor
+    - python-psutil
+    - libpwquality
+    - cracklib
+  Alpine:
+    - fail2ban
+    - iptables
+    - rkhunter
+    - aide
+    - audit
+    - apparmor
+    - apparmor-profiles
+    - cracklib
+
+# SSH service namen per OS
+ssh_service_name:
+  Debian: ssh
+  RedHat: sshd
+  Suse: sshd
+  Archlinux: sshd
+  Alpine: sshd
+
+# Firewall service namen per OS
+firewall_service:
+  Debian: ufw
+  RedHat: firewalld
+  Suse: SuSEfirewall2
+  Archlinux: iptables
+  Alpine: iptables
+
+# Kernel parameters voor security
+security_kernel_parameters:
+  Debian:
+    - name: net.ipv4.tcp_syncookies
+      value: 1
+    - name: net.ipv4.conf.all.rp_filter
+      value: 1
+    - name: net.ipv4.conf.default.rp_filter
+      value: 1
+    - name: net.ipv4.icmp_echo_ignore_broadcasts
+      value: 1
+    - name: net.ipv4.icmp_ignore_bogus_error_responses
+      value: 1
+    - name: net.ipv4.conf.all.accept_source_route
+      value: 0
+    - name: net.ipv4.conf.default.accept_source_route
+      value: 0
+    - name: kernel.randomize_va_space
+      value: 2
+  RedHat:
+    - name: net.ipv4.tcp_syncookies
+      value: 1
+    - name: net.ipv4.conf.all.rp_filter
+      value: 1
+    - name: net.ipv4.conf.default.rp_filter
+      value: 1
+    - name: kernel.randomize_va_space
+      value: 2
+    - name: fs.suid_dumpable
+      value: 0
+  Suse:
+    - name: net.ipv4.tcp_syncookies
+      value: 1
+    - name: kernel.randomize_va_space
+      value: 2
+  Archlinux:
+    - name: net.ipv4.tcp_syncookies
+      value: 1
+    - name: kernel.randomize_va_space
+      value: 2
+  Alpine:
+    - name: net.ipv4.tcp_syncookies
+      value: 1
+    - name: kernel.randomize_va_space
+      value: 2
+
+# Ongewenste services om uit te schakelen
+unwanted_services:
+  Debian:
+    - bluetooth
+    - cups
+    - avahi-daemon
+    - whoopsie
+  RedHat:
+    - bluetooth
+    - cups
+    - avahi-daemon
+    - postfix
+  Suse:
+    - bluetooth
+    - cups
+    - avahi-daemon
+  Archlinux:
+    - bluetooth
+    - cups
+    - avahi-daemon
+  Alpine: []

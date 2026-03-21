@@ -1,0 +1,29 @@
+---
+- name: Installeer Metrics Server
+  ansible.builtin.shell: |
+    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+  when: enable_metrics_server
+  tags: [addons]
+
+- name: Installeer Ingress Controller (Nginx)
+  ansible.builtin.shell: |
+    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+    helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+      --namespace ingress-nginx --create-namespace \
+      --set controller.service.type=NodePort \
+      --set controller.service.nodePorts.http={{ ingress_http_port }} \
+      --set controller.service.nodePorts.https={{ ingress_https_port }}
+  when: enable_ingress_controller and ingress_controller == "nginx"
+  tags: [addons]
+
+- name: Installeer Helm
+  ansible.builtin.shell: |
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  when: enable_helm
+  tags: [addons]
+
+- name: Installeer Cert-Manager
+  ansible.builtin.shell: |
+    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+  when: enable_cert_manager | default(false)
+  tags: [addons]

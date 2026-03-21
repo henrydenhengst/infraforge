@@ -1,0 +1,77 @@
+---
+# =============================================================================
+# NODE-RED - VISUELE AUTOMATISERING
+# =============================================================================
+# Beschrijving: Visuele automatisering voor IoT en flows
+# Website: https://nodered.org
+# =============================================================================
+
+application:
+  name: nodered
+  version: 3.1.0
+  description: "Node-RED - Visuele automatisering"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: automation-team
+    contact: automation@company.local
+    slack: "#automation"
+    documentation: "https://nodered.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - automation
+      - iot
+    ports:
+      - container: 1880
+        host: 1880
+        protocol: tcp
+        public: false
+        description: "Node-RED web interface"
+    dns:
+      - "nodered.{{ domain }}"
+      
+  container:
+    image: nodered/node-red:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: NODE_RED_ENABLE_PROJECTS
+      value: "true"
+      secret: false
+    - name: NODE_RED_ENABLE_SAFE_MODE
+      value: "false"
+      secret: false
+    - name: FLOWS
+      value: "flows.json"
+      secret: false
+    - name: NODE_RED_CREDENTIAL_SECRET
+      value: "{{ vault_nodered_secret }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 1880

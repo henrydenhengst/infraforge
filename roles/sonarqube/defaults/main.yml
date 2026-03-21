@@ -1,0 +1,3 @@
+---
+sonarqube_data_path: /opt/sonarqube
+sonarqube_db_password: "{{ vault_sonarqube_db_password }}"

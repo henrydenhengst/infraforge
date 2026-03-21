@@ -1,0 +1,561 @@
+---
+# =============================================================================
+# DATA TOOLS
+# =============================================================================
+# Functie: data
+# Beschrijving: Tools voor data discovery, cataloging, lineage, en analyse
+# =============================================================================
+
+data_tools:
+  # ---------------------------------------------------------------------------
+  # DATA DISCOVERY & CLASSIFICATION
+  # ---------------------------------------------------------------------------
+  - name: Grokker
+    profiel_tag: AI-Data
+    functie_tag: data
+    beschrijving: "Data discovery en classificatie tool"
+    categorie: data_discovery
+    docker_image: grokker/grokker:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - grokker_data:/data
+      - grokker_config:/config
+    environment:
+      GROKKER_DB_HOST: postgres
+      GROKKER_DB_NAME: grokker
+      GROKKER_DB_USER: grokker
+      GROKKER_DB_PASSWORD: "{{ vault_grokker_password }}"
+      GROKKER_REDIS_HOST: redis
+      GROKKER_REDIS_PORT: 6379
+      GROKKER_SECRET_KEY: "{{ vault_grokker_secret }}"
+      GROKKER_ADMIN_EMAIL: admin@{{ domain }}
+      GROKKER_ADMIN_PASSWORD: "{{ vault_grokker_admin_password }}"
+    database: postgresql
+    queue: redis
+    url: "https://grokker.com"
+    
+  - name: OpenMetadata
+    profiel_tag: AI-Data
+    functie_tag: data
+    beschrijving: "Centraal beheer van data-assets en lineage"
+    categorie: data_catalog
+    docker_image: openmetadata/server:latest
+    ports:
+      - "8585:8585"
+      - "8586:8586"
+    volumes:
+      - openmetadata_data:/data
+      - openmetadata_index:/index
+    environment:
+      OPENMETADATA_DATABASE_HOST: postgres
+      OPENMETADATA_DATABASE_PORT: 5432
+      OPENMETADATA_DATABASE_DBNAME: openmetadata
+      OPENMETADATA_DATABASE_USER: openmetadata
+      OPENMETADATA_DATABASE_PASSWORD: "{{ vault_openmetadata_password }}"
+      OPENMETADATA_ELASTICSEARCH_HOST: elasticsearch
+      OPENMETADATA_ELASTICSEARCH_PORT: 9200
+      OPENMETADATA_REDIS_HOST: redis
+      OPENMETADATA_REDIS_PORT: 6379
+      OPENMETADATA_AIRFLOW_HOST: airflow
+      OPENMETADATA_AIRFLOW_PORT: 8080
+    database: postgresql
+    search: elasticsearch
+    queue: redis
+    url: "https://open-metadata.org"
+    
+  - name: Tika
+    profiel_tag: AI-Data
+    functie_tag: data
+    beschrijving: "Content analyse en extractie voor grote datasets"
+    categorie: content_extraction
+    docker_image: apache/tika:latest
+    ports:
+      - "9998:9998"
+    volumes:
+      - tika_cache:/cache
+    environment:
+      TIKA_CHILD_FETCH_MAX: 100
+      TIKA_CHILD_TIMEOUT: 60s
+      TIKA_MAX_FILESIZE: 100000000
+    url: "https://tika.apache.org"
+    
+  # ---------------------------------------------------------------------------
+  # BUSINESS INTELLIGENCE
+  # ---------------------------------------------------------------------------
+  - name: Superset
+    profiel_tag: AI-Data
+    functie_tag: data
+    beschrijving: "Moderne data exploratie en visualisatie (BI)"
+    categorie: bi
+    docker_image: apache/superset:latest
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_data:/app/superset_home
+    environment:
+      SUPERSET_SECRET_KEY: "{{ vault_superset_secret }}"
+      SUPERSET_DATABASE_HOST: postgres
+      SUPERSET_DATABASE_PORT: 5432
+      SUPERSET_DATABASE_DBNAME: superset
+      SUPERSET_DATABASE_USER: superset
+      SUPERSET_DATABASE_PASSWORD: "{{ vault_superset_password }}"
+      SUPERSET_REDIS_HOST: redis
+      SUPERSET_REDIS_PORT: 6379
+      SUPERSET_ROW_LIMIT: 10000
+      SUPERSET_CACHE_ROW_LIMIT: 10000
+    database: postgresql
+    queue: redis
+    url: "https://superset.apache.org"
+    
+  - name: Metabase
+    profiel_tag: Financiën
+    functie_tag: data
+    beschrijving: "Business Intelligence tool voor vragen en dashboards"
+    categorie: bi
+    docker_image: metabase/metabase:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - metabase_data:/metabase.db
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: postgres
+      MB_DB_PORT: 5432
+      MB_DB_DBNAME: metabase
+      MB_DB_USER: metabase
+      MB_DB_PASS: "{{ vault_metabase_password }}"
+      MB_ENCRYPTION_SECRET_KEY: "{{ vault_metabase_secret }}"
+      MB_PASSWORD_COMPLEXITY: strong
+      MB_PASSWORD_LENGTH: 10
+    database: postgresql
+    url: "https://www.metabase.com"
+    
+  # ---------------------------------------------------------------------------
+  # DATA STORAGE & MANAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: NocoDB
+    profiel_tag: AI-Data
+    functie_tag: data
+    beschrijving: "Smart spreadsheet (Airtable alternatief) op je eigen SQL"
+    categorie: spreadsheet
+    docker_image: nocodb/nocodb:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - nocodb_data:/usr/app/data
+    environment:
+      NC_DB: "pg://postgres:5432?u=nocodb&p={{ vault_nocodb_password }}&d=nocodb"
+      NC_PUBLIC_URL: "https://nocodb.{{ domain }}"
+      NC_JWT_SECRET: "{{ vault_nocodb_jwt }}"
+      NC_AUTH_JWT_SECRET: "{{ vault_nocodb_jwt }}"
+    database: postgresql
+    url: "https://nocodb.com"
+    
+  - name: AITable
+    profiel_tag: AI-Data
+    functie_tag: data
+    beschrijving: "AI-gestuurde database voor projectmanagement"
+    categorie: spreadsheet
+    docker_image: apitable/all-in-one:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - apitable_data:/apitable/data
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: apitable
+      MYSQL_USER: apitable
+      MYSQL_PASSWORD: "{{ vault_apitable_password }}"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MINIO_HOST: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: "{{ vault_minio_password }}"
+    database: mysql
+    queue: redis
+    storage: minio
+    url: "https://apitable.com"
+    
+  - name: FileBrowser
+    profiel_tag: IT
+    functie_tag: data
+    beschrijving: "Web-bestandsbeheerder voor eenvoudige data toegang"
+    categorie: file_manager
+    docker_image: filebrowser/filebrowser:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - /data:/srv
+      - filebrowser_config:/config
+    environment:
+      FB_BASEURL: /files
+      FB_PORT: 80
+      FB_ADMIN_USER: admin
+      FB_ADMIN_PASSWORD: "{{ vault_filebrowser_password }}"
+    url: "https://filebrowser.org"
+    
+  # ---------------------------------------------------------------------------
+  # DATA PIPELINES & STREAMING
+  # ---------------------------------------------------------------------------
+  - name: ApacheKafka
+    profiel_tag: IT
+    functie_tag: data
+    beschrijving: "Event-streaming platform voor real-time data pipelines"
+    categorie: streaming
+    docker_image: confluentinc/cp-kafka:latest
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9997
+    url: "https://kafka.apache.org"
+    
+  - name: Zookeeper
+    profiel_tag: IT
+    functie_tag: data
+    beschrijving: "Orchestratie service voor gedistribueerde systemen"
+    categorie: coordination
+    docker_image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "2181:2181"
+      - "2888:2888"
+      - "3888:3888"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+    url: "https://zookeeper.apache.org"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+data_defaults:
+  # Algemene data instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Data catalogus
+  data_catalog:
+    enabled: true
+    auto_discovery: true
+    scan_schedule: "0 */6 * * *"
+    scan_depth: 3
+    
+  # Data lineage
+  data_lineage:
+    enabled: true
+    track_queries: true
+    track_etl: true
+    track_reports: true
+    
+  # Data kwaliteit
+  data_quality:
+    enabled: true
+    validation_rules: true
+    profiling: true
+    alert_on_anomaly: true
+    
+  # Data governance
+  data_governance:
+    classification: true
+    tagging: true
+    retention_policies: true
+    pii_detection: true
+    
+  # Data bronnen
+  data_sources:
+    databases:
+      - postgresql
+      - mysql
+      - mongodb
+      - redshift
+    cloud:
+      - s3
+      - gcs
+      - azure_blob
+    streaming:
+      - kafka
+      - kinesis
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+openmetadata_config:
+  # OpenMetadata data assets
+  data_assets:
+    - type: database
+      name: Production Database
+      service: postgres
+      description: "Hoofd productie database"
+      owner: data-team
+      
+    - type: schema
+      name: public
+      database: Production Database
+      description: "Public schema"
+      
+    - type: table
+      name: users
+      schema: public
+      database: Production Database
+      description: "Gebruikerstabel"
+      columns:
+        - name: id
+          type: integer
+          description: "Primaire sleutel"
+        - name: email
+          type: string
+          description: "Email adres"
+          pii: true
+        - name: created_at
+          type: timestamp
+          description: "Aanmaakdatum"
+          
+    - type: table
+      name: orders
+      schema: public
+      database: Production Database
+      description: "Order tabel"
+      columns:
+        - name: id
+          type: integer
+        - name: user_id
+          type: integer
+          foreign_key: users.id
+        - name: amount
+          type: float
+        - name: status
+          type: string
+          
+  # OpenMetadata tags
+  tags:
+    - name: PII
+      description: "Persoonlijk identificeerbare informatie"
+      category: security
+    - name: Sensitive
+      description: "Gevoelige data"
+      category: security
+    - name: Gold
+      description: "Kritieke data assets"
+      category: tier
+    - name: Silver
+      description: "Belangrijke data assets"
+      category: tier
+    - name: Bronze
+      description: "Ruwe data assets"
+      category: tier
+      
+  # OpenMetadata dashboards
+  dashboards:
+    - name: Data Quality Overview
+      description: "Overzicht van data kwaliteit"
+      charts:
+        - type: pie
+          title: "Data Quality Score"
+          metric: quality_score
+        - type: line
+          title: "Quality Trends"
+          metric: quality_trend
+          
+    - name: Data Lineage
+      description: "Visualisatie van data lineage"
+      type: graph
+      
+  # OpenMetadata teams
+  teams:
+    - name: Data Engineering
+      description: "Data engineering team"
+      users:
+        - data-engineer-1
+        - data-engineer-2
+    - name: Data Science
+      description: "Data science team"
+      users:
+        - data-scientist-1
+        - data-scientist-2
+
+superset_config:
+  # Superset databases
+  databases:
+    - name: Production PostgreSQL
+      engine: postgresql
+      host: postgres
+      port: 5432
+      database: analytics
+      username: superset
+      password: "{{ vault_superset_db_password }}"
+      expose_in_sqllab: true
+      
+    - name: Data Warehouse
+      engine: postgresql
+      host: data-warehouse
+      port: 5432
+      database: dw
+      username: superset
+      password: "{{ vault_superset_dw_password }}"
+      
+  # Superset dashboards
+  dashboards:
+    - name: Sales Overview
+      description: "Overzicht van sales data"
+      published: true
+      position:
+        - type: chart
+          title: "Sales by Month"
+          datasource: sales_facts
+          viz_type: line
+        - type: chart
+          title: "Top Products"
+          datasource: sales_facts
+          viz_type: bar
+        - type: chart
+          title: "Sales by Region"
+          datasource: sales_facts
+          viz_type: pie
+          
+    - name: Marketing Analytics
+      description: "Marketing KPI's"
+      published: true
+      position:
+        - type: chart
+          title: "Website Traffic"
+          datasource: web_analytics
+          viz_type: line
+        - type: chart
+          title: "Conversion Rate"
+          datasource: conversions
+          viz_type: big_number
+          
+  # Superset datasets
+  datasets:
+    - name: sales_facts
+      table_name: sales
+      database: Production PostgreSQL
+      schema: public
+      metrics:
+        - name: total_revenue
+          expression: SUM(amount)
+          metric_type: sum
+        - name: avg_order_value
+          expression: AVG(amount)
+          metric_type: avg
+          
+    - name: user_dim
+      table_name: users
+      database: Production PostgreSQL
+      schema: public
+      columns:
+        - user_id
+        - email
+        - signup_date
+        - country
+        
+  # Superset gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      first_name: Admin
+      last_name: User
+      roles: [Admin]
+      
+    - username: analyst
+      email: analyst@{{ domain }}
+      first_name: Data
+      last_name: Analyst
+      roles: [Alpha]
+      
+  # Superset rollen
+  roles:
+    - name: Admin
+      permissions:
+        - can explore on Superset
+        - can dashboard on Superset
+        - can sql_json on Superset
+        - can override_role_permissions
+        
+    - name: Alpha
+      permissions:
+        - can explore on Superset
+        - can dashboard on Superset
+        - can sql_json on Superset
+
+nocodb_config:
+  # NocoDB projects
+  projects:
+    - name: Marketing
+      description: "Marketing data"
+      type: workspace
+      databases:
+        - name: Campaigns
+          tables:
+            - name: campaigns
+              columns:
+                - name: id
+                  type: id
+                - name: name
+                  type: text
+                - name: budget
+                  type: number
+                - name: start_date
+                  type: date
+                - name: end_date
+                  type: date
+                - name: status
+                  type: select
+                  options:
+                    - Planning
+                    - Active
+                    - Completed
+                    
+        - name: Leads
+          tables:
+            - name: leads
+              columns:
+                - name: id
+                  type: id
+                - name: email
+                  type: email
+                - name: source
+                  type: text
+                - name: status
+                  type: select
+                - name: created_at
+                  type: datetime
+                  
+    - name: Operations
+      description: "Operations data"
+      type: workspace
+      databases:
+        - name: Inventory
+          tables:
+            - name: products
+              columns:
+                - name: id
+                  type: id
+                - name: name
+                  type: text
+                - name: sku
+                  type: text
+                - name: quantity
+                  type: number
+                - name: price
+                  type: number

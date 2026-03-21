@@ -1,0 +1,4 @@
+---
+- name: Docker Compose plugin is al geïnstalleerd met Docker CE
+  ansible.builtin.debug:
+    msg: "Docker Compose plugin is al geïnstalleerd met docker-compose-plugin package"

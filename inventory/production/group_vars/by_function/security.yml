@@ -1,0 +1,637 @@
+---
+# =============================================================================
+# SECURITY TOOLS
+# =============================================================================
+# Functie: security
+# Beschrijving: Tools voor beveiliging, authenticatie, monitoring en compliance
+# =============================================================================
+
+security_tools:
+  # ---------------------------------------------------------------------------
+  # IDENTITY & ACCESS MANAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: Authentik
+    profiel_tag: IT
+    functie_tag: security
+    beschrijving: "Identity Provider (SSO) voor applicaties"
+    categorie: iam
+    docker_image: ghcr.io/goauthentik/server:latest
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - authentik_data:/data
+      - authentik_certs:/certs
+      - authentik_media:/media
+      - authentik_custom_templates:/templates
+    environment:
+      AUTHENTIK_SECRET_KEY: "{{ vault_authentik_secret }}"
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: "{{ vault_authentik_password }}"
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__PORT: 6379
+      AUTHENTIK_EMAIL__HOST: smtp.{{ domain }}
+      AUTHENTIK_EMAIL__PORT: 587
+      AUTHENTIK_EMAIL__USERNAME: authentik@{{ domain }}
+      AUTHENTIK_EMAIL__PASSWORD: "{{ vault_smtp_password }}"
+      AUTHENTIK_EMAIL__USE_TLS: "true"
+      AUTHENTIK_EMAIL__FROM: authentik@{{ domain }}
+    database: postgresql
+    queue: redis
+    url: "https://goauthentik.io"
+    
+  - name: Authelia
+    profiel_tag: IT
+    functie_tag: security
+    beschrijving: "2FA en SSO portaal voor services"
+    categorie: iam
+    docker_image: authelia/authelia:latest
+    ports:
+      - "9091:9091"
+    volumes:
+      - authelia_config:/config
+      - authelia_data:/data
+      - authelia_logs:/var/log/authelia
+    environment:
+      AUTHELIA_JWT_SECRET: "{{ vault_authelia_jwt }}"
+      AUTHELIA_STORAGE_ENCRYPTION_KEY: "{{ vault_authelia_encryption }}"
+      AUTHELIA_SESSION_SECRET: "{{ vault_authelia_session }}"
+      AUTHELIA_DUO_API_SECRET_KEY: "{{ vault_authelia_duo }}"
+      AUTHELIA_NOTIFIER_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    url: "https://www.authelia.com"
+    
+  - name: Keycloak
+    profiel_tag: IT
+    functie_tag: security
+    beschrijving: "Identity Management en SSO"
+    categorie: iam
+    docker_image: quay.io/keycloak/keycloak:latest
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - keycloak_import:/opt/keycloak/import
+      - keycloak_themes:/opt/keycloak/themes
+    environment:
+      KC_HOSTNAME: "auth.{{ domain }}"
+      KC_HOSTNAME_PORT: 443
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: "{{ vault_keycloak_password }}"
+      KC_DB_SCHEMA: public
+      KC_PROXY: edge
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: "{{ vault_keycloak_admin_password }}"
+    database: postgresql
+    url: "https://www.keycloak.org"
+    
+  # ---------------------------------------------------------------------------
+  # PASSWORD MANAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: Bitwarden
+    profiel_tag: Algemeen
+    functie_tag: security
+    beschrijving: "Wachtwoordbeheerder voor teams"
+    categorie: password_manager
+    docker_image: vaultwarden/server:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - bitwarden_data:/data
+    environment:
+      ADMIN_TOKEN: "{{ vault_bitwarden_admin_token }}"
+      SIGNUPS_ALLOWED: "false"
+      INVITATIONS_ALLOWED: "true"
+      DOMAIN: "https://bitwarden.{{ domain }}"
+      DATABASE_URL: "postgresql://bitwarden:{{ vault_bitwarden_password }}@postgres:5432/bitwarden"
+      SMTP_HOST: smtp.{{ domain }}
+      SMTP_PORT: 587
+      SMTP_SSL: "true"
+      SMTP_USERNAME: bitwarden@{{ domain }}
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+      SMTP_FROM: bitwarden@{{ domain }}
+    database: postgresql
+    url: "https://bitwarden.com"
+    
+  - name: Vault
+    profiel_tag: IT
+    functie_tag: security
+    beschrijving: "Secrets management voor applicaties"
+    categorie: secrets
+    docker_image: vault:latest
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    volumes:
+      - vault_data:/vault/data
+      - vault_config:/vault/config
+      - vault_logs:/vault/logs
+    environment:
+      VAULT_LOCAL_CONFIG: |
+        {
+          "storage": {
+            "postgresql": {
+              "connection_url": "postgresql://vault:{{ vault_vault_password }}@postgres:5432/vault?sslmode=disable"
+            }
+          },
+          "listener": {
+            "tcp": {
+              "address": "0.0.0.0:8200",
+              "tls_disable": true
+            }
+          },
+          "ui": true
+        }
+      VAULT_ADDR: "http://127.0.0.1:8200"
+    cap_add:
+      - IPC_LOCK
+    database: postgresql
+    url: "https://www.vaultproject.io"
+    
+  # ---------------------------------------------------------------------------
+  # NETWORK SECURITY
+  # ---------------------------------------------------------------------------
+  - name: Pi-hole
+    profiel_tag: IT
+    functie_tag: security
+    beschrijving: "Netwerkbrede advertentieblocker en DNS"
+    categorie: network_security
+    docker_image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - pihole_config:/etc/pihole
+      - pihole_dnsmasq:/etc/dnsmasq.d
+    environment:
+      TZ: Europe/Amsterdam
+      WEBPASSWORD: "{{ vault_pihole_password }}"
+      PIHOLE_DNS_: "1.1.1.1;8.8.8.8"
+      DNSSEC: "true"
+      CONDITIONAL_FORWARDING: "false"
+    cap_add:
+      - NET_ADMIN
+    url: "https://pi-hole.net"
+    
+  - name: AdGuardHome
+    profiel_tag: IT
+    functie_tag: security
+    beschrijving: "Netwerkbrede advertentieblocker"
+    categorie: network_security
+    docker_image: adguard/adguardhome:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "784:784/udp"
+      - "853:853/tcp"
+      - "3000:3000"
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - adguard_work:/opt/adguardhome/work
+      - adguard_config:/opt/adguardhome/conf
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - NET_BIND_SERVICE
+    url: "https://adguard.com/adguard-home"
+    
+  # ---------------------------------------------------------------------------
+  # ENDPOINT SECURITY
+  # ---------------------------------------------------------------------------
+  - name: Wazuh
+    profiel_tag: Cybersec
+    functie_tag: security
+    beschrijving: "Enterprise EDR/XDR voor endpoint monitoring"
+    categorie: endpoint_security
+    docker_image: wazuh/wazuh-manager:latest
+    ports:
+      - "55000:55000"
+      - "55001:55001"
+      - "55002:55002"
+      - "55003:55003"
+    volumes:
+      - wazuh_data:/var/ossec/data
+      - wazuh_logs:/var/ossec/logs
+      - wazuh_config:/var/ossec/etc
+    environment:
+      WAZUH_MANAGER: "wazuh-manager"
+      WAZUH_REGISTRATION_SERVER: "wazuh-manager"
+      WAZUH_REGISTRATION_PASSWORD: "{{ vault_wazuh_registration }}"
+    url: "https://wazuh.com"
+    
+  - name: Wazuh Indexer
+    profiel_tag: Cybersec
+    functie_tag: security
+    beschrijving: "Elasticsearch cluster voor Wazuh"
+    categorie: endpoint_security
+    docker_image: wazuh/wazuh-indexer:latest
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - wazuh_indexer_data:/usr/share/wazuh-indexer/data
+    environment:
+      cluster.name: wazuh-cluster
+      node.name: wazuh-indexer-01
+      discovery.type: single-node
+      network.host: 0.0.0.0
+      OPENSEARCH_JAVA_OPTS: "-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    url: "https://wazuh.com"
+    
+  - name: Wazuh Dashboard
+    profiel_tag: Cybersec
+    functie_tag: security
+    beschrijving: "Kibana dashboard voor Wazuh"
+    categorie: endpoint_security
+    docker_image: wazuh/wazuh-dashboard:latest
+    ports:
+      - "5601:5601"
+    volumes:
+      - wazuh_dashboard_config:/usr/share/wazuh-dashboard/config
+    environment:
+      OPENSEARCH_HOSTS: '["https://wazuh-indexer:9200"]'
+      OPENSEARCH_SSL_VERIFICATION: "false"
+      WAZUH_MONITORING_HOSTS: '["https://wazuh-indexer:9200"]'
+      INDEXER_USERNAME: admin
+      INDEXER_PASSWORD: "{{ vault_wazuh_indexer_password }}"
+    url: "https://wazuh.com"
+    
+  # ---------------------------------------------------------------------------
+  # THREAT INTELLIGENCE
+  # ---------------------------------------------------------------------------
+  - name: OpenCTI
+    profiel_tag: Cybersec
+    functie_tag: security
+    beschrijving: "Cyber Threat Intelligence platform"
+    categorie: threat_intel
+    docker_image: opencti/platform:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - opencti_data:/opt/opencti/data
+      - opencti_logs:/opt/opencti/logs
+    environment:
+      APP__PORT: 8080
+      APP__BASE_URL: "https://opencti.{{ domain }}"
+      APP__ADMIN__EMAIL: admin@{{ domain }}
+      APP__ADMIN__PASSWORD: "{{ vault_opencti_admin_password }}"
+      APP__ADMIN__TOKEN: "{{ vault_opencti_admin_token }}"
+      ELASTICSEARCH__URL: "http://elasticsearch:9200"
+      MINIO__ENDPOINT: "minio"
+      MINIO__PORT: 9000
+      MINIO__USE_SSL: "false"
+      MINIO__ACCESS_KEY: "minioadmin"
+      MINIO__SECRET_KEY: "{{ vault_minio_password }}"
+      RABBITMQ__HOSTNAME: rabbitmq
+      RABBITMQ__PORT: 5672
+      RABBITMQ__USER: opencti
+      RABBITMQ__PASSWORD: "{{ vault_rabbitmq_password }}"
+      REDIS__HOSTNAME: redis
+      REDIS__PORT: 6379
+    database: elasticsearch
+    queue: rabbitmq
+    cache: redis
+    storage: minio
+    url: "https://www.opencti.io"
+    
+  # ---------------------------------------------------------------------------
+  # VULNERABILITY MANAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: DefectDojo
+    profiel_tag: Cybersec
+    functie_tag: security
+    beschrijving: "Vulnerability management platform"
+    categorie: vulnerability
+    docker_image: defectdojo/defectdojo:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - defectdojo_data:/app/media
+      - defectdojo_static:/app/static
+    environment:
+      DD_DATABASE_URL: "postgresql://defectdojo:{{ vault_defectdojo_password }}@postgres:5432/defectdojo"
+      DD_SECRET_KEY: "{{ vault_defectdojo_secret }}"
+      DD_CREDENTIAL_AES_256_KEY: "{{ vault_defectdojo_aes_key }}"
+      DD_ADMIN_USER: admin
+      DD_ADMIN_PASSWORD: "{{ vault_defectdojo_admin_password }}"
+      DD_ADMIN_MAIL: admin@{{ domain }}
+      DD_PORT: 8080
+    database: postgresql
+    url: "https://defectdojo.com"
+    
+  # ---------------------------------------------------------------------------
+  # INCIDENT RESPONSE
+  # ---------------------------------------------------------------------------
+  - name: TheHive
+    profiel_tag: Cybersec
+    functie_tag: security
+    beschrijving: "Incident Response platform voor security teams"
+    categorie: incident_response
+    docker_image: strangebee/thehive:latest
+    ports:
+      - "9000:9000"
+    volumes:
+      - thehive_data:/opt/thp/data
+      - thehive_index:/opt/thp/index
+      - thehive_files:/opt/thp/files
+    environment:
+      JVM_OPTS: "-Xms2G -Xmx4G"
+      DATABASE_HOST: cassandra
+      DATABASE_KEYSPACE: thehive
+      SEARCH_HOST: elasticsearch
+      SEARCH_INDEX_NAME: thehive
+      SECRET_KEY: "{{ vault_thehive_secret }}"
+    database: cassandra
+    search: elasticsearch
+    url: "https://thehive-project.org"
+    
+  # ---------------------------------------------------------------------------
+  # AI SECURITY
+  # ---------------------------------------------------------------------------
+  - name: Frigate
+    profiel_tag: AI-Ops
+    functie_tag: security
+    beschrijving: "NVR met AI-objectdetectie voor camera's"
+    categorie: ai_security
+    docker_image: ghcr.io/blakeblackshear/frigate:stable
+    ports:
+      - "5000:5000"
+      - "8554:8554"
+      - "8555:8555/tcp"
+      - "8555:8555/udp"
+    volumes:
+      - frigate_config:/config
+      - frigate_media:/media/frigate
+      - frigate_db:/db
+      - /dev/bus/usb:/dev/bus/usb
+      - /dev/dri:/dev/dri
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      FRIGATE_RTSP_PASSWORD: "{{ vault_frigate_rtsp_password }}"
+      PLUS_API_KEY: "{{ vault_frigate_plus_key }}"
+    privileged: true
+    url: "https://frigate.video"
+    
+  - name: DeepStack
+    profiel_tag: AI-Ops
+    functie_tag: security
+    beschrijving: "AI-server voor gezichts- en objectherkenning"
+    categorie: ai_security
+    docker_image: deepquestai/deepstack:latest
+    ports:
+      - "5001:5000"
+    volumes:
+      - deepstack_models:/modelstore
+      - deepstack_temp:/tempstore
+    environment:
+      VISION-DETECTION: "True"
+      VISION-FACE: "True"
+      API-KEY: "{{ vault_deepstack_api_key }}"
+      ADMIN-KEY: "{{ vault_deepstack_admin_key }}"
+    gpu_support: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    url: "https://deepstack.cc"
+    
+  - name: Facebox
+    profiel_tag: AI-Ops
+    functie_tag: security
+    beschrijving: "Gezichtsherkenning via een eenvoudige API"
+    categorie: ai_security
+    docker_image: machinebox/facebox:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - facebox_data:/data
+    environment:
+      MB_KEY: "{{ vault_facebox_key }}"
+      MB_FACEBOX_FACE_MIN_SCORE: "0.7"
+    url: "https://machinebox.io/docs/facebox"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+security_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Authenticatie
+  authentication:
+    session_timeout: 3600
+    max_login_attempts: 5
+    lockout_time: 900
+    password_min_length: 12
+    password_require_upper: true
+    password_require_lower: true
+    password_require_number: true
+    password_require_symbol: true
+    two_factor_auth: true
+    mfa_methods:
+      - totp
+      - webauthn
+      - sms
+      
+  # Autorisatie
+  authorization:
+    rbac_enabled: true
+    default_role: viewer
+    audit_logging: true
+    
+  # Netwerk beveiliging
+  network_security:
+    firewall_enabled: true
+    ids_enabled: true
+    ips_enabled: true
+    vpn_required: false
+    network_segmentation: true
+    
+  # Endpoint beveiliging
+  endpoint_security:
+    antivirus_enabled: true
+    edr_enabled: true
+    vulnerability_scanning: true
+    compliance_checking: true
+    
+  # Threat intelligence
+  threat_intel:
+    feeds_enabled: true
+    update_interval: 1h
+    sharing_enabled: false
+    
+  # Incident response
+  incident_response:
+    sla_critical: 15m
+    sla_high: 1h
+    sla_medium: 4h
+    sla_low: 24h
+    notification_channels:
+      - email
+      - slack
+      - pagerduty
+      
+  # Compliance
+  compliance:
+    standards:
+      - ISO27001
+      - NIST
+      - GDPR
+      - PCI-DSS
+    audit_frequency: quarterly
+    reporting_enabled: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+authentik_config:
+  # Authentik providers
+  providers:
+    - name: oauth2
+      type: oauth2
+      client_id: "{{ vault_authentik_oauth_client }}"
+      client_secret: "{{ vault_authentik_oauth_secret }}"
+      redirect_uris:
+        - "https://app.{{ domain }}/callback"
+        
+    - name: saml
+      type: saml
+      metadata_url: "https://auth.{{ domain }}/saml/metadata"
+      
+    - name: ldap
+      type: ldap
+      server_uri: ldap://openldap:389
+      bind_dn: cn=admin,dc=example,dc=org
+      bind_password: "{{ vault_ldap_password }}"
+      
+  # Authentik applications
+  applications:
+    - name: Nextcloud
+      slug: nextcloud
+      provider: oauth2
+      meta_launch_url: "https://nextcloud.{{ domain }}"
+      meta_icon: /static/nextcloud.png
+      
+    - name: GitLab
+      slug: gitlab
+      provider: oauth2
+      meta_launch_url: "https://gitlab.{{ domain }}"
+      
+    - name: Grafana
+      slug: grafana
+      provider: oauth2
+      meta_launch_url: "https://grafana.{{ domain }}"
+      
+  # Authentik policies
+  policies:
+    - name: require-2fa
+      execution_mode: any
+      policy:
+        type: expression
+        expression: "request.user.attributes.get('2fa_enabled', False)"
+        
+    - name: admin-access
+      execution_mode: any
+      policy:
+        type: expression
+        expression: "'admin' in request.user.attributes.get('groups', [])"
+
+vault_config:
+  # Vault mounts
+  mounts:
+    - path: secret/
+      type: kv-v2
+      description: "Key-Value secrets"
+      
+    - path: database/
+      type: database
+      description: "Database credentials"
+      
+    - path: transit/
+      type: transit
+      description: "Encryption as a service"
+      
+  # Vault policies
+  policies:
+    - name: admin
+      rules: |
+        path "*" {
+          capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+        }
+        
+    - name: developer
+      rules: |
+        path "secret/data/dev/*" {
+          capabilities = ["create", "read", "update", "delete"]
+        }
+        path "database/creds/dev-*" {
+          capabilities = ["read"]
+        }
+        
+    - name: readonly
+      rules: |
+        path "secret/data/*" {
+          capabilities = ["read", "list"]
+        }
+        
+  # Vault auth methods
+  auth_methods:
+    - name: token
+      type: token
+      
+    - name: approle
+      type: approle
+      
+    - name: ldap
+      type: ldap
+      config:
+        url: ldap://openldap:389
+        userdn: ou=users,dc=example,dc=org
+        groupdn: ou=groups,dc=example,dc=org
+        
+  # Vault secrets engines
+  secrets_engines:
+    - name: database
+      type: database
+      connections:
+        - name: postgres
+          plugin_name: postgresql-database-plugin
+          connection_url: "postgresql://{{username}}:{{password}}@postgres:5432/postgres"
+          allowed_roles: ["*"]
+          
+    - name: transit
+      type: transit
+      
+  # Vault roles
+  roles:
+    - name: postgres-app
+      type: database
+      db_name: postgres
+      creation_statements:
+        - "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'"
+        - "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO \"{{name}}\""
+      default_ttl: "1h"
+      max_ttl: "24h"

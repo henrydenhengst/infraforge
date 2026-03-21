@@ -1,0 +1,21 @@
+---
+- name: Run Traefik container
+  ansible.builtin.docker_container:
+    name: traefik
+    image: traefik:latest
+    restart_policy: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/traefik:/etc/traefik:ro
+      - /var/lib/traefik:/var/lib/traefik
+      - /var/log/traefik:/var/log/traefik
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.api.rule: "Host(`traefik.{{ domain }}`)"
+      traefik.http.routers.api.service: "api@internal"
+  tags: [docker]

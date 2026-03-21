@@ -1,0 +1,137 @@
+---
+# =============================================================================
+# DEPLOY TOOLS
+# =============================================================================
+# Functie: deploy
+# Beschrijving: Tools voor infrastructure deployment, container orchestration en CI/CD
+# =============================================================================
+
+deploy_tools:
+  # ---------------------------------------------------------------------------
+  # INFRASTRUCTURE AS CODE
+  # ---------------------------------------------------------------------------
+  - name: OpenTofu
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "Open-source Infrastructure as Code (Terraform fork)"
+    categorie: iac
+    cli_tool: true
+    url: "https://opentofu.org"
+    providers:
+      - AWS
+      - Azure
+      - Google Cloud
+      - Kubernetes
+      - Docker
+      - Helm
+      - Random
+      - Null
+      
+  - name: Terraform
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "Infrastructure as Code tool (Hashicorp)"
+    categorie: iac
+    cli_tool: true
+    url: "https://www.terraform.io"
+    
+  - name: Ansible
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "Configuration management en automation"
+    categorie: config_management
+    cli_tool: true
+    url: "https://www.ansible.com"
+    
+  # ---------------------------------------------------------------------------
+  # CONTAINER ORCHESTRATION
+  # ---------------------------------------------------------------------------
+  - name: Kubernetes
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "Container orchestration platform"
+    categorie: orchestration
+    orchestratie: kubernetes
+    url: "https://kubernetes.io"
+    
+  - name: Helm
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "Kubernetes package manager voor applicaties en charts"
+    categorie: kubernetes
+    cli_tool: true
+    url: "https://helm.sh"
+    repositories:
+      - stable
+      - ingress-nginx
+      - jetstack
+      - prometheus-community
+      - grafana
+    commands:
+      - helm install
+      - helm upgrade
+      - helm rollback
+      - helm uninstall
+      
+  - name: Nomad
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "Workload orchestrator"
+    categorie: orchestration
+    docker_image: hashicorp/nomad:latest
+    ports:
+      - "4646:4646"
+    url: "https://www.nomadproject.io"
+    
+  - name: Docker Swarm
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "Docker Swarm orchestratie"
+    categorie: orchestration
+    docker_image: docker:latest
+    url: "https://docs.docker.com/engine/swarm"
+    
+  # ---------------------------------------------------------------------------
+  # DEPLOYMENT AUTOMATION
+  # ---------------------------------------------------------------------------
+  - name: ArgoCD
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "GitOps voor Kubernetes"
+    categorie: gitops
+    docker_image: argoproj/argocd:latest
+    ports:
+      - "8082:8080"
+    orchestratie: kubernetes
+    url: "https://argoproj.github.io/cd"
+    
+  - name: Drone
+    profiel_tag: DevOps
+    functie_tag: deploy
+    beschrijving: "Container-based CI/CD"
+    categorie: ci_cd
+    docker_image: drone/drone:latest
+    ports:
+      - "8081:80"
+    url: "https://drone.io"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+deploy_defaults:
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  iac:
+    workspace: /opt/opentofu/workspace
+    state_backend: local
+    plan_on_apply: true
+    
+  kubernetes:
+    namespace: default
+    context: current
+    helm_repositories:
+      - name: stable
+        url: https://charts.helm.sh/stable

@@ -1,0 +1,422 @@
+---
+# =============================================================================
+# LLM TOOLS (LARGE LANGUAGE MODELS)
+# =============================================================================
+# Functie: llm
+# Beschrijving: Tools voor het draaien, beheren en gebruiken van grote taalmodellen
+# =============================================================================
+
+llm_tools:
+  # ---------------------------------------------------------------------------
+  # LLM SERVERS
+  # ---------------------------------------------------------------------------
+  - name: Ollama
+    profiel_tag: AI-Ops
+    functie_tag: llm
+    beschrijving: "Lokale runner voor grote taalmodellen (Llama 3, Mistral, Phi)"
+    categorie: llm_server
+    docker_image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+      - ollama_logs:/root/logs
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+      OLLAMA_ORIGINS: "*"
+      OLLAMA_MODELS: /root/.ollama/models
+      OLLAMA_KEEP_ALIVE: "5m"
+      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_MAX_LOADED_MODELS: 1
+    gpu_support: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    url: "https://ollama.ai"
+    
+  - name: LocalAI
+    profiel_tag: AI-Ops
+    functie_tag: api
+    beschrijving: "Open-source OpenAI-compatibele API voor lokale modellen"
+    categorie: llm_server
+    docker_image: quay.io/go-skynet/local-ai:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - localai_models:/models
+      - localai_images:/tmp/generated/images
+      - localai_config:/config
+    environment:
+      THREADS: "{{ ansible_processor_cores }}"
+      CONTEXT_SIZE: 512
+      DEBUG: "false"
+      MODELS_PATH: /models
+      IMAGE_PATH: /tmp/generated/images
+      GALLERIES: |
+        [
+          {
+            "name": "model-gallery",
+            "url": "github:go-skynet/model-gallery/index.yaml"
+          }
+        ]
+    gpu_support: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    url: "https://localai.io"
+    
+  - name: TextSynth
+    profiel_tag: AI-Ops
+    functie_tag: llm
+    beschrijving: "Lichtgewicht server voor tekstgeneratie modellen"
+    categorie: llm_server
+    docker_image: textsynth/textsynth:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - textsynth_models:/models
+      - textsynth_cache:/cache
+    environment:
+      TEXTSYNTH_MODELS_PATH: /models
+      TEXTSYNTH_CACHE_PATH: /cache
+      TEXTSYNTH_THREADS: "{{ ansible_processor_cores }}"
+      TEXTSYNTH_PORT: 8080
+    gpu_support: true
+    url: "https://textsynth.com"
+    
+  # ---------------------------------------------------------------------------
+  # RAG SYSTEMS
+  # ---------------------------------------------------------------------------
+  - name: AnythingLLM
+    profiel_tag: AI-Ops
+    functie_tag: llm
+    beschrijving: "Enterprise-grade RAG-systeem om documenten te chatten"
+    categorie: rag
+    docker_image: mintplexlabs/anythingllm:latest
+    ports:
+      - "3001:3001"
+    volumes:
+      - anythingllm_data:/app/server/storage
+      - anythingllm_documents:/app/server/storage/documents
+      - anythingllm_collections:/app/server/storage/vector-cache
+    environment:
+      JWT_SECRET: "{{ vault_anythingllm_jwt }}"
+      LLM_PROVIDER: ollama
+      OLLAMA_BASE_PATH: http://ollama:11434
+      OLLAMA_MODEL: llama3
+      EMBEDDING_ENGINE: native
+      VECTOR_DB: chroma
+      CHROMA_ENDPOINT: http://chromadb:8000
+      STORAGE_DIR: /app/server/storage
+    database: sqlite
+    url: "https://anythingllm.com"
+    
+  - name: PrivateGPT
+    profiel_tag: AI-Ops
+    functie_tag: llm
+    beschrijving: "Chat met je documenten zonder dat data je server verlaat"
+    categorie: rag
+    docker_image: private-gpt/private-gpt:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - privategpt_data:/app/data
+      - privategpt_documents:/app/documents
+      - privategpt_models:/app/models
+    environment:
+      PGPT_PROFILES: local
+      PGPT_MODELS_PATH: /app/models
+      PGPT_DATA_PATH: /app/data
+      PGPT_EMBEDDING_MODEL: all-MiniLM-L6-v2
+      PGPT_LLM_MODEL: llama3
+      PGPT_LLM_API_BASE: http://ollama:11434
+    gpu_support: true
+    url: "https://docs.privategpt.dev"
+    
+  # ---------------------------------------------------------------------------
+  # WEB INTERFACES
+  # ---------------------------------------------------------------------------
+  - name: Open-WebUI
+    profiel_tag: AI-Ops
+    functie_tag: ui
+    beschrijving: "ChatGPT-stijl interface voor lokaal gehoste LLM's"
+    categorie: web_ui
+    docker_image: ghcr.io/open-webui/open-webui:latest
+    ports:
+      - "3000:8080"
+    volumes:
+      - openwebui_data:/app/backend/data
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      WEBUI_SECRET_KEY: "{{ vault_openwebui_secret }}"
+      WEBUI_AUTH: "true"
+      WEBUI_NAME: "AI Assistant"
+      ENABLE_SIGNUP: "false"
+      DEFAULT_MODELS: llama3,mistral,phi
+    url: "https://github.com/open-webui/open-webui"
+    
+  - name: Danswer
+    profiel_tag: AI-Ops
+    functie_tag: search
+    beschrijving: "Enterprise AI-zoekmachine die al je bedrijfsbronnen koppelt"
+    categorie: search_ui
+    docker_image: danswer/danswer:latest
+    ports:
+      - "3002:3000"
+    volumes:
+      - danswer_data:/var/lib/danswer
+      - danswer_index:/var/lib/danswer/index
+    environment:
+      SECRET_KEY: "{{ vault_danswer_secret }}"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: danswer
+      POSTGRES_PASSWORD: "{{ vault_danswer_db_password }}"
+      POSTGRES_DB: danswer
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OLLAMA_API_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3
+      EMBEDDING_MODEL: all-MiniLM-L6-v2
+    database: postgresql
+    queue: redis
+    url: "https://danswer.ai"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+llm_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # LLM instellingen
+  llm:
+    default_model: llama3
+    default_temperature: 0.7
+    default_max_tokens: 2048
+    default_top_p: 0.9
+    default_top_k: 40
+    
+  # Embedding instellingen
+  embedding:
+    default_model: all-MiniLM-L6-v2
+    chunk_size: 500
+    chunk_overlap: 50
+    
+  # RAG instellingen
+  rag:
+    chunk_size: 1000
+    chunk_overlap: 200
+    similarity_top_k: 5
+    rerank_enabled: true
+    rerank_model: cross-encoder/ms-marco-MiniLM-L-6-v2
+    
+  # Vector databases
+  vector_db:
+    default: chroma
+    chroma_host: chromadb
+    chroma_port: 8000
+    qdrant_host: qdrant
+    qdrant_port: 6333
+    
+  # GPU instellingen
+  gpu:
+    enabled: true
+    device_ids: "0"
+    memory_limit: "8Gi"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+ollama_config:
+  # Ollama modellen
+  models:
+    - name: llama3
+      description: "Meta Llama 3 8B"
+      parameters: 8B
+      context_length: 8192
+      url: "ollama/library/llama3:latest"
+      
+    - name: mistral
+      description: "Mistral 7B"
+      parameters: 7B
+      context_length: 8192
+      url: "ollama/library/mistral:latest"
+      
+    - name: phi
+      description: "Microsoft Phi-2"
+      parameters: 2.7B
+      context_length: 2048
+      url: "ollama/library/phi:latest"
+      
+    - name: codellama
+      description: "Code Llama 7B"
+      parameters: 7B
+      context_length: 16384
+      url: "ollama/library/codellama:latest"
+      
+    - name: llama2-uncensored
+      description: "Llama 2 Uncensored"
+      parameters: 7B
+      context_length: 4096
+      url: "ollama/library/llama2-uncensored:latest"
+      
+  # Ollama model aliases
+  aliases:
+    - name: default
+      model: llama3
+    - name: code
+      model: codellama
+    - name: fast
+      model: phi
+      
+  # Ollama model pulls
+  pulls:
+    - llama3:latest
+    - mistral:latest
+    - phi:latest
+    - codellama:latest
+
+localai_config:
+  # LocalAI model gallery
+  models:
+    - name: llama-3-8b-instruct
+      description: "Llama 3 8B Instruct"
+      parameters:
+        backend: llama
+        type: GGUF
+        model: llama-3-8b-instruct.Q4_K_M.gguf
+        context_size: 8192
+        
+    - name: mistral-7b-instruct
+      description: "Mistral 7B Instruct"
+      parameters:
+        backend: llama
+        type: GGUF
+        model: mistral-7b-instruct-v0.2.Q4_K_M.gguf
+        context_size: 8192
+        
+    - name: phi-2
+      description: "Phi-2"
+      parameters:
+        backend: llama
+        type: GGUF
+        model: phi-2.Q4_K_M.gguf
+        context_size: 2048
+        
+  # LocalAI API endpoints
+  endpoints:
+    - path: /v1/completions
+      model: llama-3-8b-instruct
+    - path: /v1/chat/completions
+      model: mistral-7b-instruct
+    - path: /v1/embeddings
+      model: all-MiniLM-L6-v2
+      
+  # LocalAI backend configuratie
+  backend_config:
+    threads: "{{ ansible_processor_cores }}"
+    context_size: 2048
+    f16: true
+    gpu_layers: 35
+    mmap: true
+    mlock: true
+    low_vram: false
+    embeddings: true
+
+anythingllm_config:
+  # AnythingLLM workspaces
+  workspaces:
+    - name: Algemeen
+      description: "Algemene documenten"
+      vector_db: chroma
+      embedding_model: all-MiniLM-L6-v2
+      llm_model: llama3
+      temperature: 0.7
+      
+    - name: Technisch
+      description: "Technische documentatie"
+      vector_db: chroma
+      embedding_model: all-MiniLM-L6-v2
+      llm_model: codellama
+      temperature: 0.3
+      
+    - name: Personeel
+      description: "HR documenten"
+      vector_db: chroma
+      embedding_model: all-MiniLM-L6-v2
+      llm_model: llama3
+      temperature: 0.5
+      
+  # AnythingLLM documenten
+  documents:
+    - name: Huishoudelijk Reglement
+      path: /documents/huishoudelijk_reglement.pdf
+      workspace: Personeel
+    - name: API Documentatie
+      path: /documents/api_docs.md
+      workspace: Techniek
+    - name: Jaarverslag 2023
+      path: /documents/jaarverslag_2023.pdf
+      workspace: Algemeen
+      
+  # AnythingLLM gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_anythingllm_admin_password }}"
+      role: admin
+    - username: user
+      email: user@{{ domain }}
+      password: "{{ vault_anythingllm_user_password }}"
+      role: user
+
+openwebui_config:
+  # Open-WebUI gebruikers
+  users:
+    - name: Admin
+      email: admin@{{ domain }}
+      password: "{{ vault_openwebui_admin_password }}"
+      role: admin
+      
+  # Open-WebUI modellen
+  models:
+    - name: Llama 3
+      model: llama3
+      description: "Algemeen model voor chat"
+      max_tokens: 4096
+      temperature: 0.7
+    - name: Code Llama
+      model: codellama
+      description: "Model voor code"
+      max_tokens: 8192
+      temperature: 0.3
+    - name: Mistral
+      model: mistral
+      description: "Snel model"
+      max_tokens: 2048
+      temperature: 0.8
+      
+  # Open-WebUI functies
+  features:
+    markdown: true
+    latex: true
+    code_highlight: true
+    chat_history: true
+    prompt_templates: true
+    multi_modal: false
+    web_search: true
+    web_search_engine: searxng
+    web_search_url: http://searxng:8080

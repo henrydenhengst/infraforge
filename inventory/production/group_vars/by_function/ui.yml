@@ -1,0 +1,381 @@
+---
+# =============================================================================
+# UI TOOLS (USER INTERFACE DASHBOARDS)
+# =============================================================================
+# Functie: ui
+# Beschrijving: Tools voor startpagina's, dashboards en gebruikersinterfaces
+# =============================================================================
+
+ui_tools:
+  # ---------------------------------------------------------------------------
+  # START PAGINA'S
+  # ---------------------------------------------------------------------------
+  - name: Dashboard
+    profiel_tag: Algemeen
+    functie_tag: ui
+    beschrijving: "Centrale startpagina voor al je applicaties"
+    categorie: homepage
+    docker_image: phntxx/dashboard:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - dashboard_config:/app/config
+      - dashboard_icons:/app/icons
+    environment:
+      DASHBOARD_TITLE: "{{ company_name }} Dashboard"
+      DASHBOARD_HEADER: "Welkom"
+      DASHBOARD_FOOTER: "© {{ year }} {{ company_name }}"
+    url: "https://github.com/phntxx/dashboard"
+    
+  - name: Heimdall
+    profiel_tag: Algemeen
+    functie_tag: ui
+    beschrijving: "Applicatie-dashboard voor snelle toegang"
+    categorie: homepage
+    docker_image: linuxserver/heimdall:latest
+    ports:
+      - "8081:80"
+      - "8082:443"
+    volumes:
+      - heimdall_config:/config
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://heimdall.site"
+    
+  - name: Homer
+    profiel_tag: Algemeen
+    functie_tag: ui
+    beschrijving: "Eenvoudig en statisch service-dashboard"
+    categorie: homepage
+    docker_image: b4bz/homer:latest
+    ports:
+      - "8083:8080"
+    volumes:
+      - homer_assets:/www/assets
+      - homer_config:/www/config.yml
+    environment:
+      HOMER_TITLE: "{{ company_name }} Services"
+      HOMER_SUBTITLE: "Toegang tot al je applicaties"
+      HOMER_FOOTER: "© {{ year }} {{ company_name }}"
+    url: "https://github.com/bastienwirtz/homer"
+    
+  - name: Dashy
+    profiel_tag: IT
+    functie_tag: ui
+    beschrijving: "Modern home lab dashboard met veel functies"
+    categorie: homepage
+    docker_image: lissy93/dashy:latest
+    ports:
+      - "8084:80"
+    volumes:
+      - dashy_config:/app/public/conf.yml
+      - dashy_icons:/app/public/item-icons
+    environment:
+      NODE_ENV: production
+      UID: 1000
+      GID: 1000
+    url: "https://dashy.to"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+ui_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Dashboard stijl
+  style:
+    theme: dark
+    primary_color: "#2196F3"
+    secondary_color: "#4CAF50"
+    background_color: "#1a1a1a"
+    text_color: "#ffffff"
+    accent_color: "#ff4081"
+    
+  # Logo en branding
+  branding:
+    logo: /assets/logo.png
+    favicon: /assets/favicon.ico
+    company_name: "{{ company_name }}"
+    company_url: "https://{{ domain }}"
+    
+  # Secties
+  sections:
+    - name: Algemeen
+      icon: home
+    - name: Productiviteit
+      icon: briefcase
+    - name: Media
+      icon: film
+    - name: Ontwikkeling
+      icon: code
+    - name: Monitoring
+      icon: activity
+    - name: Systeem
+      icon: server
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+dashboard_config:
+  # Dashboard items
+  items:
+    # Algemeen
+    - name: Nextcloud
+      url: https://nextcloud.{{ domain }}
+      icon: nextcloud
+      category: Algemeen
+      description: "Bestanden en documenten"
+      
+    - name: GitLab
+      url: https://gitlab.{{ domain }}
+      icon: gitlab
+      category: Ontwikkeling
+      description: "Code repository"
+      
+    - name: Mattermost
+      url: https://mattermost.{{ domain }}
+      icon: mattermost
+      category: Algemeen
+      description: "Team chat"
+      
+    # Media
+    - name: Jellyfin
+      url: https://jellyfin.{{ domain }}
+      icon: jellyfin
+      category: Media
+      description: "Films en series"
+      
+    - name: Plex
+      url: https://plex.{{ domain }}
+      icon: plex
+      category: Media
+      description: "Mediaserver"
+      
+    - name: Navidrome
+      url: https://navidrome.{{ domain }}
+      icon: music
+      category: Media
+      description: "Muziek"
+      
+    # Monitoring
+    - name: Grafana
+      url: https://grafana.{{ domain }}
+      icon: grafana
+      category: Monitoring
+      description: "Dashboards"
+      
+    - name: Prometheus
+      url: https://prometheus.{{ domain }}
+      icon: prometheus
+      category: Monitoring
+      description: "Metrics"
+      
+    - name: Uptime Kuma
+      url: https://uptime.{{ domain }}
+      icon: uptime
+      category: Monitoring
+      description: "Uptime monitoring"
+      
+    # Systeem
+    - name: Portainer
+      url: https://portainer.{{ domain }}
+      icon: portainer
+      category: Systeem
+      description: "Container beheer"
+      
+    - name: Traefik
+      url: https://traefik.{{ domain }}
+      icon: traefik
+      category: Systeem
+      description: "Reverse proxy"
+      
+    - name: Authentik
+      url: https://auth.{{ domain }}
+      icon: authentik
+      category: Systeem
+      description: "Authenticatie"
+
+heimdall_config:
+  # Heimdall items
+  items:
+    - title: Nextcloud
+      description: "Bestanden en documenten"
+      url: https://nextcloud.{{ domain }}
+      type: self
+      color: "#0082c9"
+      
+    - title: GitLab
+      description: "Code repository"
+      url: https://gitlab.{{ domain }}
+      type: self
+      color: "#fc6d26"
+      
+    - title: Jellyfin
+      description: "Films en series"
+      url: https://jellyfin.{{ domain }}
+      type: self
+      color: "#aa5cc3"
+      
+  # Heimdall apps
+  apps:
+    - name: Nextcloud
+      colour: "#0082c9"
+      icon: fa-cloud
+      url: https://nextcloud.{{ domain }}
+      enabled: true
+      
+    - name: GitLab
+      colour: "#fc6d26"
+      icon: fa-gitlab
+      url: https://gitlab.{{ domain }}
+      enabled: true
+      
+  # Heimdall layout
+  layout:
+    columns: 4
+    gap: 20
+    padding: 20
+
+homer_config:
+  # Homer items
+  services:
+    - name: "Algemeen"
+      icon: "fas fa-cloud"
+      items:
+        - name: "Nextcloud"
+          logo: "assets/tools/nextcloud.png"
+          subtitle: "Bestanden en documenten"
+          url: "https://nextcloud.{{ domain }}"
+          target: "_blank"
+          
+        - name: "GitLab"
+          logo: "assets/tools/gitlab.png"
+          subtitle: "Code repository"
+          url: "https://gitlab.{{ domain }}"
+          target: "_blank"
+          
+    - name: "Media"
+      icon: "fas fa-film"
+      items:
+        - name: "Jellyfin"
+          logo: "assets/tools/jellyfin.png"
+          subtitle: "Films en series"
+          url: "https://jellyfin.{{ domain }}"
+          target: "_blank"
+          
+        - name: "Navidrome"
+          logo: "assets/tools/navidrome.png"
+          subtitle: "Muziek"
+          url: "https://navidrome.{{ domain }}"
+          target: "_blank"
+          
+    - name: "Monitoring"
+      icon: "fas fa-chart-line"
+      items:
+        - name: "Grafana"
+          logo: "assets/tools/grafana.png"
+          subtitle: "Dashboards"
+          url: "https://grafana.{{ domain }}"
+          target: "_blank"
+          
+        - name: "Uptime Kuma"
+          logo: "assets/tools/uptime.png"
+          subtitle: "Uptime monitoring"
+          url: "https://uptime.{{ domain }}"
+          target: "_blank"
+          
+  # Homer styling
+  stylesheet:
+    - "assets/custom.css"
+    
+  # Homer header
+  header:
+    title: "{{ company_name }} Services"
+    subtitle: "Toegang tot al je applicaties"
+    logo: "assets/logo.png"
+    
+  # Homer footer
+  footer: '<p>© {{ year }} {{ company_name }} | <a href="https://{{ domain }}">{{ domain }}</a></p>'
+
+dashy_config:
+  # Dashy configuratie
+  pageInfo:
+    title: "{{ company_name }} Dashboard"
+    description: "Centrale toegang tot al je applicaties"
+    navLinks:
+      - title: GitHub
+        path: https://github.com/{{ github_username }}
+      - title: Documentatie
+        path: https://docs.{{ domain }}
+        
+  # Dashy thema's
+  theme: dark
+  customColors:
+    primary: "#2196F3"
+    background: "#1a1a1a"
+    
+  # Dashy secties
+  sections:
+    - name: "Algemeen"
+      icon: "fas fa-home"
+      items:
+        - title: "Nextcloud"
+          description: "Bestanden en documenten"
+          url: "https://nextcloud.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/nextcloud.svg"
+          
+        - title: "GitLab"
+          description: "Code repository"
+          url: "https://gitlab.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/gitlab.svg"
+          
+    - name: "Media"
+      icon: "fas fa-film"
+      items:
+        - title: "Jellyfin"
+          description: "Films en series"
+          url: "https://jellyfin.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/jellyfin.svg"
+          
+        - title: "Navidrome"
+          description: "Muziek"
+          url: "https://navidrome.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/navidrome.svg"
+          
+    - name: "Monitoring"
+      icon: "fas fa-chart-line"
+      items:
+        - title: "Grafana"
+          description: "Dashboards"
+          url: "https://grafana.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/grafana.svg"
+          
+        - title: "Uptime Kuma"
+          description: "Uptime monitoring"
+          url: "https://uptime.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/uptime-kuma.svg"
+          
+    - name: "Systeem"
+      icon: "fas fa-server"
+      items:
+        - title: "Portainer"
+          description: "Container beheer"
+          url: "https://portainer.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/portainer.svg"
+          
+        - title: "Traefik"
+          description: "Reverse proxy"
+          url: "https://traefik.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/traefik.svg"
+          
+        - title: "Authentik"
+          description: "Authenticatie"
+          url: "https://auth.{{ domain }}"
+          icon: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/authentik.svg"

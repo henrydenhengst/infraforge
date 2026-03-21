@@ -1,0 +1,601 @@
+---
+# =============================================================================
+# DEVELOPMENT TOOLS
+# =============================================================================
+# Functie: dev-tool
+# Beschrijving: Tools voor softwareontwikkeling, IDE's, frameworks en utilities
+# =============================================================================
+
+dev_tools:
+  # ---------------------------------------------------------------------------
+  # DATA SCIENCE & ML PLATFORMS
+  # ---------------------------------------------------------------------------
+  - name: JupyterHub
+    profiel_tag: AI-Data
+    functie_tag: dev-tool
+    beschrijving: "Multi-user platform voor Data Science en Python notebooks"
+    categorie: data_science
+    docker_image: jupyterhub/jupyterhub:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - jupyterhub_data:/srv/jupyterhub/data
+      - jupyterhub_user_data:/home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      JUPYTERHUB_CRYPT_KEY: "{{ vault_jupyterhub_crypt_key }}"
+      JUPYTERHUB_ADMIN_USER: admin
+      JUPYTERHUB_ADMIN_PASSWORD: "{{ vault_jupyterhub_admin_password }}"
+      OAUTH_CLIENT_ID: "{{ vault_oauth_client_id }}"
+      OAUTH_CLIENT_SECRET: "{{ vault_oauth_client_secret }}"
+    database: postgresql
+    url: "https://jupyter.org/hub"
+    
+  - name: MLflow
+    profiel_tag: AI-Data
+    functie_tag: dev-tool
+    beschrijving: "Platform voor het beheren van de Machine Learning lifecycle"
+    categorie: mlops
+    docker_image: mlflow/mlflow:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+      - mlflow_models:/mlflow/models
+    environment:
+      MLFLOW_TRACKING_URI: "postgresql://mlflow:{{ vault_mlflow_password }}@postgres:5432/mlflow"
+      MLFLOW_ARTIFACT_ROOT: "/mlflow/artifacts"
+      MLFLOW_S3_ENDPOINT_URL: "http://minio:9000"
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: "{{ vault_minio_password }}"
+    database: postgresql
+    storage: minio
+    url: "https://mlflow.org"
+    
+  - name: Weights-Biases
+    profiel_tag: AI-Data
+    functie_tag: dev-tool
+    beschrijving: "Tracking van machine learning experimenten"
+    categorie: mlops
+    docker_image: wandb/local:latest
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - wandb_data:/vol
+    environment:
+      WANDB_BASE_URL: "https://wandb.{{ domain }}"
+      WANDB_API_KEY: "{{ vault_wandb_api_key }}"
+      WANDB_USERNAME: admin
+      WANDB_PASSWORD: "{{ vault_wandb_password }}"
+    url: "https://wandb.ai"
+    
+  # ---------------------------------------------------------------------------
+  # LOW-CODE PLATFORMS
+  # ---------------------------------------------------------------------------
+  - name: Appsmith
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Low-code platform voor interne tools"
+    categorie: low_code
+    docker_image: appsmith/appsmith-ce:latest
+    ports:
+      - "8082:80"
+      - "8083:443"
+    volumes:
+      - appsmith_data:/appsmith-stacks
+    environment:
+      APPSMITH_ENCRYPTION_PASSWORD: "{{ vault_appsmith_password }}"
+      APPSMITH_ENCRYPTION_SALT: "{{ vault_appsmith_salt }}"
+      APPSMITH_GOOGLE_CLIENT_ID: "{{ vault_google_client_id }}"
+      APPSMITH_GOOGLE_CLIENT_SECRET: "{{ vault_google_client_secret }}"
+    url: "https://www.appsmith.com"
+    
+  - name: Appsmith-AI
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Admin-panels bouwen met geïntegreerde AI"
+    categorie: low_code
+    docker_image: appsmith/appsmith-ee:latest
+    ports:
+      - "8084:80"
+    volumes:
+      - appsmith_ai_data:/appsmith-stacks
+    environment:
+      APPSMITH_AI_ENABLED: "true"
+      OPENAI_API_KEY: "{{ vault_openai_key }}"
+      APPSMITH_ENCRYPTION_PASSWORD: "{{ vault_appsmith_ai_password }}"
+    url: "https://www.appsmith.com/ai"
+    
+  - name: Budibase
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Low-code platform voor interne applicaties"
+    categorie: low_code
+    docker_image: budibase/budibase:latest
+    ports:
+      - "8085:80"
+    volumes:
+      - budibase_data:/data
+    environment:
+      BUDIBASE_COUCHDB_USER: admin
+      BUDIBASE_COUCHDB_PASSWORD: "{{ vault_budibase_couch_password }}"
+      BUDIBASE_MINIO_ACCESS_KEY: minioadmin
+      BUDIBASE_MINIO_SECRET_KEY: "{{ vault_minio_password }}"
+      BUDIBASE_REDIS_PASSWORD: "{{ vault_redis_password }}"
+    database: couchdb
+    storage: minio
+    queue: redis
+    url: "https://budibase.com"
+    
+  - name: Budibase-AI
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Interne tools genereren met AI-ondersteuning"
+    categorie: low_code
+    docker_image: budibase/budibase:latest
+    ports:
+      - "8086:80"
+    volumes:
+      - budibase_ai_data:/data
+    environment:
+      BUDIBASE_AI_ENABLED: "true"
+      AI_PROVIDER: "openai"
+      AI_API_KEY: "{{ vault_openai_key }}"
+    url: "https://budibase.com"
+    
+  - name: ToolJet
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Low-code framework voor interne zakelijke applicaties"
+    categorie: low_code
+    docker_image: tooljet/tooljet-ce:latest
+    ports:
+      - "8087:80"
+    volumes:
+      - tooljet_data:/var/lib/tooljet
+    environment:
+      TOOLJET_SECRET: "{{ vault_tooljet_secret }}"
+      TOOLJET_DB_HOST: postgres
+      TOOLJET_DB_USER: tooljet
+      TOOLJET_DB_PASSWORD: "{{ vault_tooljet_db_password }}"
+      TOOLJET_DB_NAME: tooljet
+    database: postgresql
+    url: "https://tooljet.com"
+    
+  - name: Appwrite
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Backend-as-a-service voor app-ontwikkelaars"
+    categorie: backend
+    docker_image: appwrite/appwrite:latest
+    ports:
+      - "8088:80"
+      - "8089:443"
+    volumes:
+      - appwrite_data:/storage
+      - appwrite_config:/appwrite/config
+    environment:
+      _APP_OPENSSL_KEY_V1: "{{ vault_appwrite_key }}"
+      _APP_DOMAIN: "appwrite.{{ domain }}"
+      _APP_DOMAIN_TARGET: "appwrite.{{ domain }}"
+      _APP_REDIS_HOST: redis
+      _APP_REDIS_PORT: 6379
+      _APP_DB_HOST: mariadb
+      _APP_DB_PORT: 3306
+      _APP_DB_USER: appwrite
+      _APP_DB_PASS: "{{ vault_appwrite_db_password }}"
+      _APP_DB_SCHEMA: appwrite
+    database: mariadb
+    queue: redis
+    url: "https://appwrite.io"
+    
+  # ---------------------------------------------------------------------------
+  # WEB DEVELOPMENT
+  # ---------------------------------------------------------------------------
+  - name: NodeJS
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "JavaScript runtime voor server-side development"
+    categorie: runtime
+    docker_image: node:18-alpine
+    ports:
+      - "3000:3000"
+    volumes:
+      - node_app:/app
+    working_dir: /app
+    command: "npm start"
+    url: "https://nodejs.org"
+    
+  - name: NPM
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Node package manager voor JavaScript"
+    categorie: package_manager
+    docker_image: node:18-alpine
+    volumes:
+      - node_app:/app
+    working_dir: /app
+    entrypoint: ["npm"]
+    url: "https://www.npmjs.com"
+    
+  - name: Python
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Python programmeertaal voor data en web"
+    categorie: runtime
+    docker_image: python:3.11-slim
+    volumes:
+      - python_app:/app
+    working_dir: /app
+    command: "python app.py"
+    url: "https://www.python.org"
+    
+  - name: PHP
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Web-scripttaal voor dynamische websites"
+    categorie: runtime
+    docker_image: php:8.2-apache
+    ports:
+      - "8090:80"
+    volumes:
+      - php_app:/var/www/html
+    url: "https://www.php.net"
+    
+  - name: Java-OpenJDK
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Java runtime voor enterprise applicaties"
+    categorie: runtime
+    docker_image: openjdk:17-slim
+    volumes:
+      - java_app:/app
+    working_dir: /app
+    command: "java -jar app.jar"
+    url: "https://openjdk.org"
+    
+  - name: Ruby
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Ruby programmeertaal voor webontwikkeling"
+    categorie: runtime
+    docker_image: ruby:3.2-slim
+    volumes:
+      - ruby_app:/app
+    working_dir: /app
+    command: "ruby app.rb"
+    url: "https://www.ruby-lang.org"
+    
+  - name: Go
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Google programmeertaal voor systeemontwikkeling"
+    categorie: runtime
+    docker_image: golang:1.21-alpine
+    volumes:
+      - go_app:/app
+    working_dir: /app
+    command: "go run main.go"
+    url: "https://golang.org"
+    
+  - name: Rust
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Rust programmeertaal voor veilige systemen"
+    categorie: runtime
+    docker_image: rust:1.70-slim
+    volumes:
+      - rust_app:/app
+    working_dir: /app
+    command: "cargo run"
+    url: "https://www.rust-lang.org"
+    
+  - name: Perl
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Perl programmeertaal voor tekstverwerking"
+    categorie: runtime
+    docker_image: perl:5.36-slim
+    volumes:
+      - perl_app:/app
+    working_dir: /app
+    command: "perl app.pl"
+    url: "https://www.perl.org"
+    
+  - name: dotNET
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Microsoft .NET framework"
+    categorie: runtime
+    docker_image: mcr.microsoft.com/dotnet/sdk:7.0
+    volumes:
+      - dotnet_app:/app
+    working_dir: /app
+    command: "dotnet run"
+    url: "https://dotnet.microsoft.com"
+    
+  # ---------------------------------------------------------------------------
+  # DEVELOPMENT ENVIRONMENTS
+  # ---------------------------------------------------------------------------
+  - name: Theia
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Cloud IDE voor web-based development"
+    categorie: ide
+    docker_image: theiaide/theia:latest
+    ports:
+      - "8091:3000"
+    volumes:
+      - theia_workspace:/home/project
+    environment:
+      SHELL: /bin/bash
+    url: "https://theia-ide.org"
+    
+  - name: Atheos
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Web-gebaseerde IDE voor snelle ontwikkeling"
+    categorie: ide
+    docker_image: hlsiira/atheos:latest
+    ports:
+      - "8092:80"
+    volumes:
+      - atheos_workspace:/var/www/html/workspace
+    environment:
+      ATHEOS_PASSWORD: "{{ vault_atheos_password }}"
+    url: "https://www.atheos.io"
+    
+  - name: ITtools
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Developer utilities en tools"
+    categorie: utilities
+    docker_image: ittools/ittools:latest
+    ports:
+      - "8093:80"
+    url: "https://ittools.com"
+    
+  # ---------------------------------------------------------------------------
+  # CONTAINER TOOLS
+  # ---------------------------------------------------------------------------
+  - name: Portainer
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Docker management UI voor containers"
+    categorie: container
+    docker_image: portainer/portainer-ce:latest
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    url: "https://www.portainer.io"
+    
+  - name: Yacht
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Docker dashboard voor containerbeheer"
+    categorie: container
+    docker_image: yacht/yacht:latest
+    ports:
+      - "8094:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - yacht_data:/config
+    environment:
+      YACHT_ENABLED: "true"
+      YACHT_SECRET: "{{ vault_yacht_secret }}"
+    url: "https://yacht.sh"
+    
+  - name: Watchtower
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Auto-update containers met nieuwe images"
+    categorie: container
+    docker_image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 86400 --cleanup
+    url: "https://github.com/containrrr/watchtower"
+    
+  # ---------------------------------------------------------------------------
+  # DATABASE TOOLS
+  # ---------------------------------------------------------------------------
+  - name: Pocketbase
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Open-source backend (Database/Auth/File storage)"
+    categorie: backend
+    docker_image: pocketbase/pocketbase:latest
+    ports:
+      - "8095:8090"
+    volumes:
+      - pocketbase_data:/pb_data
+      - pocketbase_public:/pb_public
+      - pocketbase_migrations:/pb_migrations
+    url: "https://pocketbase.io"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+devtool_defaults:
+  # Algemene development instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Development omgeving
+  development:
+    environment: development
+    debug: true
+    hot_reload: true
+    source_maps: true
+    
+  # Versiebeheer
+  version_control:
+    git_enabled: true
+    git_user: "{{ git_user }}"
+    git_email: "{{ git_email }}"
+    
+  # Build instellingen
+  build:
+    parallel: true
+    cache: true
+    optimization_level: 0
+    
+  # Test instellingen
+  testing:
+    unit_tests: true
+    integration_tests: true
+    e2e_tests: true
+    coverage_threshold: 80
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+jupyterhub_config:
+  # JupyterHub authenticatie
+  auth:
+    type: oauth
+    oauth_provider: google
+    oauth_client_id: "{{ vault_google_client_id }}"
+    oauth_client_secret: "{{ vault_google_client_secret }}"
+    
+  # JupyterHub gebruikers
+  users:
+    - name: admin
+      admin: true
+      roles: [admin]
+    - name: data-scientist-1
+      roles: [user]
+    - name: data-scientist-2
+      roles: [user]
+      
+  # JupyterHub spawners
+  spawner:
+    type: docker
+    image: jupyter/datascience-notebook:latest
+    network: jupyter-network
+    remove: true
+    debug: true
+    container_limit:
+      cpu: 2
+      memory: 4G
+      
+  # JupyterHub services
+  services:
+    - name: nbviewer
+      url: http://nbviewer:8080
+    - name: hubshare
+      url: http://hubshare:8081
+      
+  # JupyterHub authenticator
+  authenticator:
+    type: native
+    admin_users:
+      - admin
+    whitelist:
+      - data-scientist-1
+      - data-scientist-2
+
+mlflow_config:
+  # MLflow experimenten
+  experiments:
+    - name: Default
+      artifact_location: /mlflow/artifacts/default
+    - name: Production Models
+      artifact_location: /mlflow/artifacts/production
+    - name: Research
+      artifact_location: /mlflow/artifacts/research
+      
+  # MLflow modellen
+  models:
+    - name: RandomForest
+      version: 1
+      stage: Production
+      run_id: "{{ mlflow_run_id_1 }}"
+    - name: XGBoost
+      version: 2
+      stage: Staging
+      run_id: "{{ mlflow_run_id_2 }}"
+      
+  # MLflow tracking
+  tracking:
+    backend_store: postgresql
+    default_artifact_root: /mlflow/artifacts
+    registry_store_uri: postgresql
+
+appsmith_config:
+  # Appsmith applicaties
+  applications:
+    - name: Admin Dashboard
+      description: "Intern beheerdashboard"
+      color: blue
+      icon: settings
+    - name: Data Explorer
+      description: "Data exploratie tool"
+      color: green
+      icon: database
+    - name: User Management
+      description: "Gebruikersbeheer"
+      color: purple
+      icon: users
+      
+  # Appsmith datasources
+  datasources:
+    - name: PostgreSQL
+      type: postgres
+      host: postgres
+      port: 5432
+      database: appsmith
+      username: appsmith
+      password: "{{ vault_appsmith_db_password }}"
+    - name: MongoDB
+      type: mongodb
+      host: mongodb
+      port: 27017
+      database: appsmith
+      username: appsmith
+      password: "{{ vault_appsmith_mongo_password }}"
+      
+  # Appsmith gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      groups: [Administrator]
+    - username: developer
+      email: developer@{{ domain }}
+      groups: [Developer]
+
+budibase_config:
+  # Budibase applicaties
+  applications:
+    - name: CRM
+      description: "Klantrelatiebeheer"
+      template: crm
+    - name: Inventory
+      description: "Voorraadbeheer"
+      template: inventory
+    - name: Project Tracker
+      description: "Projectmanagement"
+      template: project-tracker
+      
+  # Budibase automations
+  automations:
+    - name: Welcome Email
+      trigger: user.created
+      actions:
+        - type: send_email
+          template: welcome
+          to: "{{ trigger.email }}"
+    - name: Daily Report
+      trigger: schedule
+      schedule: "0 8 * * *"
+      actions:
+        - type: generate_report
+          format: pdf
+          email: admin@{{ domain }}

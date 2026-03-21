@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "Elasticsearch search and analytics engine"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [elasticsearch, search, analytics, logs]
+dependencies:
+  - docker

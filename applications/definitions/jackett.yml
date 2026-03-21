@@ -1,0 +1,104 @@
+---
+# =============================================================================
+# NAVIDROME - MUZIEKSTREAMER
+# =============================================================================
+# Beschrijving: Muziekstreamer voor persoonlijke muziekcollectie
+# Website: https://www.navidrome.org
+# =============================================================================
+
+application:
+  name: navidrome
+  version: 0.52.0
+  description: "Navidrome - Muziekstreamer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://www.navidrome.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: music
+        size_gb: 500
+        performance: hdd
+        backup_required: true
+        mount_path: /music
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 4533
+        host: 4533
+        protocol: tcp
+        public: false
+        description: "Navidrome web interface"
+    dns:
+      - "music.{{ domain }}"
+      - "navidrome.{{ domain }}"
+      
+  container:
+    image: deluan/navidrome:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: ND_DATAFOLDER
+      value: "/data"
+      secret: false
+    - name: ND_MUSICFOLDER
+      value: "/music"
+      secret: false
+    - name: ND_SCANSCHEDULE
+      value: "1h"
+      secret: false
+    - name: ND_LOGLEVEL
+      value: "info"
+      secret: false
+    - name: ND_PORT
+      value: "4533"
+      secret: false
+    - name: ND_ENABLETRANSCODING
+      value: "true"
+      secret: false
+    - name: ND_TRANSCODINGCACHESIZE
+      value: "100MB"
+      secret: false
+    - name: ND_LASTFM_APIKEY
+      value: "{{ vault_lastfm_apikey }}"
+      secret: true
+    - name: ND_LASTFM_SECRET
+      value: "{{ vault_lastfm_secret }}"
+      secret: true
+    - name: ND_SPOTIFY_ID
+      value: "{{ vault_spotify_id }}"
+      secret: true
+    - name: ND_SPOTIFY_SECRET
+      value: "{{ vault_spotify_secret }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /ping
+      port: 4533

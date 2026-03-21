@@ -1,0 +1,30 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 8080
+
+distributor:
+  ring:
+    kvstore:
+      store: inmemory
+
+ingester:
+  ring:
+    kvstore:
+      store: inmemory
+    replication_factor: 1
+
+blocks_storage:
+  backend: filesystem
+  bucket_store:
+    sync_dir: {{ mimir_data_path }}/bucket-store
+  filesystem:
+    dir: {{ mimir_data_path }}/blocks
+  tsdb:
+    dir: {{ mimir_data_path }}/tsdb
+
+compactor:
+  data_dir: {{ mimir_data_path }}/compactor
+
+ruler:
+  alertmanager_url: http://alertmanager:9093

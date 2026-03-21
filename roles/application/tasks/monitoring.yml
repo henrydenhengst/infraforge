@@ -1,0 +1,30 @@
+---
+- name: '{{ ansible_os_family }} | Voeg Prometheus target toe'
+  ansible.builtin.copy:
+    content: |
+      - targets:
+        - "{{ ansible_default_ipv4.address }}:{{ application.monitoring.metrics.port }}"
+        labels:
+          app: "{{ app.name }}"
+          environment: "{{ environment }}"
+    dest: "/etc/prometheus/targets/{{ app.name }}.yml"
+    mode: '0644'
+  when: application.monitoring.metrics.enabled | default(false)
+  notify: reload prometheus
+  tags: [monitoring]
+
+- name: '{{ ansible_os_family }} | Configureer log verzameling'
+  ansible.builtin.copy:
+    content: |
+      - job_name: {{ app.name }}
+        static_configs:
+          - targets:
+            - localhost
+        labels:
+          app: {{ app.name }}
+          __path__: /var/lib/docker/containers/*/*.log
+    dest: "/etc/promtail/targets/{{ app.name }}.yml"
+    mode: '0644'
+  when: application.monitoring.logs.enabled | default(false)
+  notify: restart promtail
+  tags: [monitoring]

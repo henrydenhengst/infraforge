@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# INVIDIOUS - PRIVACY-VRIENDELIJKE YOUTUBE FRONT-END
+# =============================================================================
+# Beschrijving: Privacy-vriendelijke YouTube front-end
+# Website: https://invidious.io
+# =============================================================================
+
+application:
+  name: invidious
+  version: latest
+  description: "Invidious - Privacy-vriendelijke YouTube front-end"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://docs.invidious.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: db
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /db
+        
+  network_requirements:
+    vlans:
+      - media
+      - dmz
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: true
+        description: "Invidious web interface"
+    dns:
+      - "invidious.{{ domain }}"
+      - "yt.{{ domain }}"
+      
+  container:
+    image: quay.io/invidious/invidious:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: INVIDIOUS_CONFIG
+      value: |
+        db:
+          user: kemal
+          password: "{{ vault_invidious_password }}"
+          host: postgres
+          port: 5432
+          dbname: invidious
+        full_refresh: false
+        https_only: true
+        domain: "invidious.{{ domain }}"
+        external_port: 443
+        registration_enabled: false
+        login_enabled: true
+        captcha_enabled: false
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/stats
+      port: 3000

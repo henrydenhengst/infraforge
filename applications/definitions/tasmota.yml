@@ -1,0 +1,106 @@
+---
+# =============================================================================
+# FRIGATE - NVR MET AI-OBJECTDETECTIE
+# =============================================================================
+# Beschrijving: NVR met AI-objectdetectie voor camera's
+# Website: https://frigate.video
+# =============================================================================
+
+application:
+  name: frigate
+  version: 0.13.0
+  description: "Frigate - NVR met AI-objectdetectie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: iot-team
+    contact: iot@company.local
+    slack: "#iot"
+    documentation: "https://docs.frigate.video"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      gpu_required: true
+      coral_tpu: true
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: media
+        size_gb: 500
+        performance: hdd
+        backup_required: false
+        mount_path: /media/frigate
+      - name: db
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /db
+        
+  network_requirements:
+    vlans:
+      - iot
+      - internal
+    ports:
+      - container: 5000
+        host: 5000
+        protocol: tcp
+        public: false
+        description: "Frigate web interface"
+      - container: 8554
+        host: 8554
+        protocol: tcp
+        public: false
+        description: "RTSP restream"
+      - container: 8555
+        host: 8555
+        protocol: tcp
+        public: false
+        description: "WebRTC"
+      - container: 8555
+        host: 8555
+        protocol: udp
+        public: false
+        description: "WebRTC UDP"
+    dns:
+      - "frigate.{{ domain }}"
+      - "nvr.{{ domain }}"
+      
+  container:
+    image: ghcr.io/blakeblackshear/frigate:stable
+    restart: unless-stopped
+    privileged: true
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+    devices:
+      - "/dev/dri:/dev/dri"
+      - "/dev/bus/usb:/dev/bus/usb"
+        
+  environment_variables:
+    - name: FRIGATE_RTSP_PASSWORD
+      value: "{{ vault_frigate_rtsp_password }}"
+      secret: true
+    - name: PLUS_API_KEY
+      value: "{{ vault_frigate_plus_key }}"
+      secret: true
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/version
+      port: 5000

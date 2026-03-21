@@ -1,0 +1,84 @@
+---
+# =============================================================================
+# MATOMO - PRIVACY-VRIENDELIJKE WEB-ANALYTICS
+# =============================================================================
+# Beschrijving: Privacy-vriendelijke web-statistieken (Google Analytics alternatief)
+# Website: https://matomo.org
+# =============================================================================
+
+application:
+  name: matomo
+  version: 5.0.0
+  description: "Matomo - Privacy-vriendelijke web-analytics"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: marketing-team
+    contact: marketing@company.local
+    slack: "#marketing"
+    documentation: "https://matomo.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        
+  network_requirements:
+    vlans:
+      - marketing
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Matomo web interface"
+    dns:
+      - "analytics.{{ domain }}"
+      - "matomo.{{ domain }}"
+      
+  container:
+    image: matomo:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: MATOMO_DATABASE_HOST
+      value: "mysql"
+      secret: false
+    - name: MATOMO_DATABASE_ADAPTER
+      value: "mysql"
+      secret: false
+    - name: MATOMO_DATABASE_TABLES_PREFIX
+      value: "matomo_"
+      secret: false
+    - name: MATOMO_DATABASE_USERNAME
+      value: "matomo"
+      secret: false
+    - name: MATOMO_DATABASE_PASSWORD
+      value: "{{ vault_matomo_password }}"
+      secret: true
+    - name: MATOMO_DATABASE_DBNAME
+      value: "matomo"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

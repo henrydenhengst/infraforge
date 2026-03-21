@@ -1,0 +1,138 @@
+---
+# =============================================================================
+# CI/CD TOOLS
+# =============================================================================
+# Functie: cicd
+# Beschrijving: Tools voor Continuous Integration en Continuous Deployment
+# =============================================================================
+
+cicd_tools:
+  # ---------------------------------------------------------------------------
+  # CI/CD PLATFORMS
+  # ---------------------------------------------------------------------------
+  - name: Jenkins
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "Automatiseringsserver voor CI/CD pipelines"
+    categorie: ci_cd_platform
+    docker_image: jenkins/jenkins:lts-jdk17
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    url: "https://www.jenkins.io"
+    
+  - name: Woodpecker CI
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "CI/CD engine die in containers draait"
+    categorie: ci_cd_platform
+    docker_image: woodpeckerci/woodpecker-server:latest
+    ports:
+      - "8000:8000"
+    database: postgresql
+    url: "https://woodpecker-ci.org"
+    
+  - name: Drone
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "Container-based CI/CD platform"
+    categorie: ci_cd_platform
+    docker_image: drone/drone:latest
+    ports:
+      - "8081:80"
+    database: postgresql
+    url: "https://drone.io"
+    
+  - name: Tekton
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "Kubernetes-native CI/CD pipelines"
+    categorie: kubernetes_cicd
+    orchestratie: kubernetes
+    url: "https://tekton.dev"
+    
+  - name: ArgoCD
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "GitOps voor Kubernetes"
+    categorie: gitops
+    docker_image: argoproj/argocd:latest
+    ports:
+      - "8082:8080"
+      - "8083:8083"
+    orchestratie: kubernetes
+    url: "https://argoproj.github.io/cd"
+    
+  # ---------------------------------------------------------------------------
+  # ARTIFACT REPOSITORIES
+  # ---------------------------------------------------------------------------
+  - name: Nexus
+    profiel_tag: DevOps
+    functie_tag: cicd
+    beschrijving: "Artifact repository manager voor builds en packages"
+    categorie: artifact_repository
+    docker_image: sonatype/nexus3:latest
+    ports:
+      - "8081:8081"
+    volumes:
+      - nexus_data:/nexus-data
+    url: "https://www.sonatype.com/nexus"
+    repositories:
+      - maven
+      - npm
+      - docker
+      - pypi
+      - nuget
+      - raw
+      
+  # ---------------------------------------------------------------------------
+  # CODE QUALITY
+  # ---------------------------------------------------------------------------
+  - name: SonarQube
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "Code kwaliteit en security check"
+    categorie: code_quality
+    docker_image: sonarqube:community
+    ports:
+      - "9000:9000"
+    database: postgresql
+    url: "https://www.sonarqube.org"
+    
+  # ---------------------------------------------------------------------------
+  # CI/CD AGENTS
+  # ---------------------------------------------------------------------------
+  - name: GitLabRunner
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "CI/CD execution agent voor GitLab"
+    categorie: ci_agent
+    docker_image: gitlab/gitlab-runner:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    url: "https://docs.gitlab.com/runner"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+cicd_defaults:
+  backup_enabled: true
+  backup_schedule: "0 3 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  pipeline_defaults:
+    timeout: 3600
+    retries: 3
+    parallel_jobs: 4
+    artifacts_retention_days: 30
+    
+  notifications:
+    enabled: true
+    on_success: false
+    on_failure: true
+    channels:
+      - slack
+      - email

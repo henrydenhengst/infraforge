@@ -1,0 +1,120 @@
+---
+# =============================================================================
+# CANVAS - MODERN LEERMANAGEMENTSYSTEEM
+# =============================================================================
+# Beschrijving: Modern leerbeheersysteem voor scholen en trainingen
+# Website: https://www.instructure.com/canvas
+# =============================================================================
+
+application:
+  name: canvas
+  version: 2024.03.01
+  description: "Canvas - Modern Learning Management System"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: education-team
+    contact: education@company.local
+    slack: "#education"
+    documentation: "https://www.instructure.com/canvas/resources"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/src/app
+      - name: assets
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/src/app/public/assets
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /usr/src/app/log
+        
+  network_requirements:
+    vlans:
+      - education
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Canvas HTTP"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: false
+        description: "Canvas HTTPS"
+    dns:
+      - "canvas.{{ domain }}"
+      - "learn.{{ domain }}"
+      
+  container:
+    image: canvaslms/canvas:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: CANVAS_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: CANVAS_DB_PORT
+      value: "5432"
+      secret: false
+    - name: CANVAS_DB_NAME
+      value: "canvas"
+      secret: false
+    - name: CANVAS_DB_USER
+      value: "canvas"
+      secret: false
+    - name: CANVAS_DB_PASSWORD
+      value: "{{ vault_canvas_password }}"
+      secret: true
+    - name: CANVAS_REDIS_HOST
+      value: "redis"
+      secret: false
+    - name: CANVAS_REDIS_PORT
+      value: "6379"
+      secret: false
+    - name: CANVAS_URL
+      value: "https://canvas.{{ domain }}"
+      secret: false
+    - name: CANVAS_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: CANVAS_ADMIN_PASSWORD
+      value: "{{ vault_canvas_admin_password }}"
+      secret: true
+    - name: CANVAS_SITE_NAME
+      value: "{{ company_name }} Learning"
+      secret: false
+    - name: CANVAS_LANG
+      value: "nl"
+      secret: false
+    - name: CANVAS_TIMEZONE
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health_check
+      port: 80

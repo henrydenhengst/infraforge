@@ -1,0 +1,8 @@
+---
+- name: Configureer AppArmor voor Docker
+  ansible.builtin.lineinfile:
+    path: /etc/default/docker
+    regexp: '^DOCKER_OPTS='
+    line: 'DOCKER_OPTS="--apparmor=true"'
+    create: yes
+  notify: restart docker

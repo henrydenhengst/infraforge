@@ -1,0 +1,97 @@
+---
+# =============================================================================
+# WOODPECKER CI - CI/CD ENGINE
+# =============================================================================
+# Beschrijving: CI/CD engine die in containers draait
+# Website: https://woodpecker-ci.org
+# =============================================================================
+
+application:
+  name: woodpecker
+  version: 2.4.0
+  description: "Woodpecker CI - CI/CD engine"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://woodpecker-ci.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/woodpecker
+        
+  network_requirements:
+    vlans:
+      - devops
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "Woodpecker server"
+    dns:
+      - "ci.{{ domain }}"
+      - "woodpecker.{{ domain }}"
+      
+  container:
+    image: woodpeckerci/woodpecker-server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  sidecars:
+    - name: agent
+      image: woodpeckerci/woodpecker-agent:latest
+      environment:
+        WOODPECKER_SERVER: "woodpecker-server:9000"
+        WOODPECKER_AGENT_SECRET: "{{ vault_woodpecker_agent_secret }}"
+        
+  environment_variables:
+    - name: WOODPECKER_OPEN
+      value: "true"
+      secret: false
+    - name: WOODPECKER_ADMIN
+      value: "admin"
+      secret: false
+    - name: WOODPECKER_HOST
+      value: "https://ci.{{ domain }}"
+      secret: false
+    - name: WOODPECKER_GITHUB
+      value: "true"
+      secret: false
+    - name: WOODPECKER_GITHUB_CLIENT
+      value: "{{ vault_github_client }}"
+      secret: true
+    - name: WOODPECKER_GITHUB_SECRET
+      value: "{{ vault_github_secret }}"
+      secret: true
+    - name: WOODPECKER_DATABASE_DRIVER
+      value: "postgres"
+      secret: false
+    - name: WOODPECKER_DATABASE_DATASOURCE
+      value: "postgres://woodpecker:{{ vault_woodpecker_password }}@postgres:5432/woodpecker?sslmode=disable"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8000

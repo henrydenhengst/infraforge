@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# SABNZBD - USENET DOWNLOADMANAGER
+# =============================================================================
+# Beschrijving: Usenet downloadmanager
+# Website: https://sabnzbd.org
+# =============================================================================
+
+application:
+  name: sabnzbd
+  version: 4.2.0
+  description: "SABnzbd - Usenet downloadmanager"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://sabnzbd.org/wiki"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: downloads
+        size_gb: 500
+        performance: hdd
+        backup_required: false
+        mount_path: /downloads
+      - name: incomplete
+        size_gb: 100
+        performance: hdd
+        backup_required: false
+        mount_path: /incomplete
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "SABnzbd web interface"
+      - container: 9090
+        host: 9090
+        protocol: tcp
+        public: false
+        description: "SABnzbd API"
+    dns:
+      - "sabnzbd.{{ domain }}"
+      - "usenet.{{ domain }}"
+      
+  container:
+    image: linuxserver/sabnzbd:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

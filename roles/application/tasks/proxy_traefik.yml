@@ -1,0 +1,7 @@
+---
+- name: '{{ ansible_os_family }} | Configureer Traefik labels'
+  ansible.builtin.template:
+    src: traefik_labels.yml.j2
+    dest: "/opt/applications/{{ app.name }}/traefik.yml"
+    mode: '0644'
+  tags: [proxy]

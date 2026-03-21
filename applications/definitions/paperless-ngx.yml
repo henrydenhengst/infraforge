@@ -1,0 +1,124 @@
+---
+# =============================================================================
+# DOLIBARR - ERP EN CRM VOOR MKB
+# =============================================================================
+# Beschrijving: ERP en CRM voor MKB
+# Website: https://www.dolibarr.org
+# =============================================================================
+
+application:
+  name: dolibarr
+  version: 18.0.0
+  description: "Dolibarr - ERP en CRM voor MKB"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: finance-team
+    contact: finance@company.local
+    slack: "#finance"
+    documentation: "https://wiki.dolibarr.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: documents
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/documents
+      - name: scripts
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/scripts
+      - name: custom
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/custom
+        
+  network_requirements:
+    vlans:
+      - finance
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Dolibarr web interface"
+    dns:
+      - "dolibarr.{{ domain }}"
+      - "doli.{{ domain }}"
+      
+  container:
+    image: dolibarr/dolibarr:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: DOLI_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: DOLI_DB_NAME
+      value: "dolibarr"
+      secret: false
+    - name: DOLI_DB_USER
+      value: "dolibarr"
+      secret: false
+    - name: DOLI_DB_PASSWORD
+      value: "{{ vault_dolibarr_password }}"
+      secret: true
+    - name: DOLI_ADMIN_LOGIN
+      value: "admin"
+      secret: false
+    - name: DOLI_ADMIN_PASSWORD
+      value: "{{ vault_dolibarr_admin_password }}"
+      secret: true
+    - name: DOLI_URL_ROOT
+      value: "https://dolibarr.{{ domain }}"
+      secret: false
+    - name: PHP_INI_DATE_TIMEZONE
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: DOLI_SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: DOLI_SMTP_PORT
+      value: "587"
+      secret: false
+    - name: DOLI_SMTP_USER
+      value: "dolibarr@{{ domain }}"
+      secret: false
+    - name: DOLI_SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+      
+  modules:
+    - facture
+    - propal
+    - commande
+    - expedition
+    - stock
+    - produit
+    - societe
+    - contact
+    - adherent
+    - banque
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

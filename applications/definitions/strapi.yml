@@ -1,0 +1,86 @@
+---
+# =============================================================================
+# PLAUSIBLE - LICHTGEWICHT WEB-ANALYTICS
+# =============================================================================
+# Beschrijving: Lichtgewicht web-analytics, GDPR compliant
+# Website: https://plausible.io
+# =============================================================================
+
+application:
+  name: plausible
+  version: 2.0.0
+  description: "Plausible - Lichtgewicht web-analytics"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: marketing-team
+    contact: marketing@company.local
+    slack: "#marketing"
+    documentation: "https://plausible.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/plausible
+        description: "Plausible analytics data"
+        
+  network_requirements:
+    vlans:
+      - marketing
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "Plausible API"
+    dns:
+      - "analytics.{{ domain }}"
+      - "plausible.{{ domain }}"
+      - "stats.{{ domain }}"
+      
+  container:
+    image: plausible/analytics:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DATABASE_URL
+      value: "postgresql://plausible:{{ vault_plausible_password }}@postgres:5432/plausible"
+      secret: true
+    - name: SECRET_KEY_BASE
+      value: "{{ vault_plausible_secret }}"
+      secret: true
+    - name: BASE_URL
+      value: "https://analytics.{{ domain }}"
+      secret: false
+    - name: DISABLE_REGISTRATION
+      value: "true"
+      secret: false
+    - name: DISABLE_AUTH
+      value: "false"
+      secret: false
+    - name: CLICKHOUSE_DATABASE_URL
+      value: "http://clickhouse:8123/plausible"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8000

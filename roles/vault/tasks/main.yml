@@ -1,0 +1,54 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Vault'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Configureer Vault'
+  ansible.builtin.template:
+    src: vault.hcl.j2
+    dest: /etc/vault/vault.hcl
+    mode: '0640'
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Create Vault service'
+  ansible.builtin.template:
+    src: vault.service.j2
+    dest: /etc/systemd/system/vault.service
+    mode: '0644'
+  notify: restart vault
+  tags: [service]
+
+- name: '{{ ansible_os_family }} | Start en enable Vault'
+  ansible.builtin.systemd:
+    name: vault
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [service]
+
+- name: '{{ ansible_os_family }} | Wacht tot Vault actief is'
+  ansible.builtin.wait_for:
+    port: 8200
+    timeout: 60
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Initialize Vault'
+  ansible.builtin.shell: |
+    vault operator init -key-shares=5 -key-threshold=3 > /root/vault-keys.txt
+  when: vault_initialize | default(true)
+  ignore_errors: yes
+  tags: [init]
+
+- name: '{{ ansible_os_family }} | Unseal Vault'
+  ansible.builtin.shell: |
+    vault operator unseal $(grep "Unseal Key" /root/vault-keys.txt | head -1 | awk '{print $NF}')
+  when: vault_initialize | default(true)
+  ignore_errors: yes
+  tags: [unseal]
+
+- name: '{{ ansible_os_family }} | Log in to Vault'
+  ansible.builtin.shell: |
+    vault login $(grep "Initial Root Token" /root/vault-keys.txt | awk '{print $NF}')
+  when: vault_initialize | default(true)
+  ignore_errors: yes
+  tags: [auth]

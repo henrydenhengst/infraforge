@@ -1,0 +1,85 @@
+---
+# =============================================================================
+# K6 - PERFORMANCE TESTING
+# =============================================================================
+# Beschrijving: Modern performance testing tool voor developers
+# Website: https://k6.io
+# =============================================================================
+
+application:
+  name: k6
+  version: 0.48.0
+  description: "k6 - Performance testing tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://k6.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: scripts
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /scripts
+      - name: results
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /results
+        
+  network_requirements:
+    vlans:
+      - testing
+      - internal
+    ports:
+      - container: 6565
+        host: 6565
+        protocol: tcp
+        public: false
+        description: "k6 REST API"
+    dns:
+      - "k6.{{ domain }}"
+      
+  container:
+    image: grafana/k6:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: K6_PROMETHEUS_RW_SERVER_URL
+      value: "http://prometheus:9090/api/v1/write"
+      secret: false
+    - name: K6_OUT
+      value: "prometheus-rw"
+      secret: false
+    - name: K6_WEB_DASHBOARD
+      value: "true"
+      secret: false
+    - name: K6_WEB_DASHBOARD_PORT
+      value: "6565"
+      secret: false
+    - name: K6_WEB_DASHBOARD_EXPORT
+      value: "/results/dashboard.html"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 6565

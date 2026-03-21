@@ -1,0 +1,40 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 9090
+
+distributor:
+  ring:
+    kvstore:
+      store: inmemory
+
+ingester:
+  lifecycler:
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    final_sleep: 0s
+
+storage:
+  engine: chunks
+  chunks:
+    fs:
+      dir: {{ cortex_data_path }}/chunks
+  filesystem:
+    dir: {{ cortex_data_path }}/index
+
+schema:
+  configs:
+    - from: 2020-01-01
+      store: filesystem
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h

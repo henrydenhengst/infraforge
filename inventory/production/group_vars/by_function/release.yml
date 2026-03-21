@@ -1,0 +1,113 @@
+---
+# =============================================================================
+# RELEASE TOOLS
+# =============================================================================
+# Functie: release
+# Beschrijving: Tools voor release management, canary deployments en feature flags
+# =============================================================================
+
+release_tools:
+  # ---------------------------------------------------------------------------
+  # FEATURE FLAGS
+  # ---------------------------------------------------------------------------
+  - name: Unleash
+    profiel_tag: DevOps
+    functie_tag: release
+    beschrijving: "Feature flag management voor canary releases en A/B testing"
+    categorie: feature_flags
+    docker_image: unleashorg/unleash-server:latest
+    ports:
+      - "4242:4242"
+    database: postgresql
+    url: "https://www.getunleash.io"
+    sdks:
+      - Node.js
+      - Python
+      - Java
+      - Go
+      - Ruby
+      - React
+      - Android
+      - iOS
+      
+  - name: Flagr
+    profiel_tag: DevOps
+    functie_tag: release
+    beschrijving: "Feature flagging microservice met REST API"
+    categorie: feature_flags
+    docker_image: checkr/flagr:latest
+    ports:
+      - "18000:18000"
+    database: postgresql
+    url: "https://github.com/checkr/flagr"
+    
+  # ---------------------------------------------------------------------------
+  # SERVICE MESH
+  # ---------------------------------------------------------------------------
+  - name: Istio
+    profiel_tag: DevOps
+    functie_tag: release
+    beschrijving: "Service mesh voor canary deployments, blue-green en traffic management"
+    categorie: service_mesh
+    orchestratie: kubernetes
+    url: "https://istio.io"
+    traffic_management:
+      - VirtualService
+      - DestinationRule
+      - Gateway
+      - ServiceEntry
+    features:
+      - Canary deployments
+      - Blue-green deployments
+      - A/B testing
+      - Traffic mirroring
+      - Circuit breaking
+      - Retry policies
+      - Timeouts
+      
+  - name: Linkerd
+    profiel_tag: DevOps
+    functie_tag: release
+    beschrijving: "Ultra-light service mesh voor Kubernetes"
+    categorie: service_mesh
+    orchestratie: kubernetes
+    url: "https://linkerd.io"
+    features:
+      - mTLS encryption
+      - Automatic metrics
+      - Traffic splitting
+      - Canary deployments
+      - Retry and timeout
+      
+  # ---------------------------------------------------------------------------
+  # DEPLOYMENT STRATEGIES
+  # ---------------------------------------------------------------------------
+  - name: ArgoCD
+    profiel_tag: DevOps
+    functie_tag: release
+    beschrijving: "GitOps voor Kubernetes deployments"
+    categorie: gitops
+    docker_image: argoproj/argocd:latest
+    ports:
+      - "8082:8080"
+    orchestratie: kubernetes
+    url: "https://argoproj.github.io/cd"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+release_defaults:
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  feature_flags:
+    default_strategy: gradual_rollout
+    rollout_duration: 3600
+    metrics_enabled: true
+    
+  service_mesh:
+    mtls_enabled: true
+    tracing_enabled: true
+    metrics_enabled: true

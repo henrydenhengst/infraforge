@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+http:
+  routers:
+    traefik:
+      rule: "Host(`traefik.{{ domain }}`)"
+      service: "api@internal"
+      entryPoints:
+        - traefik
+      middlewares:
+        - auth
+  middlewares:
+    auth:
+      basicAuth:
+        users:
+          - "admin:$2y$10$..."

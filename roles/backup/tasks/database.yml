@@ -1,0 +1,93 @@
+---
+- name: '{{ ansible_os_family }} | Installeer database clients'
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ database_clients[ansible_os_family] }}"
+  vars:
+    database_clients:
+      Debian:
+        - postgresql-client
+        - mysql-client
+        - mongodb-clients
+        - redis-tools
+      RedHat:
+        - postgresql
+        - mysql
+        - mongodb-org-tools
+        - redis
+      Suse:
+        - postgresql-client
+        - mysql-client
+        - mongodb-tools
+        - redis-tools
+      Archlinux:
+        - postgresql
+        - mysql
+        - mongodb-tools
+        - redis
+      Alpine:
+        - postgresql-client
+        - mysql-client
+        - mongodb-tools
+        - redis
+  tags: [database]
+
+- name: Maak database backup directory
+  ansible.builtin.file:
+    path: "{{ backup_base_dir }}/database"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  tags: [database]
+
+- name: Configureer PostgreSQL backup script
+  ansible.builtin.template:
+    src: backup_postgres.sh.j2
+    dest: /backup/scripts/backup_postgres.sh
+    mode: '0750'
+  when: postgres_databases | length > 0
+  tags: [database, postgresql]
+
+- name: Configureer MySQL backup script
+  ansible.builtin.template:
+    src: backup_mysql.sh.j2
+    dest: /backup/scripts/backup_mysql.sh
+    mode: '0750'
+  when: mysql_databases | length > 0
+  tags: [database, mysql]
+
+- name: Configureer MongoDB backup script
+  ansible.builtin.template:
+    src: backup_mongodb.sh.j2
+    dest: /backup/scripts/backup_mongodb.sh
+    mode: '0750'
+  when: mongodb_databases | length > 0
+  tags: [database, mongodb]
+
+- name: Configureer Redis backup script
+  ansible.builtin.template:
+    src: backup_redis.sh.j2
+    dest: /backup/scripts/backup_redis.sh
+    mode: '0750'
+  when: redis_databases | length > 0
+  tags: [database, redis]
+
+- name: Voeg database backup cron jobs toe
+  ansible.builtin.cron:
+    name: "database-backup-{{ item }}"
+    minute: "0"
+    hour: "2"
+    job: "/backup/scripts/backup_{{ item }}.sh >> /var/log/backup/database_{{ item }}.log 2>&1"
+  loop:
+    - postgres
+    - mysql
+    - mongodb
+    - redis
+  when: >
+    (item == 'postgres' and postgres_databases | length > 0) or
+    (item == 'mysql' and mysql_databases | length > 0) or
+    (item == 'mongodb' and mongodb_databases | length > 0) or
+    (item == 'redis' and redis_databases | length > 0)
+  tags: [database, cron]

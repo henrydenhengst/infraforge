@@ -1,0 +1,73 @@
+---
+# =============================================================================
+# NEXUS - ARTIFACT REPOSITORY MANAGER
+# =============================================================================
+# Beschrijving: Repository manager voor builds, artifacts en containers
+# Website: https://www.sonatype.com/products/nexus-repository
+# =============================================================================
+
+application:
+  name: nexus
+  version: 3
+  description: "Nexus - Artifact repository manager"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://help.sonatype.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /nexus-data
+        
+  network_requirements:
+    vlans:
+      - devops
+      - internal
+    ports:
+      - container: 8081
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Nexus web interface"
+    dns:
+      - "nexus.{{ domain }}"
+      - "repository.{{ domain }}"
+      
+  container:
+    image: sonatype/nexus3:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: NEXUS_CONTEXT
+      value: "/"
+      secret: false
+    - name: INSTALL4J_ADD_VM_PARAMS
+      value: "-Xms2g -Xmx4g -XX:MaxDirectMemorySize=2g"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8081
+      initial_delay: 120

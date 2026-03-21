@@ -1,0 +1,22 @@
+---
+- name: restart networking
+  ansible.builtin.service:
+    name: "{{ network_service[ansible_os_family] }}"
+    state: restarted
+
+- name: reload networking
+  ansible.builtin.service:
+    name: "{{ network_service[ansible_os_family] }}"
+    state: reloaded
+
+- name: restart systemd-networkd
+  ansible.builtin.service:
+    name: systemd-networkd
+    state: restarted
+  when: ansible_os_family in ['Archlinux', 'Debian']
+
+- name: restart systemd-resolved
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: restarted
+  when: ansible_os_family in ['Archlinux', 'Debian']

@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "Grafana Mimir scalable Prometheus"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [mimir, prometheus, monitoring, scalable, grafana]
+dependencies:
+  - docker

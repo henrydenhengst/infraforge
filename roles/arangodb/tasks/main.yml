@@ -1,0 +1,38 @@
+---
+- name: '{{ ansible_os_family }} | Maak ArangoDB directories'
+  ansible.builtin.file:
+    path: "{{ arangodb_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start ArangoDB container'
+  ansible.builtin.docker_container:
+    name: arangodb
+    image: arangodb:latest
+    restart_policy: unless-stopped
+    ports:
+      - "8529:8529"
+    volumes:
+      - "{{ arangodb_data_path }}:/var/lib/arangodb3"
+      - "{{ arangodb_data_path }}/apps:/var/lib/arangodb3-apps"
+    environment:
+      ARANGO_ROOT_PASSWORD: "{{ arangodb_root_password }}"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.arangodb.rule: "Host(`arangodb.{{ domain }}`)"
+      traefik.http.services.arangodb.loadbalancer.server.port: "8529"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot ArangoDB actief is'
+  ansible.builtin.wait_for:
+    port: 8529
+    timeout: 60
+  tags: [validate]
+
+- name: Toon ArangoDB informatie
+  ansible.builtin.debug:
+    msg:
+      - "ArangoDB: https://arangodb.{{ domain }}"
+      - "Root user: root"
+  tags: [validate]

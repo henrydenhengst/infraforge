@@ -1,0 +1,149 @@
+---
+# =============================================================================
+# MONITORING PLAYBOOK - Monitoring stack configuratie
+# =============================================================================
+# Dit playbook installeert en configureert de monitoring stack.
+# Gebruik: ansible-playbook playbooks/monitoring.yml
+# =============================================================================
+
+- name: Installeer monitoring stack
+  hosts: monitoring_servers
+  gather_facts: yes
+  become: yes
+  
+  roles:
+    - role: monitoring
+      tags: [monitoring]
+
+- name: Configureer Prometheus targets
+  hosts: monitoring_servers
+  become: yes
+  tasks:
+    - name: Voeg Node Exporter targets toe
+      copy:
+        content: |
+          - targets:
+            {% for host in groups['all'] %}
+            - "{{ hostvars[host]['ansible_default_ipv4']['address'] }}:9100"
+            {% endfor %}
+          labels:
+            job: node
+        dest: /etc/prometheus/targets/nodes.yml
+        mode: '0644'
+      notify: reload prometheus
+      tags: [prometheus]
+
+    - name: Voeg Docker targets toe
+      copy:
+        content: |
+          - targets:
+            {% for host in groups['docker_hosts'] %}
+            - "{{ hostvars[host]['ansible_default_ipv4']['address'] }}:9323"
+            {% endfor %}
+          labels:
+            job: docker
+        dest: /etc/prometheus/targets/docker.yml
+        mode: '0644'
+      notify: reload prometheus
+      tags: [prometheus]
+
+- name: Configureer Loki log targets
+  hosts: monitoring_servers
+  become: yes
+  tasks:
+    - name: Configureer Promtail
+      copy:
+        content: |
+          scrape_configs:
+            - job_name: system
+              static_configs:
+                - targets: ['localhost']
+                  labels:
+                    job: syslog
+                    host: '{{ inventory_hostname }}'
+                    __path__: /var/log/*log
+            - job_name: docker
+              static_configs:
+                - targets: ['localhost']
+                  labels:
+                    job: docker
+                    host: '{{ inventory_hostname }}'
+                    __path__: /var/lib/docker/containers/*/*.log
+        dest: /etc/loki/promtail.yml
+        mode: '0644'
+      notify: restart promtail
+      tags: [loki]
+
+- name: Configureer Grafana dashboards
+  hosts: monitoring_servers
+  become: yes
+  tasks:
+    - name: Voeg Prometheus datasource toe
+      copy:
+        content: |
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              access: proxy
+              url: http://localhost:9090
+              isDefault: true
+        dest: /etc/grafana/provisioning/datasources/prometheus.yml
+        mode: '0644'
+      notify: restart grafana
+      tags: [grafana]
+
+    - name: Download standaard dashboards
+      get_url:
+        url: "https://grafana.com/api/dashboards/{{ item.id }}/revisions/{{ item.version }}/download"
+        dest: "/etc/grafana/provisioning/dashboards/{{ item.name }}.json"
+        mode: '0644'
+      loop:
+        - { id: 1860, version: 34, name: node-exporter }
+        - { id: 893, version: 26, name: docker-monitoring }
+        - { id: 315, version: 4, name: kubernetes }
+      when: download_dashboards | default(true)
+      notify: restart grafana
+      tags: [grafana]
+
+- name: Valideer monitoring stack
+  hosts: monitoring_servers
+  become: no
+  tasks:
+    - name: Controleer Prometheus health
+      uri:
+        url: http://localhost:9090/-/healthy
+        status_code: 200
+      register: prometheus_health
+      tags: [validate]
+
+    - name: Controleer Grafana health
+      uri:
+        url: http://localhost:3000/api/health
+        status_code: 200
+      register: grafana_health
+      tags: [validate]
+
+    - name: Toon monitoring endpoints
+      debug:
+        msg:
+          - "Prometheus: http://{{ ansible_default_ipv4.address }}:9090"
+          - "Grafana: http://{{ ansible_default_ipv4.address }}:3000 (admin/admin)"
+          - "Loki: http://{{ ansible_default_ipv4.address }}:3100"
+      tags: [validate]
+
+  handlers:
+    - name: reload prometheus
+      uri:
+        url: http://localhost:9090/-/reload
+        method: POST
+
+    - name: restart promtail
+      systemd:
+        name: promtail
+        state: restarted
+
+    - name: restart grafana
+      systemd:
+        name: grafana-server
+        state: restarted

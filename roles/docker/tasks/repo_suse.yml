@@ -1,0 +1,7 @@
+---
+- name: Voeg Docker repository toe (SUSE)
+  ansible.builtin.zypper_repository:
+    name: docker
+    repo: 'https://download.docker.com/linux/opensuse/tumbleweed'
+    auto_import_keys: yes
+    state: present

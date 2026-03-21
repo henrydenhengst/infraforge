@@ -1,0 +1,80 @@
+---
+# =============================================================================
+# HEIMDALL - APPLICATIE-DASHBOARD
+# =============================================================================
+# Beschrijving: Applicatie-dashboard voor snelle toegang
+# Website: https://heimdall.site
+# =============================================================================
+
+application:
+  name: heimdall
+  version: 2.5.0
+  description: "Heimdall - Applicatie-dashboard"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: tools-team
+    contact: tools@company.local
+    slack: "#tools"
+    documentation: "https://heimdall.site/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+        
+  network_requirements:
+    vlans:
+      - tools
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Heimdall web interface"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: false
+        description: "Heimdall HTTPS"
+    dns:
+      - "dashboard.{{ domain }}"
+      - "heimdall.{{ domain }}"
+      
+  container:
+    image: linuxserver/heimdall:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

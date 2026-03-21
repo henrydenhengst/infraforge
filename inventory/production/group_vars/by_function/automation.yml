@@ -1,0 +1,451 @@
+---
+# =============================================================================
+# AUTOMATION TOOLS
+# =============================================================================
+# Functie: automation
+# Beschrijving: Tools voor workflow automatisering, data pipelines en taakscheduling
+# =============================================================================
+
+automation_tools:
+  # ---------------------------------------------------------------------------
+  # WORKFLOW AUTOMATION
+  # ---------------------------------------------------------------------------
+  - name: Airflow
+    profiel_tag: AI-Data
+    functie_tag: automation
+    beschrijving: "Workflow orchestratie voor complexe data-pipelines"
+    categorie: workflow_orchestration
+    docker_image: apache/airflow:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - airflow_dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+      - airflow_plugins:/opt/airflow/plugins
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:{{ vault_airflow_password }}@postgres/airflow"
+      AIRFLOW__CELERY__BROKER_URL: "redis://:{{ vault_redis_password }}@redis:6379/0"
+      AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://airflow:{{ vault_airflow_password }}@postgres/airflow"
+    database: postgresql
+    queue: redis
+    url: "https://airflow.apache.org"
+    components:
+      - webserver
+      - scheduler
+      - worker
+      - triggerer
+      
+  - name: N8n
+    profiel_tag: IT
+    functie_tag: automation
+    beschrijving: "Workflow automation met visuele editor (fair-code)"
+    categorie: workflow_automation
+    docker_image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: "{{ vault_n8n_password }}"
+      N8N_HOST: "n8n.{{ domain }}"
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: "https://n8n.{{ domain }}/"
+    database: sqlite
+    url: "https://n8n.io"
+    
+  - name: N8n_Enterprise
+    profiel_tag: IT
+    functie_tag: automation
+    beschrijving: "Geavanceerde workflow automatisering met RBAC en SSO"
+    categorie: workflow_automation
+    docker_image: n8nio/n8n:latest
+    ports:
+      - "5679:5678"
+    volumes:
+      - n8n_enterprise_data:/home/node/.n8n
+    environment:
+      N8N_ENTERPRISE: "true"
+      N8N_LICENSE_KEY: "{{ vault_n8n_license }}"
+      N8N_USER_MANAGEMENT_ENABLED: "true"
+      N8N_USER_MANAGEMENT_JWT_SECRET: "{{ vault_n8n_jwt_secret }}"
+      N8N_SSO_ENABLED: "true"
+      N8N_SSO_TYPE: "saml"
+    database: postgresql
+    url: "https://n8n.io/enterprise"
+    
+  - name: Node-RED
+    profiel_tag: IT
+    functie_tag: automation
+    beschrijving: "Visuele automatisering voor IoT en flows"
+    categorie: flow_based
+    docker_image: nodered/node-red:latest
+    ports:
+      - "1880:1880"
+    volumes:
+      - nodered_data:/data
+    environment:
+      NODE_RED_ENABLE_PROJECTS: "true"
+      NODE_RED_ENABLE_SAFE_MODE: "false"
+    url: "https://nodered.org"
+    
+  - name: Flowise
+    profiel_tag: AI-Ops
+    functie_tag: automation
+    beschrijving: "Visuele drag-and-drop builder voor AI-workflows (LangChain)"
+    categorie: ai_automation
+    docker_image: flowiseai/flowise:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - flowise_data:/root/.flowise
+    environment:
+      FLOWISE_USERNAME: admin
+      FLOWISE_PASSWORD: "{{ vault_flowise_password }}"
+      DATABASE_PATH: /root/.flowise
+      API_KEY: "{{ vault_flowise_api_key }}"
+    url: "https://flowiseai.com"
+    
+  - name: Langflow
+    profiel_tag: AI-Ops
+    functie_tag: automation
+    beschrijving: "Low-code UI voor het ontwerpen van complexe AI-pipelines"
+    categorie: ai_automation
+    docker_image: langflowai/langflow:latest
+    ports:
+      - "7860:7860"
+    volumes:
+      - langflow_data:/app/data
+    environment:
+      LANGFLOW_AUTO_LOGIN: "false"
+      LANGFLOW_SUPERUSER: admin
+      LANGFLOW_SUPERUSER_PASSWORD: "{{ vault_langflow_password }}"
+      LANGFLOW_SECRET_KEY: "{{ vault_langflow_secret }}"
+    url: "https://langflow.org"
+    
+  # ---------------------------------------------------------------------------
+  # DATA PIPELINES
+  # ---------------------------------------------------------------------------
+  - name: Benthos
+    profiel_tag: AI-Data
+    functie_tag: automation
+    beschrijving: "Stream-processor voor complexe data-transformaties"
+    categorie: data_streaming
+    docker_image: jeffail/benthos:latest
+    ports:
+      - "4195:4195"
+    volumes:
+      - benthos_config:/config
+    command: -c /config/benthos.yaml
+    url: "https://www.benthos.dev"
+    
+  - name: ApacheKafka
+    profiel_tag: IT
+    functie_tag: data
+    beschrijving: "Event-streaming platform voor real-time data pipelines"
+    categorie: message_queue
+    docker_image: confluentinc/cp-kafka:latest
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    url: "https://kafka.apache.org"
+    depends_on:
+      - zookeeper
+      
+  - name: Zookeeper
+    profiel_tag: IT
+    functie_tag: data
+    beschrijving: "Orchestratie service voor gedistribueerde systemen"
+    categorie: coordination
+    docker_image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    url: "https://zookeeper.apache.org"
+    
+  # ---------------------------------------------------------------------------
+  # JOB SCHEDULING
+  # ---------------------------------------------------------------------------
+  - name: Rundeck
+    profiel_tag: IT
+    functie_tag: automation
+    beschrijving: "Job scheduler voor geautomatiseerde taken"
+    categorie: job_scheduling
+    docker_image: rundeck/rundeck:latest
+    ports:
+      - "4440:4440"
+    volumes:
+      - rundeck_data:/home/rundeck/server/data
+    environment:
+      RUNDECK_DATABASE_URL: "jdbc:postgresql://postgres/rundeck"
+      RUNDECK_DATABASE_USERNAME: rundeck
+      RUNDECK_DATABASE_PASSWORD: "{{ vault_rundeck_password }}"
+      RUNDECK_GRAILS_URL: "https://rundeck.{{ domain }}"
+    database: postgresql
+    url: "https://www.rundeck.com"
+    
+  - name: Semaphore
+    profiel_tag: IT
+    functie_tag: automation
+    beschrijving: "Ansible UI voor het beheren van playbooks"
+    categorie: ansible_ui
+    docker_image: semaphoreui/semaphore:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - semaphore_data:/var/lib/semaphore
+    environment:
+      SEMAPHORE_DB_HOST: postgres
+      SEMAPHORE_DB_USER: semaphore
+      SEMAPHORE_DB_PASS: "{{ vault_semaphore_password }}"
+      SEMAPHORE_DB_NAME: semaphore
+      SEMAPHORE_ADMIN: admin
+      SEMAPHORE_ADMIN_PASSWORD: "{{ vault_semaphore_admin_password }}"
+      SEMAPHORE_ADMIN_NAME: Admin
+      SEMAPHORE_ADMIN_EMAIL: admin@{{ domain }}
+    database: postgresql
+    url: "https://www.semaphoreui.com"
+    
+  # ---------------------------------------------------------------------------
+  # CI/CD AUTOMATION
+  # ---------------------------------------------------------------------------
+  - name: Jenkins
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "Automatiseringsserver voor CI/CD pipelines"
+    categorie: ci_cd
+    docker_image: jenkins/jenkins:lts
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    url: "https://www.jenkins.io"
+    
+  - name: Woodpecker CI
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "CI/CD engine die in containers draait"
+    categorie: ci_cd
+    docker_image: woodpeckerci/woodpecker-server:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - woodpecker_data:/var/lib/woodpecker
+    environment:
+      WOODPECKER_OPEN: "true"
+      WOODPECKER_ADMIN: admin
+      WOODPECKER_HOST: "https://ci.{{ domain }}"
+      WOODPECKER_GITHUB: "true"
+      WOODPECKER_GITHUB_CLIENT: "{{ vault_github_client }}"
+      WOODPECKER_GITHUB_SECRET: "{{ vault_github_secret }}"
+    database: postgresql
+    url: "https://woodpecker-ci.org"
+    
+  - name: Drone
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "Container-based CI/CD platform"
+    categorie: ci_cd
+    docker_image: drone/drone:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - drone_data:/data
+    environment:
+      DRONE_GITHUB_CLIENT_ID: "{{ vault_drone_github_client }}"
+      DRONE_GITHUB_CLIENT_SECRET: "{{ vault_drone_github_secret }}"
+      DRONE_RPC_SECRET: "{{ vault_drone_rpc_secret }}"
+      DRONE_SERVER_HOST: "drone.{{ domain }}"
+      DRONE_SERVER_PROTO: https
+    database: sqlite
+    url: "https://drone.io"
+    
+  - name: Tekton
+    profiel_tag: IT
+    functie_tag: cicd
+    beschrijving: "Kubernetes-native CI/CD pipelines"
+    categorie: kubernetes_cicd
+    docker_image: tektoncd/pipeline:latest
+    ports:
+      - "9097:9097"
+    orchestratie: kubernetes
+    url: "https://tekton.dev"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+automation_defaults:
+  # Algemene instellingen voor alle automation tools
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Resource limieten
+  resources:
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+      
+  # Timeout instellingen
+  timeouts:
+    task_timeout: 3600
+    connection_timeout: 30
+    execution_timeout: 7200
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+airflow_config:
+  # Airflow specifieke configuratie
+  executor: CeleryExecutor
+  parallelism: 32
+  dag_concurrency: 16
+  worker_concurrency: 16
+  max_active_runs_per_dag: 16
+  
+  # Standaard DAG arguments
+  default_args:
+    owner: airflow
+    depends_on_past: false
+    email_on_failure: true
+    email_on_retry: false
+    email: alerts@{{ domain }}
+    retries: 1
+    retry_delay: 300
+    start_date: "2024-01-01"
+    
+  # Verbindingen
+  connections:
+    - conn_id: postgres_default
+      conn_type: postgres
+      host: postgres
+      port: 5432
+      login: airflow
+      password: "{{ vault_airflow_password }}"
+    - conn_id: redis_default
+      conn_type: redis
+      host: redis
+      port: 6379
+      password: "{{ vault_redis_password }}"
+
+n8n_config:
+  # n8n workflows directory
+  workflows_dir: /home/node/.n8n/workflows
+  
+  # Credentials
+  credentials:
+    - name: OpenAI
+      type: openAiApi
+      data:
+        apiKey: "{{ vault_openai_key }}"
+    - name: PostgreSQL
+      type: postgres
+      data:
+        host: postgres
+        port: 5432
+        database: n8n
+        user: n8n
+        password: "{{ vault_n8n_db_password }}"
+    - name: HTTP
+      type: httpRequest
+      data:
+        url: "https://api.{{ domain }}"
+        
+  # Webhooks
+  webhooks:
+    - path: /webhook/ai
+      method: POST
+      workflow: ai-processor
+    - path: /webhook/data
+      method: POST
+      workflow: data-ingest
+
+flowise_config:
+  # Flowise AI configuratie
+  ai_config:
+    default_llm: openai
+    embedding_provider: openai
+    vector_store: chromadb
+    
+  # Vector databases
+  vector_stores:
+    - name: chromadb
+      type: chroma
+      host: chromadb
+      port: 8000
+    - name: qdrant
+      type: qdrant
+      host: qdrant
+      port: 6333
+      
+  # Document loaders
+  document_loaders:
+    - pdf
+    - txt
+    - docx
+    - html
+    - json
+    
+  # API keys
+  api_keys:
+    openai: "{{ vault_openai_key }}"
+    huggingface: "{{ vault_huggingface_key }}"
+    cohere: "{{ vault_cohere_key }}"
+
+benthos_config:
+  # Benthos pipeline voorbeelden
+  pipelines:
+    - name: log-processor
+      input:
+        type: http_server
+        path: /logs
+      pipeline:
+        processors:
+          - bloblang: |
+              root = this
+              root.timestamp = timestamp_unix()
+              root.level = this.level.uppercase()
+      output:
+        type: elasticsearch
+        urls:
+          - http://elasticsearch:9200
+        index: logs-${!timestamp("2006-01-02")}
+        
+    - name: ai-embedder
+      input:
+        type: kafka
+        addresses:
+          - kafka:9092
+        topics:
+          - documents
+      pipeline:
+        processors:
+          - bloblang: |
+              root = this
+              root.embedding = api().post("http://localai:8080/v1/embeddings", this.text).embedding
+      output:
+        type: qdrant
+        host: qdrant
+        port: 6333
+        collection: documents

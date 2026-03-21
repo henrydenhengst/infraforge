@@ -1,0 +1,6 @@
+---
+- name: Voeg Docker repository toe (RedHat)
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: '0644'

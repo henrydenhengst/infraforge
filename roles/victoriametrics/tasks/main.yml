@@ -1,0 +1,37 @@
+---
+- name: '{{ ansible_os_family }} | Maak VictoriaMetrics directories'
+  ansible.builtin.file:
+    path: "{{ victoriametrics_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start VictoriaMetrics container'
+  ansible.builtin.docker_container:
+    name: victoriametrics
+    image: victoriametrics/victoria-metrics:latest
+    restart_policy: unless-stopped
+    ports:
+      - "8428:8428"
+    volumes:
+      - "{{ victoriametrics_data_path }}:/victoria-metrics-data"
+    command:
+      - '-storageDataPath=/victoria-metrics-data'
+      - '-httpListenAddr=:8428'
+      - '-retentionPeriod=30d'
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.victoriametrics.rule: "Host(`victoriametrics.{{ domain }}`)"
+      traefik.http.services.victoriametrics.loadbalancer.server.port: "8428"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot VictoriaMetrics actief is'
+  ansible.builtin.wait_for:
+    port: 8428
+    timeout: 60
+  tags: [validate]
+
+- name: Toon VictoriaMetrics URL
+  ansible.builtin.debug:
+    msg: "VictoriaMetrics: https://victoriametrics.{{ domain }}"
+  tags: [validate]

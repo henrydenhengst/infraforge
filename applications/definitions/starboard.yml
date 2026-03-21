@@ -1,0 +1,80 @@
+---
+# =============================================================================
+# KYVERNO - KUBERNETES POLICY ENGINE
+# =============================================================================
+# Beschrijving: Kubernetes-native policy management
+# Website: https://kyverno.io
+# =============================================================================
+
+application:
+  name: kyverno
+  version: 1.11.0
+  description: "Kyverno - Kubernetes policy engine"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://kyverno.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 9443
+        host: 9443
+        protocol: tcp
+        public: false
+        description: "Kyverno webhook"
+    dns:
+      - "kyverno.{{ domain }}"
+      
+  container:
+    image: kyverno/kyverno:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: KYVERNO_NAMESPACE
+      value: "kyverno"
+      secret: false
+    - name: KYVERNO_SERVICE_ACCOUNT
+      value: "kyverno"
+      secret: false
+    - name: KYVERNO_WEBHOOK_TIMEOUT
+      value: "10"
+      secret: false
+    - name: KYVERNO_LOG_LEVEL
+      value: "2"
+      secret: false
+    - name: KYVERNO_POLICY_CONTROLLER_ENABLE
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health/liveness
+      port: 9443

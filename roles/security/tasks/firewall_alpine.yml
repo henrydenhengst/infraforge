@@ -1,0 +1,13 @@
+---
+- name: Configureer iptables (Alpine)
+  ansible.builtin.iptables:
+    chain: INPUT
+    jump: ACCEPT
+    protocol: "{{ item.proto | default('tcp') }}"
+    destination_port: "{{ item.port }}"
+  loop: "{{ firewall_allowed_ports }}"
+  when: firewall_enabled | default(true)
+
+- name: Save iptables rules
+  ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4
+  when: firewall_enabled | default(true)

@@ -1,0 +1,101 @@
+---
+# =============================================================================
+# DAGSTER - DATA PIPELINE ORCHESTRATOR
+# =============================================================================
+# Beschrijving: Data pipeline orchestrator voor analytics
+# Website: https://dagster.io
+# =============================================================================
+
+application:
+  name: dagster
+  version: 1.5.0
+  description: "Dagster - Data pipeline orchestrator"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://docs.dagster.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/dagster/data
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /opt/dagster/logs
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Dagster web UI"
+      - container: 4000
+        host: 4000
+        protocol: tcp
+        public: false
+        description: "Dagster daemon"
+    dns:
+      - "dagster.{{ domain }}"
+      
+  container:
+    image: dagster/dagster:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  sidecars:
+    - name: daemon
+      image: dagster/dagster:latest
+      command: ["dagster-daemon", "run"]
+    - name: code-server
+      image: dagster/dagster:latest
+      command: ["dagster", "api", "grpc", "-h", "0.0.0.0", "-p", "4000"]
+      
+  environment_variables:
+    - name: DAGSTER_HOME
+      value: "/opt/dagster"
+      secret: false
+    - name: DAGSTER_POSTGRES_HOST
+      value: "postgres"
+      secret: false
+    - name: DAGSTER_POSTGRES_PORT
+      value: "5432"
+      secret: false
+    - name: DAGSTER_POSTGRES_USER
+      value: "dagster"
+      secret: false
+    - name: DAGSTER_POSTGRES_PASSWORD
+      value: "{{ vault_dagster_password }}"
+      secret: true
+    - name: DAGSTER_POSTGRES_DB
+      value: "dagster"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

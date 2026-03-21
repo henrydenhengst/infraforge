@@ -1,0 +1,106 @@
+---
+# =============================================================================
+# RASA - CONVERSATIE-AI FRAMEWORK
+# =============================================================================
+# Beschrijving: Open-source framework voor conversatie-AI en bots
+# Website: https://rasa.com
+# =============================================================================
+
+application:
+  name: rasa
+  version: 3.6.0
+  description: "Rasa - Conversatie-AI framework"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: support-team
+    contact: support@company.local
+    slack: "#support"
+    documentation: "https://rasa.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+      - name: models
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /app/models
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /app/config
+        
+  network_requirements:
+    vlans:
+      - support
+      - internal
+    ports:
+      - container: 5005
+        host: 5005
+        protocol: tcp
+        public: false
+        description: "Rasa API"
+    dns:
+      - "rasa.{{ domain }}"
+      - "chatbot.{{ domain }}"
+      
+  container:
+    image: rasa/rasa:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  sidecars:
+    - name: actions
+      image: rasa/rasa-sdk:latest
+      ports:
+        - container: 5055
+      environment:
+        RASA_TOKEN: "{{ vault_rasa_token }}"
+        RASA_MODEL_SERVER: "http://rasa:5005"
+        
+  environment_variables:
+    - name: RASA_TELEMETRY_ENABLED
+      value: "false"
+      secret: false
+    - name: RASA_MODEL_SERVER
+      value: "http://rasa-server:5005"
+      secret: false
+    - name: RASA_ACTION_ENDPOINT
+      value: "http://rasa-actions:5055/webhook"
+      secret: false
+    - name: RASA_TOKEN
+      value: "{{ vault_rasa_token }}"
+      secret: true
+    - name: RASA_MODEL_DIRECTORY
+      value: "/app/models"
+      secret: false
+    - name: RASA_DATA_DIRECTORY
+      value: "/app/data"
+      secret: false
+    - name: RASA_CONFIG_DIRECTORY
+      value: "/app/config"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 5005

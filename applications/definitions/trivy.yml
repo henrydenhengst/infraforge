@@ -1,0 +1,61 @@
+---
+# =============================================================================
+# KUBE-BENCH - CIS BENCHMARK SCANNER
+# =============================================================================
+# Beschrijving: CIS Kubernetes benchmark scanner
+# Website: https://github.com/aquasecurity/kube-bench
+# =============================================================================
+
+application:
+  name: kube-bench
+  version: 0.7.0
+  description: "kube-bench - CIS Kubernetes benchmark scanner"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://github.com/aquasecurity/kube-bench"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: aquasec/kube-bench:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: KUBE_BENCH_VERSION
+      value: "1.25"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["kube-bench", "version"]

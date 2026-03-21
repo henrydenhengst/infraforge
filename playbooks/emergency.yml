@@ -1,0 +1,77 @@
+---
+# =============================================================================
+# EMERGENCY PLAYBOOK - Noodprocedures
+# =============================================================================
+# Dit playbook voert noodprocedures uit bij incidenten.
+# Gebruik: ansible-playbook playbooks/emergency.yml -e emergency_type=restart
+# =============================================================================
+
+- name: Noodstop - Stop alle services
+  hosts: all
+  become: yes
+  vars:
+    emergency_type: "{{ emergency_type | default('restart') }}"
+  tasks:
+    - name: Stop alle Docker containers
+      docker_container:
+        name: "{{ item }}"
+        state: stopped
+      loop: "{{ docker_containers | default([]) }}"
+      when: emergency_type == 'stop' and docker_containers is defined
+      tags: [stop]
+
+    - name: Herstart alle services
+      shell: |
+        systemctl restart {{ item }}
+      loop: "{{ services_to_restart | default(['docker', 'kubelet', 'nginx']) }}"
+      when: emergency_type == 'restart'
+      tags: [restart]
+
+    - name: Controleer kritieke services
+      shell: |
+        systemctl status {{ item }} | grep Active
+      loop: "{{ critical_services | default(['docker', 'kubelet', 'ssh']) }}"
+      register: service_status
+      tags: [check]
+
+    - name: Toon service status
+      debug:
+        var: service_status.results
+      tags: [check]
+
+- name: Noodherstel - Herstel van backup
+  hosts: backup_servers
+  become: yes
+  vars:
+    emergency_type: "{{ emergency_type | default('restart') }}"
+  tasks:
+    - name: Herstel configuratie van backup
+      shell: |
+        cp /backup/latest/etc-{{ ansible_date_time.date }}.tar.gz /tmp/
+        tar xzf /tmp/etc-{{ ansible_date_time.date }}.tar.gz -C /
+      when: emergency_type == 'restore_config'
+      tags: [restore]
+
+    - name: Herstel database van backup
+      shell: |
+        gunzip < /backup/latest/postgres-{{ ansible_date_time.date }}.sql.gz | psql -U postgres
+      when: emergency_type == 'restore_db' and postgresql_servers is defined
+      tags: [restore]
+
+- name: Noodnotificatie
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Stuur emergency notificatie
+      uri:
+        url: "{{ vault_slack_webhook }}"
+        method: POST
+        body: |
+          {
+            "text": "🚨 EMERGENCY - {{ emergency_type }} uitgevoerd op {{ ansible_date_time.date }}",
+            "username": "Ansible Emergency",
+            "icon_emoji": ":fire:"
+          }
+        body_format: json
+      when: emergency_notify | default(true)
+      tags: [notify]

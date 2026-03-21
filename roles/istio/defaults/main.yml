@@ -1,0 +1,6 @@
+---
+istio_version: "1.20.0"
+istio_profile: "default"
+istio_namespaces: ["default", "production", "staging"]
+install_istio: true
+deploy_addons: false

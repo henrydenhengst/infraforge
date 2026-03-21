@@ -1,0 +1,14 @@
+---
+- name: Configureer UFW firewall (Debian)
+  ansible.builtin.ufw:
+    rule: "{{ item.rule | default('allow') }}"
+    port: "{{ item.port }}"
+    proto: "{{ item.proto | default('tcp') }}"
+  loop: "{{ firewall_allowed_ports }}"
+  when: firewall_enabled | default(true)
+
+- name: Schakel UFW in
+  ansible.builtin.ufw:
+    state: enabled
+    policy: "{{ firewall_default_policy }}"
+  when: firewall_enabled | default(true)

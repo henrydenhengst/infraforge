@@ -1,0 +1,13 @@
+---
+- name: Configureer /etc/network/interfaces (Alpine)
+  ansible.builtin.template:
+    src: interfaces_alpine.j2
+    dest: /etc/network/interfaces
+    mode: '0644'
+  notify: restart networking
+
+- name: Start en enable networking
+  ansible.builtin.service:
+    name: networking
+    state: started
+    enabled: yes

@@ -1,0 +1,620 @@
+---
+# =============================================================================
+# MONITORING TOOLS
+# =============================================================================
+# Functie: monitoring
+# Beschrijving: Tools voor monitoring, observability, metrics en logging
+# =============================================================================
+
+monitoring_tools:
+  # ---------------------------------------------------------------------------
+  # METRICS & DASHBOARDS
+  # ---------------------------------------------------------------------------
+  - name: Prometheus
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Time-series monitoring voor metrics en alerts"
+    categorie: metrics
+    docker_image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - prometheus_config:/etc/prometheus
+      - prometheus_rules:/etc/prometheus/rules
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    url: "https://prometheus.io"
+    
+  - name: Grafana
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Data-visualisatie dashboards voor metrics en logs"
+    categorie: dashboards
+    docker_image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - grafana_config:/etc/grafana
+      - grafana_dashboards:/etc/grafana/provisioning/dashboards
+      - grafana_datasources:/etc/grafana/provisioning/datasources
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "{{ vault_grafana_password }}"
+      GF_SECURITY_ALLOW_EMBEDDING: true
+      GF_AUTH_ANONYMOUS_ENABLED: false
+      GF_AUTH_BASIC_ENABLED: true
+      GF_SERVER_ROOT_URL: "https://grafana.{{ domain }}"
+      GF_SERVER_DOMAIN: "grafana.{{ domain }}"
+      GF_INSTALL_PLUGINS: grafana-piechart-panel,grafana-worldmap-panel,grafana-clock-panel
+    url: "https://grafana.com"
+    
+  - name: VictoriaMetrics
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "TSDB monitoring als alternatief voor Prometheus"
+    categorie: metrics
+    docker_image: victoriametrics/victoria-metrics:latest
+    ports:
+      - "8428:8428"
+      - "8089:8089"
+      - "8089:8089/udp"
+    volumes:
+      - victoriametrics_data:/victoria-metrics-data
+    command:
+      - '-storageDataPath=/victoria-metrics-data'
+      - '-httpListenAddr=:8428'
+      - '-graphiteListenAddr=:2003'
+      - '-opentsdbListenAddr=:4242'
+      - '-influxListenAddr=:8089'
+      - '-retentionPeriod=30'
+    url: "https://victoriametrics.com"
+    
+  # ---------------------------------------------------------------------------
+  # LOGGING
+  # ---------------------------------------------------------------------------
+  - name: Loki
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Log-opslag systeem voor efficiënte log aggregatie"
+    categorie: logging
+    docker_image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+      - loki_config:/etc/loki
+    command:
+      - '-config.file=/etc/loki/loki-config.yaml'
+    url: "https://grafana.com/oss/loki"
+    
+  - name: Logstash
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Log-verwerkingspipeline voor data transformatie"
+    categorie: logging
+    docker_image: logstash:8.11.0
+    ports:
+      - "5044:5044"
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    volumes:
+      - logstash_config:/usr/share/logstash/config
+      - logstash_pipeline:/usr/share/logstash/pipeline
+    environment:
+      LS_JAVA_OPTS: "-Xmx1g -Xms1g"
+      XPACK_MONITORING_ENABLED: "false"
+    url: "https://www.elastic.co/logstash"
+    
+  - name: Vector
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Vector aggregator voor logs en metrics"
+    categorie: logging
+    docker_image: timberio/vector:latest
+    ports:
+      - "8686:8686"
+      - "9000:9000"
+    volumes:
+      - vector_config:/etc/vector
+      - vector_data:/var/lib/vector
+    command: --config /etc/vector/vector.toml
+    url: "https://vector.dev"
+    
+  - name: Loggifly
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Log-aggregatie voor meerdere bronnen"
+    categorie: logging
+    docker_image: loggifly/loggifly:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - loggifly_data:/data
+      - loggifly_config:/config
+    environment:
+      LOGGIFLY_DB_HOST: postgres
+      LOGGIFLY_DB_NAME: loggifly
+      LOGGIFLY_DB_USER: loggifly
+      LOGGIFLY_DB_PASSWORD: "{{ vault_loggifly_password }}"
+    database: postgresql
+    url: "https://loggifly.com"
+    
+  # ---------------------------------------------------------------------------
+  # VISUALISATIE
+  # ---------------------------------------------------------------------------
+  - name: Kibana
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Elasticsearch visualisatie voor log data"
+    categorie: visualization
+    docker_image: kibana:8.11.0
+    ports:
+      - "5601:5601"
+    volumes:
+      - kibana_config:/usr/share/kibana/config
+    environment:
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+      SERVER_NAME: "kibana.{{ domain }}"
+      SERVER_HOST: "0.0.0.0"
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: "{{ vault_kibana_encryption_key }}"
+      XPACK_REPORTING_ENCRYPTIONKEY: "{{ vault_kibana_reporting_key }}"
+      XPACK_SECURITY_ENCRYPTIONKEY: "{{ vault_kibana_security_key }}"
+    url: "https://www.elastic.co/kibana"
+    
+  - name: Lumis
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Metrics dashboard voor systeemoverzicht"
+    categorie: dashboards
+    docker_image: lumis/lumis:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - lumis_data:/data
+    environment:
+      LUMIS_DB_HOST: postgres
+      LUMIS_DB_NAME: lumis
+      LUMIS_DB_USER: lumis
+      LUMIS_DB_PASSWORD: "{{ vault_lumis_password }}"
+    database: postgresql
+    url: "https://lumis.com"
+    
+  # ---------------------------------------------------------------------------
+  # STATUS & UPTIME
+  # ---------------------------------------------------------------------------
+  - name: Uptime-kuma
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Self-hosted uptime monitor met notificaties"
+    categorie: uptime
+    docker_image: louislam/uptime-kuma:latest
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime_kuma_data:/app/data
+    environment:
+      UPTIME_KUMA_PORT: 3001
+      UPTIME_KUMA_HOST: 0.0.0.0
+    url: "https://uptime.kuma.pet"
+    
+  - name: Statping
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Statuspagina voor services en websites"
+    categorie: status
+    docker_image: statping/statping:latest
+    ports:
+      - "8082:8080"
+    volumes:
+      - statping_data:/app
+    environment:
+      STATPING_DB_HOST: postgres
+      STATPING_DB_PORT: 5432
+      STATPING_DB_USER: statping
+      STATPING_DB_PASS: "{{ vault_statping_password }}"
+      STATPING_DB_DATABASE: statping
+      STATPING_NAME: "Statuspagina {{ company_name }}"
+      STATPING_DOMAIN: "https://status.{{ domain }}"
+      STATPING_ADMIN_USER: admin
+      STATPING_ADMIN_PASSWORD: "{{ vault_statping_admin_password }}"
+      STATPING_ADMIN_EMAIL: admin@{{ domain }}
+    database: postgresql
+    url: "https://statping.com"
+    
+  - name: Changedetection.io
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Webpagina monitor voor wijzigingen"
+    categorie: web_monitor
+    docker_image: ghcr.io/dgtlmoon/changedetection.io:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - changedetection_data:/datastore
+    environment:
+      PLAYWRIGHT_DRIVER_URL: ws://playwright-chrome:3000
+      WEBDRIVER_URL: http://selenium:4444/wd/hub
+    url: "https://changedetection.io"
+    
+  # ---------------------------------------------------------------------------
+  # PERFORMANCE MONITORING
+  # ---------------------------------------------------------------------------
+  - name: Netdata
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Real-time performance monitoring met mooie dashboards"
+    categorie: performance
+    docker_image: netdata/netdata:latest
+    ports:
+      - "19999:19999"
+    volumes:
+      - netdata_config:/etc/netdata
+      - netdata_data:/var/cache/netdata
+      - netdata_lib:/var/lib/netdata
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DOCKER_HOST: "unix:///var/run/docker.sock"
+      NETDATA_CLAIM_URL: "https://app.netdata.cloud"
+      NETDATA_CLAIM_TOKEN: "{{ vault_netdata_token }}"
+      NETDATA_CLAIM_ROOMS: "{{ vault_netdata_rooms }}"
+    privileged: true
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    url: "https://www.netdata.cloud"
+    
+  - name: Glances
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Cross-platform systeemmonitor in terminal of web"
+    categorie: performance
+    docker_image: nicolargo/glances:latest
+    ports:
+      - "61208:61208"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - glances_config:/glances/conf
+    environment:
+      GLANCES_OPT: "-w"
+      GLANCES_WEBSERVER: "true"
+      GLANCES_PORT: 61208
+    url: "https://nicolargo.github.io/glances"
+    
+  - name: Dozzle
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Real-time Docker log-viewer"
+    categorie: logs
+    docker_image: amir20/dozzle:latest
+    ports:
+      - "8888:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - dozzle_data:/data
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+      DOZZLE_FILTER: "name=.*"
+    url: "https://dozzle.dev"
+    
+  # ---------------------------------------------------------------------------
+  # ALERTING
+  # ---------------------------------------------------------------------------
+  - name: Alertmanager
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Alert routering en notificaties voor Prometheus"
+    categorie: alerting
+    docker_image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+      - "9094:9094"
+    volumes:
+      - alertmanager_data:/alertmanager
+      - alertmanager_config:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=https://alertmanager.{{ domain }}'
+    url: "https://prometheus.io/docs/alerting/latest/alertmanager"
+    
+  # ---------------------------------------------------------------------------
+  # ENTERPRISE MONITORING
+  # ---------------------------------------------------------------------------
+  - name: Zabbix
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Enterprise monitoring voor netwerken en servers"
+    categorie: enterprise
+    docker_image: zabbix/zabbix-server-pgsql:latest
+    ports:
+      - "10051:10051"
+    volumes:
+      - zabbix_data:/var/lib/zabbix
+      - zabbix_config:/etc/zabbix
+    environment:
+      DB_SERVER_HOST: postgres
+      DB_SERVER_PORT: 5432
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: "{{ vault_zabbix_password }}"
+      POSTGRES_DB: zabbix
+      ZBX_JAVAGATEWAY_ENABLE: true
+      ZBX_JAVAGATEWAY: zabbix-java-gateway
+    url: "https://www.zabbix.com"
+    
+  - name: Checkmk
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "IT-monitoring platform voor servers en applicaties"
+    categorie: enterprise
+    docker_image: checkmk/check-mk-raw:latest
+    ports:
+      - "8080:5000"
+    volumes:
+      - checkmk_data:/omd/sites
+      - checkmk_config:/omd/sites/cmk/etc/check_mk
+    environment:
+      CMK_SITE_ID: cmk
+      CMK_PASSWORD: "{{ vault_checkmk_password }}"
+      CMK_LIVESTATUS_TCP: "6557"
+    url: "https://checkmk.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+monitoring_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Retentie
+  retention:
+    metrics_days: 30
+    logs_days: 90
+    alerts_days: 365
+    traces_days: 7
+    
+  # Alerting
+  alerting:
+    default_severity: warning
+    repeat_interval: 4h
+    group_by:
+      - alertname
+      - cluster
+      - service
+    receivers:
+      - slack
+      - email
+      - gotify
+      
+  # Scrape configs
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  
+  # Endpoints
+  endpoints:
+    node_exporter: 9100
+    cadvisor: 8080
+    blackbox_exporter: 9115
+    pushgateway: 9091
+    
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: monitoring@{{ domain }}
+    email_prefix: "[Monitor]"
+    slack_enabled: true
+    slack_channel: "#alerts"
+    gotify_enabled: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+prometheus_config:
+  # Prometheus scrape configs
+  scrape_configs:
+    - job_name: node
+      static_configs:
+        - targets: ["node-exporter:9100"]
+    - job_name: cadvisor
+      static_configs:
+        - targets: ["cadvisor:8080"]
+    - job_name: prometheus
+      static_configs:
+        - targets: ["localhost:9090"]
+        
+  # Prometheus rules
+  rules:
+    groups:
+      - name: node_rules
+        interval: 30s
+        rules:
+          - alert: HighCPULoad
+            expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU load ({{ $value }}%)"
+              
+          - alert: HighMemoryLoad
+            expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High memory load ({{ $value }}%)"
+              
+          - alert: DiskSpaceLow
+            expr: (node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Disk space low ({{ $value }}%)"
+
+grafana_config:
+  # Grafana datasources
+  datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus:9090
+      access: proxy
+      isDefault: true
+      
+    - name: Loki
+      type: loki
+      url: http://loki:3100
+      access: proxy
+      
+    - name: Elasticsearch
+      type: elasticsearch
+      url: http://elasticsearch:9200
+      access: proxy
+      database: "[logs-]YYYY.MM.DD"
+      
+  # Grafana dashboards
+  dashboards:
+    - name: Node Exporter
+      url: https://grafana.com/api/dashboards/1860/revisions/34/download
+    - name: Docker Monitoring
+      url: https://grafana.com/api/dashboards/893/revisions/26/download
+    - name: Prometheus Stats
+      url: https://grafana.com/api/dashboards/3662/revisions/7/download
+      
+  # Grafana users
+  users:
+    - name: admin
+      email: admin@{{ domain }}
+      role: Admin
+    - name: viewer
+      email: viewer@{{ domain }}
+      role: Viewer
+      
+  # Grafana teams
+  teams:
+    - name: Operations
+      members:
+        - admin
+    - name: Development
+      members:
+        - viewer
+
+alertmanager_config:
+  # Alertmanager receivers
+  receivers:
+    - name: slack
+      slack_configs:
+        - api_url: "{{ vault_slack_webhook }}"
+          channel: "#alerts"
+          title: '{{ template "slack.title" . }}'
+          text: '{{ template "slack.text" . }}'
+          
+    - name: email
+      email_configs:
+        - to: "alerts@{{ domain }}"
+          from: "alertmanager@{{ domain }}"
+          smarthost: "smtp.{{ domain }}:587"
+          auth_username: "alertmanager@{{ domain }}"
+          auth_password: "{{ vault_smtp_password }}"
+          
+    - name: gotify
+      webhook_configs:
+        - url: "http://gotify:80/message?token={{ vault_gotify_alert_token }}"
+          
+  # Alertmanager routes
+  route:
+    group_by: ['alertname', 'cluster', 'service']
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    receiver: slack
+    routes:
+      - match:
+          severity: critical
+        receiver: pagerduty
+        continue: true
+      - match:
+          severity: warning
+        receiver: slack
+      - match_re:
+          severity: ^(warning|critical)$
+        receiver: email
+        
+  # Alertmanager inhibition
+  inhibit_rules:
+    - source_match:
+        severity: critical
+      target_match:
+        severity: warning
+      equal: ['alertname', 'instance']
+
+loki_config:
+  # Loki storage
+  storage_config:
+    boltdb_shipper:
+      active_index_directory: /loki/index
+      cache_location: /loki/cache
+      shared_store: filesystem
+    filesystem:
+      directory: /loki/chunks
+      
+  # Loki schema
+  schema_config:
+    configs:
+      - from: 2020-01-01
+        store: boltdb-shipper
+        object_store: filesystem
+        schema: v11
+        index:
+          prefix: index_
+          period: 24h
+          
+  # Loki limits
+  limits_config:
+    enforce_metric_name: false
+    reject_old_samples: true
+    reject_old_samples_max_age: 168h
+    max_entries_limit_per_query: 5000
+    ingestion_rate_mb: 10
+    ingestion_burst_size_mb: 20
+    
+  # Loki compactor
+  compactor:
+    working_directory: /loki/compactor
+    shared_store: filesystem
+    compaction_interval: 10m
+    retention_enabled: true
+    retention_delete_delay: 2h
+    retention_delete_worker_count: 150
+    
+  # Loki querier
+  querier:
+    query_timeout: 5m
+    max_concurrent: 20
+    
+  # Loki ingester
+  ingester:
+    lifecycler:
+      ring:
+        kvstore:
+          store: inmemory
+        replication_factor: 1
+    chunk_idle_period: 30m
+    chunk_retain_period: 5m
+    wal:
+      enabled: true
+      dir: /loki/wal

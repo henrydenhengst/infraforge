@@ -1,0 +1,60 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Grafana via package manager'
+  ansible.builtin.include_tasks: "grafana_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: Create Grafana provisioning directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: '0755'
+  loop:
+    - /etc/grafana/provisioning/datasources
+    - /etc/grafana/provisioning/dashboards
+  tags: [config]
+
+- name: Configure Grafana datasource
+  ansible.builtin.template:
+    src: grafana-datasource.yml.j2
+    dest: /etc/grafana/provisioning/datasources/prometheus.yml
+    mode: '0644'
+  notify: restart grafana
+  tags: [config]
+
+- name: Configure Grafana dashboard provisioning
+  ansible.builtin.template:
+    src: grafana-dashboards.yml.j2
+    dest: /etc/grafana/provisioning/dashboards/dashboards.yml
+    mode: '0644'
+  notify: restart grafana
+  tags: [config]
+
+- name: Download Grafana dashboards
+  ansible.builtin.get_url:
+    url: "https://grafana.com/api/dashboards/{{ item.id }}/revisions/{{ item.version }}/download"
+    dest: "/etc/grafana/provisioning/dashboards/{{ item.name }}.json"
+    mode: '0644'
+  loop: "{{ grafana_dashboards }}"
+  when: grafana_dashboards_enabled
+  notify: restart grafana
+  tags: [dashboards]
+
+- name: Start and enable Grafana
+  ansible.builtin.systemd:
+    name: grafana-server
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [service]
+
+- name: Wait for Grafana to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_listen_port }}/api/health"
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 30
+  delay: 5
+  tags: [validate]

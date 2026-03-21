@@ -1,0 +1,34 @@
+---
+# =============================================================================
+# NETWORKING ROLE DEFAULTS
+# =============================================================================
+
+# DNS servers
+dns_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+  - 9.9.9.9
+
+# DNS search domain
+dns_search: "{{ domain | default('company.local') }}"
+
+# Network bonding (LACP)
+network_bonding_enabled: false
+network_bonding_mode: 4  # 802.3ad (LACP)
+network_bonding_miimon: 100
+network_bonding_lacp_rate: fast
+network_bonding_slaves: []
+
+# VLANs
+network_vlans: []
+
+# Interface configuratie
+network_interfaces: []
+
+# Hostname
+hostname: "{{ inventory_hostname }}"
+domain: "{{ domain | default('company.local') }}"
+
+# MTU
+mtu: 1500
+jumbo_mtu: 9000

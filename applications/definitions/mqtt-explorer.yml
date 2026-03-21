@@ -1,0 +1,106 @@
+---
+# =============================================================================
+# VERNEMQ - DISTRIBUTED MQTT BROKER
+# =============================================================================
+# Beschrijving: Distributed MQTT broker for IoT and messaging
+# Website: https://vernemq.com
+# =============================================================================
+
+application:
+  name: vernemq
+  version: 1.13.0
+  description: "VerneMQ - Distributed MQTT broker"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: iot-team
+    contact: iot@company.local
+    slack: "#iot"
+    documentation: "https://docs.vernemq.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/vernemq
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/vernemq
+        
+  network_requirements:
+    vlans:
+      - iot
+      - internal
+    ports:
+      - container: 1883
+        host: 1883
+        protocol: tcp
+        public: false
+        description: "MQTT"
+      - container: 8883
+        host: 8883
+        protocol: tcp
+        public: false
+        description: "MQTT SSL"
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "WebSocket"
+      - container: 44053
+        host: 44053
+        protocol: tcp
+        public: false
+        description: "Cluster communication"
+    dns:
+      - "mqtt.{{ domain }}"
+      - "vernemq.{{ domain }}"
+      
+  container:
+    image: vernemq/vernemq:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: DOCKER_VERNEMQ_ALLOW_ANONYMOUS
+      value: "off"
+      secret: false
+    - name: DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD
+      value: "on"
+      secret: false
+    - name: DOCKER_VERNEMQ_PLUGINS__VMQ_ACL
+      value: "on"
+      secret: false
+    - name: DOCKER_VERNEMQ_LISTENER__TCP__DEFAULT
+      value: "0.0.0.0:1883"
+      secret: false
+    - name: DOCKER_VERNEMQ_LISTENER__WS__DEFAULT
+      value: "0.0.0.0:8080"
+      secret: false
+    - name: DOCKER_VERNEMQ_LISTENER__SSL__DEFAULT
+      value: "0.0.0.0:8883"
+      secret: false
+    - name: DOCKER_VERNEMQ_ACCEPT_EULA
+      value: "yes"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: tcp
+      port: 1883

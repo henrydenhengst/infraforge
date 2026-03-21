@@ -1,0 +1,453 @@
+---
+# =============================================================================
+# BACKUP TOOLS
+# =============================================================================
+# Functie: backup
+# Beschrijving: Tools voor het maken, beheren en herstellen van back-ups
+# =============================================================================
+
+backup_tools:
+  # ---------------------------------------------------------------------------
+  # BACKUP SOFTWARE
+  # ---------------------------------------------------------------------------
+  - name: Duplicati
+    profiel_tag: IT
+    functie_tag: backup
+    beschrijving: "Backup-software naar cloud, met encryptie en deduplicatie"
+    categorie: backup_client
+    docker_image: duplicati/duplicati:latest
+    ports:
+      - "8200:8200"
+    volumes:
+      - duplicati_config:/config
+      - duplicati_backups:/backups
+      - /mnt/data:/source:ro  # Read-only toegang tot te backuppen data
+    environment:
+      DUPLICATI__WEBSERVICE_PASSWORD: "{{ vault_duplicati_password }}"
+    url: "https://www.duplicati.com"
+    
+  # ---------------------------------------------------------------------------
+  # BACKUP STORAGE
+  # ---------------------------------------------------------------------------
+  - name: MinIO
+    profiel_tag: IT
+    functie_tag: storage
+    beschrijving: "Object storage (S3-compatible) voor backups"
+    categorie: backup_storage
+    docker_image: minio/minio:latest
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: "{{ vault_minio_password }}"
+    command: server /data --console-address ":9001"
+    url: "https://min.io"
+    
+  - name: MinIO Client
+    profiel_tag: IT
+    functie_tag: storage
+    beschrijving: "Client voor MinIO en S3-compatible storage"
+    categorie: backup_storage
+    docker_image: minio/mc:latest
+    command: "tail -f /dev/null"  # Blijft draaien voor interactief gebruik
+    volumes:
+      - minio_client_config:/root/.mc
+    url: "https://min.io/docs/minio/linux/reference/minio-mc.html"
+    
+  - name: Seafile
+    profiel_tag: Algemeen
+    functie_tag: storage
+    beschrijving: "Bestandssync met versiebeheer en encryptie"
+    categorie: file_sync
+    docker_image: seafileltd/seafile:latest
+    ports:
+      - "8000:8000"  # Seahub
+      - "8082:8082"  # File Server
+    volumes:
+      - seafile_data:/shared
+    environment:
+      SEAFILE_SERVER_HOSTNAME: "seafile.{{ domain }}"
+      SEAFILE_ADMIN_EMAIL: admin@{{ domain }}
+      SEAFILE_ADMIN_PASSWORD: "{{ vault_seafile_password }}"
+    database: mysql
+    url: "https://www.seafile.com"
+    
+  - name: OwnCloud_Infinite
+    profiel_tag: Algemeen
+    functie_tag: storage
+    beschrijving: "Next-gen cloud opslag (Go-based) voor enorme volumes"
+    categorie: cloud_storage
+    docker_image: owncloud/ocis:latest
+    ports:
+      - "9200:9200"  # Web UI
+      - "9140:9140"  # Graph
+      - "9160:9160"  # Storage
+    volumes:
+      - ocis_data:/var/lib/ocis
+    environment:
+      OCIS_INSECURE: "false"
+      OCIS_URL: "https://ocis.{{ domain }}"
+      OCIS_ADMIN_USER_ID: admin
+      OCIS_ADMIN_PASSWORD: "{{ vault_ocis_password }}"
+    url: "https://owncloud.com/infinite-scale"
+
+  # ---------------------------------------------------------------------------
+  # BACKUP MANAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: Duplicati
+    profiel_tag: IT
+    functie_tag: backup
+    beschrijving: "Backup-software naar cloud, met encryptie en deduplicatie"
+    categorie: backup_client
+    docker_image: duplicati/duplicati:latest
+    ports:
+      - "8200:8200"
+    volumes:
+      - duplicati_config:/config
+      - duplicati_backups:/backups
+      - /mnt/data:/source:ro
+    environment:
+      DUPLICATI__WEBSERVICE_PASSWORD: "{{ vault_duplicati_password }}"
+    url: "https://www.duplicati.com"
+    
+  # ---------------------------------------------------------------------------
+  # STORAGE TOOLS
+  # ---------------------------------------------------------------------------
+  - name: MinIO
+    profiel_tag: IT
+    functie_tag: storage
+    beschrijving: "Object storage (S3-compatible) voor backups"
+    categorie: backup_storage
+    docker_image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: "{{ vault_minio_password }}"
+    command: server /data --console-address ":9001"
+    url: "https://min.io"
+    
+  - name: Seafile
+    profiel_tag: Algemeen
+    functie_tag: storage
+    beschrijving: "Bestandssync met versiebeheer en encryptie"
+    categorie: file_sync
+    docker_image: seafileltd/seafile:latest
+    ports:
+      - "8000:8000"
+      - "8082:8082"
+    volumes:
+      - seafile_data:/shared
+    environment:
+      SEAFILE_SERVER_HOSTNAME: "seafile.{{ domain }}"
+      SEAFILE_ADMIN_EMAIL: admin@{{ domain }}
+      SEAFILE_ADMIN_PASSWORD: "{{ vault_seafile_password }}"
+    database: mysql
+    url: "https://www.seafile.com"
+    
+  - name: OwnCloud_Infinite
+    profiel_tag: Algemeen
+    functie_tag: storage
+    beschrijving: "Next-gen cloud opslag (Go-based) voor enorme volumes"
+    categorie: cloud_storage
+    docker_image: owncloud/ocis:latest
+    ports:
+      - "9200:9200"
+      - "9140:9140"
+      - "9160:9160"
+    volumes:
+      - ocis_data:/var/lib/ocis
+    environment:
+      OCIS_INSECURE: "false"
+      OCIS_URL: "https://ocis.{{ domain }}"
+      OCIS_ADMIN_USER_ID: admin
+      OCIS_ADMIN_PASSWORD: "{{ vault_ocis_password }}"
+    url: "https://owncloud.com/infinite-scale"
+    
+  # ---------------------------------------------------------------------------
+  # BACKUP CLIENTS
+  # ---------------------------------------------------------------------------
+  - name: MinIO Client
+    profiel_tag: IT
+    functie_tag: storage
+    beschrijving: "Client voor MinIO en S3-compatible storage"
+    categorie: backup_storage
+    docker_image: minio/mc:latest
+    command: "tail -f /dev/null"
+    volumes:
+      - minio_client_config:/root/.mc
+    url: "https://min.io/docs/minio/linux/reference/minio-mc.html"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+backup_defaults:
+  # Algemene backup strategie
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  backup_retention_days: 30
+  backup_compression: true
+  backup_encryption: true
+  backup_verify: true
+  
+  # Backup doelen
+  backup_destinations:
+    - type: local
+      path: /backup
+    - type: s3
+      bucket: backups
+      endpoint: minio:9000
+      access_key: minioadmin
+      secret_key: "{{ vault_minio_password }}"
+    - type: nfs
+      server: backup-server
+      path: /exports/backup
+      
+  # Backup selectie
+  backup_includes:
+    - /etc
+    - /home
+    - /var/lib/docker/volumes
+    - /var/lib/postgresql
+    - /var/lib/mysql
+    
+  backup_excludes:
+    - "*.log"
+    - "*.tmp"
+    - "*.cache"
+    - "/tmp"
+    - "/proc"
+    - "/sys"
+    
+  # Backup notificaties
+  backup_notifications:
+    enabled: true
+    on_success: false
+    on_failure: true
+    on_warning: true
+    email: backup-alerts@{{ domain }}
+    slack_channel: "#backups"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+duplicati_config:
+  # Backup sets
+  backup_sets:
+    - name: system-config
+      description: "Systeem configuratie bestanden"
+      source: /source/etc
+      destination: "s3://s3.amazonaws.com/backups/config"
+      schedule: "0 2 * * *"
+      retention: 30
+      encryption: true
+      compression: true
+      
+    - name: docker-volumes
+      description: "Docker volumes"
+      source: /source/var/lib/docker/volumes
+      destination: "s3://s3.amazonaws.com/backups/docker"
+      schedule: "0 3 * * *"
+      retention: 14
+      encryption: true
+      compression: true
+      
+    - name: databases
+      description: "Database dumps"
+      source: /source/backup/db
+      destination: "s3://s3.amazonaws.com/backups/db"
+      schedule: "0 4 * * *"
+      retention: 60
+      encryption: true
+      compression: true
+      
+  # Backup rapportage
+  reporting:
+    send_mail: true
+    mail_to: backup@{{ domain }}
+    mail_from: duplicati@{{ domain }}
+    smtp_server: smtp.{{ domain }}
+    smtp_port: 587
+    smtp_username: backup
+    smtp_password: "{{ vault_smtp_password }}"
+
+minio_config:
+  # MinIO buckets
+  buckets:
+    - name: backups
+      policy: private
+      versioning: true
+      locking: false
+      quota: 1TB
+      
+    - name: data
+      policy: private
+      versioning: true
+      locking: false
+      quota: 5TB
+      
+    - name: logs
+      policy: private
+      versioning: false
+      locking: false
+      quota: 500GB
+      lifecycle:
+        - days: 30
+          action: delete
+          
+  # MinIO users
+  users:
+    - name: backup-user
+      policy: readwrite
+      secret_key: "{{ vault_minio_backup_user }}"
+    - name: app-user
+      policy: readonly
+      secret_key: "{{ vault_minio_app_user }}"
+      
+  # MinIO policies
+  policies:
+    - name: readwrite
+      statements:
+        - effect: Allow
+          actions:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+          resources:
+            - arn:aws:s3:::backups/*
+            - arn:aws:s3:::backups
+    - name: readonly
+      statements:
+        - effect: Allow
+          actions:
+            - s3:GetObject
+            - s3:ListBucket
+          resources:
+            - arn:aws:s3:::data/*
+            - arn:aws:s3:::data
+
+seafile_config:
+  # Seafile libraries
+  libraries:
+    - name: Documents
+      description: "Documenten library"
+      encrypted: true
+      password: "{{ vault_seafile_docs_password }}"
+    - name: Photos
+      description: "Foto library"
+      encrypted: false
+    - name: Backups
+      description: "Backup library"
+      encrypted: true
+      password: "{{ vault_seafile_backup_password }}"
+      
+  # Seafile gebruikers
+  users:
+    - email: admin@{{ domain }}
+      is_admin: true
+      password: "{{ vault_seafile_admin_password }}"
+    - email: backup@{{ domain }}
+      is_admin: false
+      password: "{{ vault_seafile_backup_user_password }}"
+      
+  # Seafile instellingen
+  settings:
+    file_size_limit: 100MB
+    trash_clean_days: 30
+    enable_auto_update: true
+    enable_encrypted_library: true
+    enable_repo_history: true
+
+ocis_config:
+  # OwnCloud Infinite Scale settings
+  apps:
+    - idp
+    - graph
+    - storage
+    - web
+    - thumbnails
+    - search
+    - settings
+    
+  # Storage providers
+  storage_providers:
+    - name: local
+      type: local
+      path: /var/lib/ocis/storage
+    - name: s3
+      type: s3
+      bucket: ocis
+      endpoint: minio:9000
+      access_key: minioadmin
+      secret_key: "{{ vault_minio_password }}"
+      
+  # Users
+  users:
+    - username: admin
+      role: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_ocis_admin_password }}"
+    - username: user
+      role: user
+      email: user@{{ domain }}
+      password: "{{ vault_ocis_user_password }}"
+
+# =============================================================================
+# BACKUP SCHEDULES
+# =============================================================================
+backup_schedules:
+  # Dagelijkse backups
+  daily:
+    enabled: true
+    time: "02:00"
+    retention: 7
+    includes:
+      - /etc
+      - /home/*/.config
+      - /var/lib/docker/volumes/*_data
+    
+  # Wekelijkse backups
+  weekly:
+    enabled: true
+    day: sunday
+    time: "03:00"
+    retention: 4
+    includes:
+      - /home
+      - /var/lib/postgresql
+      - /var/lib/mysql
+      
+  # Maandelijkse backups
+  monthly:
+    enabled: true
+    day: 1
+    time: "04:00"
+    retention: 12
+    includes:
+      - /var/lib/docker/volumes
+      - /backup
+      
+  # Volledige systeem backup (kwartaallijks)
+  quarterly:
+    enabled: true
+    month: "*/3"
+    day: 1
+    time: "05:00"
+    retention: 4
+    includes:
+      - /
+    excludes:
+      - /proc
+      - /sys
+      - /dev
+      - /tmp
+      - /var/cache
+      - /var/log

@@ -1,0 +1,350 @@
+---
+# =============================================================================
+# TIME TRACKING TOOLS
+# =============================================================================
+# Functie: time-tracking
+# Beschrijving: Tools voor urenregistratie, projecttijden en facturatie
+# =============================================================================
+
+time_tracking_tools:
+  # ---------------------------------------------------------------------------
+  # URENREGISTRATIE
+  # ---------------------------------------------------------------------------
+  - name: Kimai
+    profiel_tag: Financiën
+    functie_tag: time-tracking
+    beschrijving: "Professionele urenregistratie voor facturatie en projecten"
+    categorie: time_tracking
+    docker_image: kimai/kimai2:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - kimai_data:/opt/kimai/var/data
+      - kimai_logs:/opt/kimai/var/log
+      - kimai_plugins:/opt/kimai/plugins
+    environment:
+      DATABASE_URL: "mysql://kimai:{{ vault_kimai_password }}@mysql:3306/kimai"
+      APP_ENV: prod
+      APP_SECRET: "{{ vault_kimai_secret }}"
+      MAILER_URL: "smtp://smtp.{{ domain }}:587?encryption=tls&auth_mode=login&username=kimai@{{ domain }}&password={{ vault_smtp_password }}"
+      MAILER_FROM: kimai@{{ domain }}
+      COMPANY_NAME: "{{ company_name }}"
+      TIMEZONE: Europe/Amsterdam
+      CURRENCY: EUR
+      CURRENCY_SYMBOL: €
+      LANGUAGE: nl
+      DATE_FORMAT: d.m.Y
+      TIME_FORMAT: H:i
+      FIRST_DAY_OF_WEEK: monday
+    database: mysql
+    url: "https://www.kimai.org"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+time_tracking_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Tijdregistratie instellingen
+  time_tracking:
+    currency: EUR
+    currency_symbol: €
+    timezone: Europe/Amsterdam
+    workweek:
+      monday: true
+      tuesday: true
+      wednesday: true
+      thursday: true
+      friday: true
+      saturday: false
+      sunday: false
+    default_work_start: "09:00"
+    default_work_end: "17:00"
+    lunch_break: 30
+    overtime_enabled: true
+    overtime_rate: 1.5
+    
+  # Uurtarieven
+  hourly_rates:
+    default: 75
+    developer: 95
+    senior_developer: 125
+    consultant: 150
+    project_manager: 110
+    
+  # Facturatie
+  invoicing:
+    enabled: true
+    invoice_prefix: "INV-{{ '%Y' | strftime }}-"
+    payment_terms: 30
+    late_fee_percentage: 2
+    default_vat_rate: 21
+    rounding_precision: 0.05
+    
+  # Projecten
+  projects:
+    default_budget: 100
+    default_budget_type: hours
+    allow_overtime: true
+    require_approval: true
+    
+  # Rapportage
+  reports:
+    - weekly_report
+    - monthly_report
+    - project_report
+    - user_report
+    - invoice_report
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+kimai_config:
+  # Kimai klanten
+  customers:
+    - name: "{{ company_name }}"
+      number: CUST-001
+      currency: EUR
+      country: NL
+      city: "{{ company_city }}"
+      address: "{{ company_address }}"
+      contact: "Financiële administratie"
+      email: finance@{{ domain }}
+      phone: "{{ company_phone }}"
+      
+    - name: "Voorbeeld Klant BV"
+      number: CUST-002
+      currency: EUR
+      country: NL
+      city: Amsterdam
+      address: "Klantstraat 1, 1000 AA Amsterdam"
+      contact: "Jan Jansen"
+      email: info@klant.nl
+      phone: "020-1234567"
+      vat_id: "NL123456789B01"
+      
+    - name: "Testbedrijf BV"
+      number: CUST-003
+      currency: EUR
+      country: NL
+      city: Rotterdam
+      address: "Testlaan 10, 3000 AA Rotterdam"
+      contact: "Piet Pietersen"
+      email: info@testbedrijf.nl
+      phone: "010-7654321"
+      
+  # Kimai projecten
+  projects:
+    - name: "Website Ontwikkeling"
+      customer: "Voorbeeld Klant BV"
+      order_number: PO-2024-001
+      budget: 100
+      budget_type: hours
+      time_budget: 100
+      hourly_rate: 95
+      visible: true
+      start_date: "2024-01-01"
+      end_date: "2024-06-30"
+      description: "Ontwikkeling van nieuwe bedrijfswebsite"
+      
+    - name: "Onderhoud & Support"
+      customer: "Voorbeeld Klant BV"
+      order_number: PO-2024-002
+      budget: 5000
+      budget_type: price
+      time_budget: 50
+      hourly_rate: 85
+      visible: true
+      start_date: "2024-01-01"
+      end_date: "2024-12-31"
+      description: "Maandelijks onderhoud en support"
+      
+    - name: "Interne Projecten"
+      customer: "{{ company_name }}"
+      budget: 1000
+      budget_type: hours
+      hourly_rate: 0
+      visible: true
+      description: "Interne ontwikkelingen en verbeteringen"
+      
+    - name: "Training & Opleiding"
+      customer: "Testbedrijf BV"
+      order_number: PO-2024-003
+      budget: 40
+      budget_type: hours
+      hourly_rate: 150
+      visible: true
+      description: "Training voor nieuwe medewerkers"
+      
+  # Kimai activiteiten
+  activities:
+    - name: "Ontwikkeling"
+      project: "Website Ontwikkeling"
+      visible: true
+      billable: true
+      
+    - name: "Overleg"
+      project: "Website Ontwikkeling"
+      visible: true
+      billable: true
+      
+    - name: "Documentatie"
+      project: "Website Ontwikkeling"
+      visible: true
+      billable: true
+      
+    - name: "Onderhoud"
+      project: "Onderhoud & Support"
+      visible: true
+      billable: true
+      
+    - name: "Administratie"
+      project: "Interne Projecten"
+      visible: true
+      billable: false
+      
+    - name: "Vergadering"
+      project: "Interne Projecten"
+      visible: true
+      billable: false
+      
+    - name: "Training geven"
+      project: "Training & Opleiding"
+      visible: true
+      billable: true
+      
+    - name: "Voorbereiding"
+      project: "Training & Opleiding"
+      visible: true
+      billable: true
+      
+  # Kimai gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_kimai_admin_password }}"
+      roles: ["ROLE_SUPER_ADMIN"]
+      hourly_rate: 0
+      
+    - username: finance
+      email: finance@{{ domain }}
+      password: "{{ vault_kimai_finance_password }}"
+      roles: ["ROLE_ADMIN"]
+      hourly_rate: 0
+      
+    - username: developer1
+      email: developer1@{{ domain }}
+      password: "{{ vault_kimai_dev1_password }}"
+      roles: ["ROLE_USER"]
+      hourly_rate: 95
+      
+    - username: developer2
+      email: developer2@{{ domain }}
+      password: "{{ vault_kimai_dev2_password }}"
+      roles: ["ROLE_USER"]
+      hourly_rate: 85
+      
+    - username: consultant
+      email: consultant@{{ domain }}
+      password: "{{ vault_kimai_consultant_password }}"
+      roles: ["ROLE_USER"]
+      hourly_rate: 150
+      
+  # Kimai teams
+  teams:
+    - name: Development
+      members:
+        - developer1
+        - developer2
+      teamlead: developer1
+      projects:
+        - Website Ontwikkeling
+        - Onderhoud & Support
+        
+    - name: Consulting
+      members:
+        - consultant
+      teamlead: consultant
+      projects:
+        - Training & Opleiding
+        
+    - name: Management
+      members:
+        - admin
+        - finance
+      teamlead: admin
+      projects: "*"
+      
+  # Kimai timesheet instellingen
+  timesheet:
+    default_begin: "09:00"
+    default_end: "17:00"
+    default_break: 30
+    min_duration: 15
+    max_duration: 480
+    rounding: 15
+    allow_overlapping: false
+    allow_future_times: false
+    require_description: true
+    require_activity: true
+    require_project: true
+    export_decimal: true
+    
+  # Kimai export
+  export:
+    formats:
+      - pdf
+      - csv
+      - excel
+      - json
+    default_format: pdf
+    include_subtotals: true
+    include_totals: true
+    include_tax: true
+    
+  # Kimai facturatie
+  invoice:
+    templates:
+      - name: Standaard
+        file: default.html.twig
+        renderer: pdf
+      - name: Uitgebreid
+        file: extended.html.twig
+        renderer: pdf
+      - name: Excel
+        file: default.xlsx
+        renderer: xlsx
+        
+    number_format: "{{ '%04d' | format(invoice_number) }}"
+    due_days: 30
+    vat_rate: 21
+    payment_terms: "14 dagen"
+    footer: "Betaling binnen 14 dagen na factuurdatum"
+    bank:
+      name: "{{ company_bank }}"
+      iban: "{{ company_iban }}"
+      bic: "{{ company_bic }}"
+      
+  # Kimai rapporten
+  reports:
+    - name: "Wekelijks overzicht"
+      type: user
+      period: week
+      recipients:
+        - finance@{{ domain }}
+    - name: "Maandelijks projectoverzicht"
+      type: project
+      period: month
+      recipients:
+        - finance@{{ domain }}
+        - admin@{{ domain }}
+    - name: "Uren per klant"
+      type: customer
+      period: month
+      recipients:
+        - finance@{{ domain }}

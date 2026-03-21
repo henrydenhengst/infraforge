@@ -1,0 +1,33 @@
+<?php
+$CONFIG = [
+    'datadirectory' => '{{ nextcloud_data_path }}',
+    'dbtype' => 'pgsql',
+    'version' => '{{ nextcloud_version }}',
+    'installed' => true,
+    'trusted_domains' => [
+        0 => '{{ nextcloud_domain }}',
+    ],
+    'dbname' => '{{ nextcloud_db_name }}',
+    'dbhost' => '{{ nextcloud_db_host }}',
+    'dbuser' => '{{ nextcloud_db_user }}',
+    'dbpassword' => '{{ nextcloud_db_password }}',
+    'overwrite.cli.url' => 'https://{{ nextcloud_domain }}',
+    'overwritehost' => '{{ nextcloud_domain }}',
+    'overwriteprotocol' => 'https',
+    'memcache.local' => '\\OC\\Memcache\\APCu',
+    'memcache.distributed' => '\\OC\\Memcache\\Redis',
+    'memcache.locking' => '\\OC\\Memcache\\Redis',
+    'redis' => [
+        'host' => 'localhost',
+        'port' => 6379,
+    ],
+    'mail_smtpmode' => 'smtp',
+    'mail_smtpsecure' => 'tls',
+    'mail_smtphost' => 'smtp.{{ domain }}',
+    'mail_smtpport' => '587',
+    'mail_smtpauth' => true,
+    'mail_smtpname' => 'nextcloud@{{ domain }}',
+    'mail_smtppassword' => '{{ vault_smtp_password }}',
+    'mail_from_address' => 'nextcloud',
+    'mail_domain' => '{{ domain }}',
+];

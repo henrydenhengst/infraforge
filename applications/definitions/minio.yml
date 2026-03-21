@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# CHROMADB - LICHTGEWICHT VECTOR STORE
+# =============================================================================
+# Beschrijving: Lichtgewicht vector store voor AI-agenten
+# Website: https://www.trychroma.com
+# =============================================================================
+
+application:
+  name: chromadb
+  version: 0.4.24
+  description: "ChromaDB - Lichtgewicht vector store"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ai-team
+    contact: ai@company.local
+    slack: "#ai"
+    documentation: "https://docs.trychroma.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /chroma/chroma
+        
+  network_requirements:
+    vlans:
+      - ai
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "ChromaDB API"
+    dns:
+      - "chroma.{{ domain }}"
+      
+  container:
+    image: chromadb/chroma:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: CHROMA_SERVER_HOST
+      value: "0.0.0.0"
+      secret: false
+    - name: CHROMA_SERVER_PORT
+      value: "8000"
+      secret: false
+    - name: CHROMA_PERSIST_DIRECTORY
+      value: "/chroma/chroma"
+      secret: false
+    - name: CHROMA_ANONYMIZED_TELEMETRY
+      value: "false"
+      secret: false
+      
+  collections:
+    - name: documents
+      metadata:
+        hnsw:space: cosine
+      embedding_function: all-MiniLM-L6-v2
+    - name: code
+      metadata:
+        hnsw:space: l2
+      embedding_function: code-bert
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/heartbeat
+      port: 8000

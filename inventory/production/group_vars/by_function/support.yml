@@ -1,0 +1,532 @@
+---
+# =============================================================================
+# SUPPORT TOOLS
+# =============================================================================
+# Functie: support
+# Beschrijving: Tools voor klantenservice, helpdesk, tickets en support
+# =============================================================================
+
+support_tools:
+  # ---------------------------------------------------------------------------
+  # TICKETSYSTEMEN
+  # ---------------------------------------------------------------------------
+  - name: Zammad
+    profiel_tag: Klantenservice
+    functie_tag: support
+    beschrijving: "Modern ticketsysteem en helpdesk voor klantenservice"
+    categorie: ticketing
+    docker_image: zammad/zammad:latest
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - zammad_data:/opt/zammad
+      - zammad_backup:/var/tmp/zammad
+      - zammad_logs:/opt/zammad/log
+    environment:
+      ZAMMAD_DB_HOST: postgres
+      ZAMMAD_DB_PORT: 5432
+      ZAMMAD_DB_USER: zammad
+      ZAMMAD_DB_PASS: "{{ vault_zammad_password }}"
+      ZAMMAD_DB_NAME: zammad
+      ZAMMAD_ELASTICSEARCH_HOST: elasticsearch
+      ZAMMAD_ELASTICSEARCH_PORT: 9200
+      ZAMMAD_ELASTICSEARCH_SCHEME: http
+      ZAMMAD_RAILS_PORT: 3000
+      ZAMMAD_WEBSOCKET_PORT: 6042
+      ZAMMAD_MAILBOX_INIT: "true"
+      ZAMMAD_MAILBOX_USER: support@{{ domain }}
+      ZAMMAD_MAILBOX_PASSWORD: "{{ vault_zammad_mailbox_password }}"
+    database: postgresql
+    search: elasticsearch
+    url: "https://zammad.com"
+    
+  - name: Zammad-AI
+    profiel_tag: Support
+    functie_tag: support
+    beschrijving: "Ticket-samenvattingen en antwoordsuggesties via AI"
+    categorie: ai_support
+    docker_image: zammad/zammad:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - zammad_ai_data:/opt/zammad
+    environment:
+      ZAMMAD_AI_ENABLED: "true"
+      ZAMMAD_AI_MODEL: "llama3"
+      ZAMMAD_AI_API_URL: "http://ollama:11434"
+      ZAMMAD_AI_TEMPERATURE: 0.3
+      ZAMMAD_AI_MAX_TOKENS: 500
+    database: postgresql
+    search: elasticsearch
+    url: "https://zammad.com"
+    
+  # ---------------------------------------------------------------------------
+  # CHAT & CUSTOMER ENGAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: Chatwoot
+    profiel_tag: Support
+    functie_tag: chat
+    beschrijving: "Customer engagement platform (Omnichannel)"
+    categorie: live_chat
+    docker_image: chatwoot/chatwoot:latest
+    ports:
+      - "8082:3000"
+    volumes:
+      - chatwoot_data:/app/storage
+      - chatwoot_logs:/app/log
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: chatwoot
+      POSTGRES_USER: chatwoot
+      POSTGRES_PASSWORD: "{{ vault_chatwoot_password }}"
+      REDIS_URL: "redis://redis:6379"
+      RAILS_ENV: production
+      SECRET_KEY_BASE: "{{ vault_chatwoot_secret }}"
+      FRONTEND_URL: "https://chatwoot.{{ domain }}"
+      MAILER_SENDER_EMAIL: chatwoot@{{ domain }}
+      SMTP_ADDRESS: smtp.{{ domain }}
+      SMTP_PORT: 587
+      SMTP_USERNAME: chatwoot@{{ domain }}
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+      SMTP_DOMAIN: "{{ domain }}"
+      SMTP_AUTHENTICATION: login
+      SMTP_ENABLE_STARTTLS_AUTO: "true"
+    database: postgresql
+    queue: redis
+    url: "https://www.chatwoot.com"
+    
+  - name: Chatwoot-GPT
+    profiel_tag: Support
+    functie_tag: chat
+    beschrijving: "AI-chatbot voor automatische klantenservice"
+    categorie: ai_chat
+    docker_image: chatwoot/chatwoot:latest
+    ports:
+      - "8083:3000"
+    volumes:
+      - chatwoot_gpt_data:/app/storage
+    environment:
+      CHATWOOT_GPT_ENABLED: "true"
+      OPENAI_API_KEY: "{{ vault_openai_key }}"
+      OPENAI_MODEL: "gpt-3.5-turbo"
+      AI_BOT_NAME: "SupportBot"
+      AI_BOT_AVATAR: "/assets/bot.png"
+      AI_AUTO_RESPOND: "true"
+      AI_ESCALATE_TO_HUMAN: "true"
+      AI_ESCALATION_KEYWORDS: "agent,human,supervisor"
+    database: postgresql
+    queue: redis
+    url: "https://www.chatwoot.com"
+    
+  # ---------------------------------------------------------------------------
+  # FRAMEWORKS VOOR CONVERSATIE-AI
+  # ---------------------------------------------------------------------------
+  - name: Rasa
+    profiel_tag: Support
+    functie_tag: chat
+    beschrijving: "Open-source framework voor conversatie-AI en bots"
+    categorie: ai_framework
+    docker_image: rasa/rasa:latest
+    ports:
+      - "5005:5005"
+    volumes:
+      - rasa_data:/app/data
+      - rasa_models:/app/models
+      - rasa_config:/app/config
+    environment:
+      RASA_TELEMETRY_ENABLED: "false"
+      RASA_MODEL_SERVER: "http://rasa-server:5005"
+      RASA_ACTION_ENDPOINT: "http://rasa-actions:5055/webhook"
+      RASA_TOKEN: "{{ vault_rasa_token }}"
+    command: run --enable-api --cors "*" --debug
+    url: "https://rasa.com"
+    
+  - name: Rasa Actions
+    profiel_tag: Support
+    functie_tag: chat
+    beschrijving: "Custom actions server voor Rasa"
+    categorie: ai_framework
+    docker_image: rasa/rasa-sdk:latest
+    ports:
+      - "5055:5055"
+    volumes:
+      - rasa_actions:/app/actions
+    environment:
+      RASA_TOKEN: "{{ vault_rasa_token }}"
+      RASA_MODEL_SERVER: "http://rasa:5005"
+    url: "https://rasa.com"
+    
+  # ---------------------------------------------------------------------------
+  # LICHTGEWICHT HELP DESK
+  # ---------------------------------------------------------------------------
+  - name: Helpy
+    profiel_tag: Support
+    functie_tag: support
+    beschrijving: "Klantenservice platform met focus op privacy"
+    categorie: lightweight
+    docker_image: helpy/helpy:latest
+    ports:
+      - "8084:3000"
+    volumes:
+      - helpy_data:/helpy/public
+      - helpy_db:/helpy/db
+    environment:
+      RAILS_ENV: production
+      SECRET_KEY_BASE: "{{ vault_helpy_secret }}"
+      DEVISE_SECRET_KEY: "{{ vault_helpy_devise_secret }}"
+      DOMAIN: "helpy.{{ domain }}"
+      PROTOCOL: https
+      SMTP_ADDRESS: smtp.{{ domain }}
+      SMTP_PORT: 587
+      SMTP_USERNAME: helpy@{{ domain }}
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+      SMTP_DOMAIN: "{{ domain }}"
+      SMTP_AUTHENTICATION: login
+    database: sqlite
+    url: "https://helpy.io"
+    
+  - name: Freescout
+    profiel_tag: Support
+    functie_tag: support
+    beschrijving: "Helpdesk en gedeelde inbox (Zendesk alternatief)"
+    categorie: lightweight
+    docker_image: tiredofit/freescout:latest
+    ports:
+      - "8085:80"
+    volumes:
+      - freescout_data:/data
+      - freescout_modules:/modules
+      - freescout_logs:/var/log/freescout
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: freescout
+      DB_USERNAME: freescout
+      DB_PASSWORD: "{{ vault_freescout_password }}"
+      APP_URL: "https://freescout.{{ domain }}"
+      APP_NAME: "Helpdesk {{ company_name }}"
+      ADMIN_EMAIL: admin@{{ domain }}
+      ADMIN_PASS: "{{ vault_freescout_admin_password }}"
+      ADMIN_NAME: Admin User
+      ENABLE_SSL_PROXY: "false"
+      FORCE_HTTPS: "true"
+    database: mysql
+    url: "https://freescout.net"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+support_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Helpdesk instellingen
+  helpdesk:
+    name: "{{ company_name }} Support"
+    email: support@{{ domain }}
+    phone: "{{ company_phone }}"
+    working_hours:
+      monday: "09:00-17:00"
+      tuesday: "09:00-17:00"
+      wednesday: "09:00-17:00"
+      thursday: "09:00-17:00"
+      friday: "09:00-17:00"
+      saturday: closed
+      sunday: closed
+    timezone: Europe/Amsterdam
+    
+  # Ticket instellingen
+  tickets:
+    default_priority: medium
+    priorities:
+      - low
+      - medium
+      - high
+      - critical
+    statuses:
+      - new
+      - open
+      - pending
+      - resolved
+      - closed
+    sla:
+      critical: 1h
+      high: 4h
+      medium: 24h
+      low: 48h
+      
+  # Kanalen
+  channels:
+    - email
+    - web
+    - chat
+    - phone
+    - social_media
+    
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: support@{{ domain }}
+    email_prefix: "[Support]"
+    slack_enabled: true
+    slack_channel: "#support"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+zammad_config:
+  # Zammad groepen
+  groups:
+    - name: Support
+      assignment_timeout: 180
+      follow_up_possible: true
+      reopen_time_in_days: 7
+    - name: Sales
+      assignment_timeout: 60
+    - name: Techniek
+      assignment_timeout: 120
+      
+  # Zammad rollen
+  roles:
+    - name: Admin
+      permissions:
+        - admin.*
+        - ticket.*
+        - user.*
+        - group.*
+    - name: Agent
+      permissions:
+        - ticket.agent
+        - ticket.listing
+        - user.agent
+    - name: Customer
+      permissions:
+        - ticket.customer
+        
+  # Zammad gebruikers
+  users:
+    - firstname: Admin
+      lastname: User
+      email: admin@{{ domain }}
+      password: "{{ vault_zammad_admin_password }}"
+      roles:
+        - Admin
+    - firstname: Agent
+      lastname: One
+      email: agent1@{{ domain }}
+      password: "{{ vault_zammad_agent1_password }}"
+      roles:
+        - Agent
+      groups:
+        - Support
+    - firstname: Agent
+      lastname: Two
+      email: agent2@{{ domain }}
+      password: "{{ vault_zammad_agent2_password }}"
+      roles:
+        - Agent
+      groups:
+        - Techniek
+        
+  # Zammad tickets
+  ticket_templates:
+    - name: Algemene vraag
+      group: Support
+      priority: medium
+      state: new
+      article:
+        subject: "Algemene vraag"
+        body: "Standaard template voor algemene vragen"
+    - name: Technisch probleem
+      group: Techniek
+      priority: high
+      state: new
+      article:
+        subject: "Technisch probleem"
+        body: "Standaard template voor technische problemen"
+        
+  # Zammad automations
+  automations:
+    - name: Stuur bevestiging
+      trigger: ticket.created
+      conditions:
+        - ticket.state: new
+      actions:
+        - send_email:
+            template: confirmation
+    - name: Escalatie na 24 uur
+      trigger: ticket.escalation
+      conditions:
+        - ticket.state: [new, open]
+        - ticket.age: ">24h"
+      actions:
+        - set_priority: high
+        - notify_group:
+            group: Support
+            message: "Ticket is 24 uur ongewijzigd"
+            
+  # Zammad triggers
+  triggers:
+    - name: Email notificatie agent
+      event: ticket.update
+      conditions:
+        - ticket.owner_id: changed
+      actions:
+        - send_email:
+            recipient: ticket.owner
+            template: ticket_assigned
+
+chatwoot_config:
+  # Chatwoot inboxen
+  inboxes:
+    - name: Website Chat
+      type: website
+      widget_color: "#1f93ff"
+      welcome_message: "Hoe kunnen we je helpen?"
+      greeting_enabled: true
+      greeting_message: "Welkom bij {{ company_name }} Support!"
+      
+    - name: Email Support
+      type: email
+      email: support@{{ domain }}
+      signature: "{{ company_name }} Support Team"
+      
+    - name: Facebook
+      type: facebook
+      page_id: "{{ facebook_page_id }}"
+      user_access_token: "{{ vault_facebook_token }}"
+      
+    - name: WhatsApp
+      type: whatsapp
+      phone_number: "{{ whatsapp_number }}"
+      api_key: "{{ vault_whatsapp_api_key }}"
+      
+  # Chatwoot teams
+  teams:
+    - name: Support Team
+      description: "Eerste lijn support"
+      members:
+        - agent1@{{ domain }}
+        - agent2@{{ domain }}
+    - name: Technical Team
+      description: "Technische support"
+      members:
+        - tech1@{{ domain }}
+        - tech2@{{ domain }}
+        
+  # Chatwoot automations
+  automations:
+    - name: Auto-assign
+      trigger: conversation.created
+      conditions:
+        - inbox: Website Chat
+      actions:
+        - assign_team: Support Team
+    - name: Offline message
+      trigger: conversation.created
+      conditions:
+        - inbox: Website Chat
+        - time: outside_business_hours
+      actions:
+        - send_message:
+            message: "Buiten kantooruren. We reageren zo snel mogelijk."
+            
+  # Chatwoot canned responses
+  canned_responses:
+    - short_code: welcome
+      content: "Welkom bij {{ company_name }}! Hoe kunnen we je helpen?"
+    - short_code: thanks
+      content: "Bedankt voor je bericht. We nemen zo snel mogelijk contact op."
+    - short_code: closed
+      content: "Deze conversatie is afgesloten. Neem gerust contact op voor verdere vragen."
+
+rasa_config:
+  # Rasa NLU configuratie
+  nlu:
+    pipeline:
+      - name: WhitespaceTokenizer
+      - name: RegexFeaturizer
+      - name: LexicalSyntacticFeaturizer
+      - name: CountVectorsFeaturizer
+      - name: CountVectorsFeaturizer
+        analyzer: char_wb
+        min_ngram: 1
+        max_ngram: 4
+      - name: DIETClassifier
+        epochs: 100
+      - name: EntitySynonymMapper
+      - name: ResponseSelector
+        epochs: 100
+    language: nl
+    
+  # Rasa domains
+  domain:
+    intents:
+      - greet
+      - goodbye
+      - affirm
+      - deny
+      - mood_great
+      - mood_unhappy
+      - bot_challenge
+      - ask_support
+      - report_problem
+    entities:
+      - problem_type
+      - urgency
+    slots:
+      - problem_type:
+          type: text
+          mappings:
+            - type: from_entity
+              entity: problem_type
+      - urgency:
+          type: categorical
+          values:
+            - low
+            - medium
+            - high
+          mappings:
+            - type: from_entity
+              entity: urgency
+    responses:
+      utter_greet:
+        - text: "Hallo! Hoe kan ik je helpen?"
+      utter_goodbye:
+        - text: "Tot ziens!"
+      utter_ask_problem:
+        - text: "Kun je beschrijven wat het probleem is?"
+      utter_ask_urgency:
+        - text: "Hoe dringend is dit probleem? (laag/middel/hoog)"
+        
+  # Rasa stories
+  stories:
+    - story: happy path
+      steps:
+        - intent: greet
+        - action: utter_greet
+        - intent: mood_great
+        - action: utter_happy
+        
+    - story: support request
+      steps:
+        - intent: ask_support
+        - action: utter_ask_problem
+        - intent: report_problem
+          entities:
+            - problem_type: login
+        - slot_was_set:
+            - problem_type: login
+        - action: utter_ask_urgency
+        - intent: inform
+          entities:
+            - urgency: high
+        - slot_was_set:
+            - urgency: high
+        - action: action_create_ticket

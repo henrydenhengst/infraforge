@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# LABEL STUDIO - DATA-ANNOTATIE TOOL
+# =============================================================================
+# Beschrijving: Data-annotatie tool voor het trainen van eigen AI-modellen
+# Website: https://labelstud.io
+# =============================================================================
+
+application:
+  name: labelstudio
+  version: 1.11.0
+  description: "Label Studio - Data-annotatie tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://labelstud.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /label-studio/data
+      - name: uploads
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /label-studio/upload
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Label Studio web interface"
+    dns:
+      - "annotate.{{ domain }}"
+      - "labelstudio.{{ domain }}"
+      
+  container:
+    image: heartexlabs/label-studio:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: LABEL_STUDIO_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: LABEL_STUDIO_DB_NAME
+      value: "labelstudio"
+      secret: false
+    - name: LABEL_STUDIO_DB_USER
+      value: "labelstudio"
+      secret: false
+    - name: LABEL_STUDIO_DB_PASSWORD
+      value: "{{ vault_labelstudio_password }}"
+      secret: true
+    - name: LABEL_STUDIO_DB_PORT
+      value: "5432"
+      secret: false
+    - name: LABEL_STUDIO_USERNAME
+      value: "admin"
+      secret: false
+    - name: LABEL_STUDIO_PASSWORD
+      value: "{{ vault_labelstudio_admin_password }}"
+      secret: true
+    - name: LABEL_STUDIO_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

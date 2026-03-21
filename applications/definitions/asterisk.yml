@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# DOCUSEAL - DIGITALE HANDTEKENINGEN
+# =============================================================================
+# Beschrijving: Open-source alternatief voor DocuSign
+# Website: https://www.docuseal.co
+# =============================================================================
+
+application:
+  name: docuseal
+  version: 1.0.0
+  description: "DocuSeal - Digitale handtekeningen"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: legal-team
+    contact: legal@company.local
+    slack: "#legal"
+    documentation: "https://www.docuseal.co/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - legal
+      - dmz
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: true
+        description: "DocuSeal web interface"
+    dns:
+      - "sign.{{ domain }}"
+      - "docuseal.{{ domain }}"
+      
+  container:
+    image: docuseal/docuseal:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DATABASE_URL
+      value: "postgresql://docuseal:{{ vault_docuseal_password }}@postgres:5432/docuseal"
+      secret: true
+    - name: SECRET_KEY_BASE
+      value: "{{ vault_docuseal_secret }}"
+      secret: true
+    - name: HOST
+      value: "https://sign.{{ domain }}"
+      secret: false
+    - name: SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: SMTP_PORT
+      value: "587"
+      secret: false
+    - name: SMTP_USER
+      value: "docuseal@{{ domain }}"
+      secret: false
+    - name: SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: SMTP_FROM
+      value: "docuseal@{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

@@ -1,0 +1,332 @@
+---
+# =============================================================================
+# VIDEO TOOLS
+# =============================================================================
+# Functie: video
+# Beschrijving: Tools voor video productie, streaming en AI-video generatie
+# =============================================================================
+
+video_tools:
+  # ---------------------------------------------------------------------------
+  # AI VIDEO GENERATIE
+  # ---------------------------------------------------------------------------
+  - name: Synthesia-Local
+    profiel_tag: Creators
+    functie_tag: video
+    beschrijving: "AI-avatar video generatie tools"
+    categorie: ai_video
+    docker_image: synthesia/local:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - synthesia_models:/app/models
+      - synthesia_output:/app/output
+      - synthesia_avatars:/app/avatars
+      - synthesia_config:/app/config
+    environment:
+      SYNTHESIA_API_KEY: "{{ vault_synthesia_api_key }}"
+      SYNTHESIA_MODEL: "standard"
+      SYNTHESIA_RESOLUTION: "1080p"
+      SYNTHESIA_FPS: 30
+      SYNTHESIA_MAX_DURATION: 300
+      NVIDIA_VISIBLE_DEVICES: "all"
+    gpu_support: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, video]
+    url: "https://www.synthesia.io"
+    
+  # ---------------------------------------------------------------------------
+  # VIDEO CONFERENCING
+  # ---------------------------------------------------------------------------
+  - name: BigBlueButton
+    profiel_tag: Education
+    functie_tag: video
+    beschrijving: "Web-conferencing specifiek voor online lesgeven"
+    categorie: video_conferencing
+    docker_image: bigbluebutton/bbb:latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "1935:1935"
+      - "5066:5066"
+    volumes:
+      - bbb_data:/var/bigbluebutton
+      - bbb_logs:/var/log/bigbluebutton
+      - bbb_playback:/var/bigbluebutton/playback
+      - bbb_published:/var/bigbluebutton/published
+      - bbb_recording:/var/bigbluebutton/recording
+    environment:
+      BBB_SERVER_URL: "https://bbb.{{ domain }}"
+      BBB_SECRET: "{{ vault_bbb_secret }}"
+      SMTP_SERVER: smtp.{{ domain }}
+      SMTP_USERNAME: bbb@{{ domain }}
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+      SMTP_DOMAIN: "{{ domain }}"
+      TZ: Europe/Amsterdam
+      LANGUAGE: nl
+    url: "https://bigbluebutton.org"
+    
+  - name: Jitsi Meet
+    profiel_tag: Algemeen
+    functie_tag: chat
+    beschrijving: "Video-conferencing voor teams"
+    categorie: video_conferencing
+    docker_image: jitsi/web:latest
+    ports:
+      - "8000:80"
+      - "8443:443"
+    volumes:
+      - jitsi_config:/config
+      - jitsi_transcripts:/transcripts
+      - jitsi_recordings:/recordings
+    environment:
+      JITSI_DOMAIN: "meet.{{ domain }}"
+      JITSI_ENABLE_AUTH: "true"
+      JITSI_AUTH_TYPE: internal
+      JITSI_ENABLE_GUESTS: "true"
+      JITSI_ENABLE_RECORDING: "false"
+      JITSI_ENABLE_TRANSCRIPTIONS: "false"
+      JITSI_PUBLIC_URL: "https://meet.{{ domain }}"
+    url: "https://jitsi.org"
+    
+  # ---------------------------------------------------------------------------
+  # TUTORIAL & SCREENCASTING
+  # ---------------------------------------------------------------------------
+  - name: Guidde
+    profiel_tag: Education
+    functie_tag: video
+    beschrijving: "AI-gestuurde handleidingen en video-tutorials maken"
+    categorie: screencasting
+    docker_image: guidde/guidde:latest
+    ports:
+      - "8081:3000"
+    volumes:
+      - guidde_data:/app/data
+      - guidde_videos:/app/videos
+      - guidde_screenshots:/app/screenshots
+    environment:
+      GUIDDE_API_KEY: "{{ vault_guidde_api_key }}"
+      GUIDDE_AI_MODEL: "gpt-4"
+      GUIDDE_MAX_DURATION: 300
+      GUIDDE_RESOLUTION: "1920x1080"
+      GUIDDE_FPS: 30
+      GUIDDE_STORAGE_PATH: /app/videos
+    url: "https://www.guidde.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+video_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Video instellingen
+  video:
+    default_resolution: "1920x1080"
+    default_fps: 30
+    default_bitrate: 5000
+    default_codec: h264
+    default_format: mp4
+    
+  # AI video instellingen
+  ai_video:
+    model: "standard"
+    max_duration: 300
+    supported_languages:
+      - nl
+      - en
+      - de
+      - fr
+    voice_options:
+      - "FEMALE"
+      - "MALE"
+      - "NEUTRAL"
+      
+  # Conferencing instellingen
+  conferencing:
+    max_participants: 50
+    max_duration: 120
+    recording_enabled: true
+    transcription_enabled: true
+    screen_sharing_enabled: true
+    chat_enabled: true
+    
+  # Tutorial instellingen
+  tutorials:
+    auto_caption: true
+    caption_language: nl
+    highlight_clicks: true
+    zoom_on_click: true
+    blur_sensitive_info: true
+    
+  # GPU instellingen
+  gpu:
+    enabled: true
+    device_ids: "0"
+    memory_limit: "8Gi"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+synthesia_config:
+  # Synthesia avatars
+  avatars:
+    - name: Emma
+      gender: female
+      language: nl
+      style: professional
+      preview: /avatars/emma.jpg
+      
+    - name: Lucas
+      gender: male
+      language: nl
+      style: casual
+      preview: /avatars/lucas.jpg
+      
+    - name: Sophie
+      gender: female
+      language: en
+      style: professional
+      preview: /avatars/sophie.jpg
+      
+  # Synthesia templates
+  templates:
+    - name: Product Intro
+      duration: 60
+      format: landscape
+      background: studio
+      avatar_position: bottom-right
+      
+    - name: Tutorial
+      duration: 180
+      format: landscape
+      background: screen-recording
+      avatar_position: bottom-left
+      
+    - name: Presentation
+      duration: 300
+      format: landscape
+      background: slides
+      avatar_position: top-right
+      
+  # Synthesia voices
+  voices:
+    - language: nl
+      provider: google
+      voice_id: nl-NL-Standard-A
+    - language: en
+      provider: amazon
+      voice_id: Joanna
+    - language: de
+      provider: microsoft
+      voice_id: de-DE-KatjaNeural
+
+bigbluebutton_config:
+  # BigBlueButton meetings
+  meeting_settings:
+    max_participants: 50
+    max_duration: 120
+    welcome_message: "Welkom bij de vergadering!"
+    moderator_only_message: true
+    record: true
+    auto_start_recording: false
+    allow_start_stop_recording: true
+    
+  # BigBlueButton recording
+  recording:
+    enabled: true
+    format: mp4
+    resolution: "1920x1080"
+    retention_days: 30
+    
+  # BigBlueButton breakout rooms
+  breakout_rooms:
+    enabled: true
+    max_rooms: 5
+    allow_choice: true
+    allow_reorder: true
+    
+  # BigBlueButton polls
+  polls:
+    enabled: true
+    allow_multiple_choices: true
+    show_results: true
+    
+  # BigBlueButton layouts
+  layouts:
+    default: grid
+    available:
+      - grid
+      - presentation
+      - webcam
+      - sidebar
+    
+  # BigBlueButton branding
+  branding:
+    logo: /assets/logo.png
+    favicon: /assets/favicon.ico
+    primary_color: "#2196F3"
+    secondary_color: "#4CAF50"
+
+guidde_config:
+  # Guidde templates
+  templates:
+    - name: Software Tutorial
+      steps:
+        - title: "Introductie"
+          duration: 10
+        - title: "Stap 1"
+          duration: 30
+        - title: "Stap 2"
+          duration: 30
+        - title: "Conclusie"
+          duration: 10
+      ai_script: true
+      ai_voiceover: true
+      
+    - name: Product Demo
+      steps:
+        - title: "Product overzicht"
+          duration: 30
+        - title: "Belangrijkste features"
+          duration: 60
+        - title: "Pricing"
+          duration: 20
+        - title: "Call to action"
+          duration: 10
+      ai_script: true
+      ai_voiceover: true
+      
+  # Guidde export
+  export:
+    formats:
+      - mp4
+      - webm
+      - gif
+    qualities:
+      - "720p"
+      - "1080p"
+      - "4k"
+      
+  # Guidde storage
+  storage:
+    type: local
+    path: /app/videos
+    max_size: 100GB
+    
+  # Guidde AI settings
+  ai:
+    script_model: gpt-4
+    voice_model: standard
+    language: nl
+    voice_speed: 1.0
+    voice_pitch: 1.0

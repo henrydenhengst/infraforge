@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# WEIGHTS & BIASES - ML EXPERIMENT TRACKING
+# =============================================================================
+# Beschrijving: Tracking van machine learning experimenten
+# Website: https://wandb.ai
+# =============================================================================
+
+application:
+  name: weights-biases
+  version: 1.0.0
+  description: "Weights & Biases - ML experiment tracking"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://docs.wandb.ai"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /vol
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Weights & Biases web interface"
+      - container: 8081
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Weights & Biases API"
+    dns:
+      - "wandb.{{ domain }}"
+      - "weights-biases.{{ domain }}"
+      
+  container:
+    image: wandb/local:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: WANDB_BASE_URL
+      value: "https://wandb.{{ domain }}"
+      secret: false
+    - name: WANDB_API_KEY
+      value: "{{ vault_wandb_api_key }}"
+      secret: true
+    - name: WANDB_USERNAME
+      value: "admin"
+      secret: false
+    - name: WANDB_PASSWORD
+      value: "{{ vault_wandb_password }}"
+      secret: true
+    - name: WANDB_STORAGE
+      value: "/vol"
+      secret: false
+    - name: WANDB_DB
+      value: "postgresql://wandb:{{ vault_wandb_password }}@postgres:5432/wandb"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

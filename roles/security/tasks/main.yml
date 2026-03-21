@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# SECURITY ROLE - Security hardening voor alle servers
+# =============================================================================
+# Deze role zorgt voor security hardening op alle servers.
+# Gebaseerd op CIS benchmarks en best practices.
+# =============================================================================
+
+- name: '{{ ansible_os_family }} | Installeer security packages'
+  ansible.builtin.package:
+    name: "{{ security_packages[ansible_os_family] }}"
+    state: present
+  tags: [packages, always]
+
+- name: '{{ ansible_os_family }} | Configureer SSH hardening'
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0600'
+  notify: restart ssh
+  tags: [ssh]
+
+- name: '{{ ansible_os_family }} | Configureer firewall'
+  ansible.builtin.include_tasks: "firewall_{{ ansible_os_family | lower }}.yml"
+  tags: [firewall]
+
+- name: '{{ ansible_os_family }} | Configureer fail2ban'
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart fail2ban
+  when: fail2ban_enabled | default(true)
+  tags: [fail2ban]
+
+- name: '{{ ansible_os_family }} | Configureer kernel parameters'
+  ansible.builtin.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop: "{{ security_kernel_parameters[ansible_os_family] | default([]) }}"
+  tags: [kernel]
+
+- name: '{{ ansible_os_family }} | Configureer auditd'
+  ansible.builtin.include_tasks: "auditd_{{ ansible_os_family | lower }}.yml"
+  when: auditd_enabled | default(true)
+  tags: [audit]
+
+- name: '{{ ansible_os_family }} | Configureer automatic updates'
+  ansible.builtin.include_tasks: "autoupdates_{{ ansible_os_family | lower }}.yml"
+  when: automatic_updates | default(true)
+  tags: [updates]
+
+- name: '{{ ansible_os_family }} | Beperk sudo rechten'
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    state: present
+    regexp: '^%sudo'
+    line: '%sudo ALL=(ALL:ALL) ALL'
+    validate: 'visudo -cf %s'
+  tags: [sudo]
+
+- name: '{{ ansible_os_family }} | Schakel ongewenste services uit'
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  loop: "{{ unwanted_services[ansible_os_family] | default([]) }}"
+  ignore_errors: yes
+  tags: [services]
+
+- name: '{{ ansible_os_family }} | Configureer motd (message of the day)'
+  ansible.builtin.copy:
+    dest: /etc/motd
+    content: |
+      ╔══════════════════════════════════════════════════════════════╗
+      ║                    {{ company_name }}                        ║
+      ║                                                              ║
+      ║   Authorized access only. All activity is monitored.        ║
+      ║   Unauthorized access is prohibited.                        ║
+      ║                                                              ║
+      ║   Last login: {{ ansible_date_time.date }}                  ║
+      ╚══════════════════════════════════════════════════════════════╝
+    mode: '0644'
+  tags: [motd]

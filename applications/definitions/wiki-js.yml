@@ -1,0 +1,96 @@
+---
+# =============================================================================
+# APACHE SUPERSET - BUSINESS INTELLIGENCE
+# =============================================================================
+# Beschrijving: Moderne data exploratie en visualisatie (BI)
+# Website: https://superset.apache.org
+# =============================================================================
+
+application:
+  name: superset
+  version: 3.1.0
+  description: "Apache Superset - Business Intelligence"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://superset.apache.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/superset_home
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8088
+        host: 8088
+        protocol: tcp
+        public: false
+        description: "Superset web interface"
+    dns:
+      - "superset.{{ domain }}"
+      - "bi.{{ domain }}"
+      
+  container:
+    image: apache/superset:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: SUPERSET_SECRET_KEY
+      value: "{{ vault_superset_secret }}"
+      secret: true
+    - name: SUPERSET_DATABASE_HOST
+      value: "postgres"
+      secret: false
+    - name: SUPERSET_DATABASE_PORT
+      value: "5432"
+      secret: false
+    - name: SUPERSET_DATABASE_DBNAME
+      value: "superset"
+      secret: false
+    - name: SUPERSET_DATABASE_USER
+      value: "superset"
+      secret: false
+    - name: SUPERSET_DATABASE_PASSWORD
+      value: "{{ vault_superset_db_password }}"
+      secret: true
+    - name: SUPERSET_REDIS_HOST
+      value: "redis"
+      secret: false
+    - name: SUPERSET_REDIS_PORT
+      value: "6379"
+      secret: false
+    - name: SUPERSET_ROW_LIMIT
+      value: "10000"
+      secret: false
+    - name: SUPERSET_CACHE_ROW_LIMIT
+      value: "10000"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8088

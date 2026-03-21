@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+auto {{ parent }}.{{ vlan_id }}
+iface {{ parent }}.{{ vlan_id }} inet {{ family | default('static') }}
+    vlan-raw-device {{ parent }}
+{% if family == 'static' %}
+    address {{ address }}
+    netmask {{ netmask | default('255.255.255.0') }}
+{% endif %}
+{% if mtu is defined %}
+    mtu {{ mtu }}
+{% endif %}

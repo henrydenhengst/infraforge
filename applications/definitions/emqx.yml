@@ -1,0 +1,119 @@
+---
+# =============================================================================
+# SENTRY - APPLICATION MONITORING
+# =============================================================================
+# Beschrijving: Application monitoring and error tracking platform
+# Website: https://sentry.io
+# =============================================================================
+
+application:
+  name: sentry
+  version: 24.3.0
+  description: "Sentry - Application monitoring"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://develop.sentry.dev"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: logs
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/sentry
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 9000
+        host: 9000
+        protocol: tcp
+        public: false
+        description: "Sentry web UI"
+    dns:
+      - "sentry.{{ domain }}"
+      - "monitor.{{ domain }}"
+      
+  container:
+    image: getsentry/sentry:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: SENTRY_SECRET_KEY
+      value: "{{ vault_sentry_secret }}"
+      secret: true
+    - name: SENTRY_POSTGRES_HOST
+      value: "postgres"
+      secret: false
+    - name: SENTRY_POSTGRES_PORT
+      value: "5432"
+      secret: false
+    - name: SENTRY_POSTGRES_USER
+      value: "sentry"
+      secret: false
+    - name: SENTRY_POSTGRES_PASSWORD
+      value: "{{ vault_sentry_password }}"
+      secret: true
+    - name: SENTRY_POSTGRES_DB
+      value: "sentry"
+      secret: false
+    - name: SENTRY_REDIS_HOST
+      value: "redis"
+      secret: false
+    - name: SENTRY_REDIS_PORT
+      value: "6379"
+      secret: false
+    - name: SENTRY_REDIS_PASSWORD
+      value: "{{ vault_redis_password }}"
+      secret: true
+    - name: SENTRY_MEMCACHED_HOST
+      value: "memcached"
+      secret: false
+    - name: SENTRY_SERVER_EMAIL
+      value: "sentry@{{ domain }}"
+      secret: false
+    - name: SENTRY_EMAIL_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: SENTRY_EMAIL_PORT
+      value: "587"
+      secret: false
+    - name: SENTRY_EMAIL_USER
+      value: "sentry@{{ domain }}"
+      secret: false
+    - name: SENTRY_EMAIL_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: SENTRY_EMAIL_USE_TLS
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /_health/
+      port: 9000

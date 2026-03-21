@@ -1,0 +1,113 @@
+---
+# =============================================================================
+# WIKI.JS - MODERNE WIKI PLATFORM
+# =============================================================================
+# Beschrijving: Moderne, krachtige wiki platform gebouwd op Node.js
+# Website: https://js.wiki
+# =============================================================================
+
+application:
+  name: wiki-js
+  version: 2.5.0
+  description: "Wiki.js - Moderne wiki platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: documentation-team
+    contact: docs@company.local
+    slack: "#docs"
+    documentation: "https://docs.requarks.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /wiki/data
+      - name: db
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/postgresql/data
+        
+  network_requirements:
+    vlans:
+      - documentation
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Wiki.js web interface"
+    dns:
+      - "wiki.{{ domain }}"
+      - "docs.{{ domain }}"
+      
+  container:
+    image: ghcr.io/requarks/wiki:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DB_TYPE
+      value: "postgres"
+      secret: false
+    - name: DB_HOST
+      value: "postgres"
+      secret: false
+    - name: DB_PORT
+      value: "5432"
+      secret: false
+    - name: DB_NAME
+      value: "wiki"
+      secret: false
+    - name: DB_USER
+      value: "wiki"
+      secret: false
+    - name: DB_PASS
+      value: "{{ vault_wiki_password }}"
+      secret: true
+    - name: SSL_ENABLED
+      value: "true"
+      secret: false
+    - name: SSL_PORT
+      value: "443"
+      secret: false
+    - name: SSL_DOMAIN
+      value: "wiki.{{ domain }}"
+      secret: false
+    - name: SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: SMTP_PORT
+      value: "587"
+      secret: false
+    - name: SMTP_USER
+      value: "wiki@{{ domain }}"
+      secret: false
+    - name: SMTP_PASS
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: SMTP_FROM
+      value: "wiki@{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

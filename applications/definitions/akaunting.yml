@@ -1,0 +1,105 @@
+---
+# =============================================================================
+# MATTERMOST - TEAM CHAT PLATFORM
+# =============================================================================
+# Beschrijving: Team-chat platform (Slack alternatief)
+# Website: https://mattermost.com
+# =============================================================================
+
+application:
+  name: mattermost
+  version: 9.5.0
+  description: "Mattermost - Team chat platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: communication-team
+    contact: comms@company.local
+    slack: "#comms"
+    documentation: "https://docs.mattermost.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /mattermost/config
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /mattermost/data
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /mattermost/logs
+      - name: plugins
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /mattermost/client/plugins
+        
+  network_requirements:
+    vlans:
+      - communication
+      - internal
+    ports:
+      - container: 8065
+        host: 8065
+        protocol: tcp
+        public: true
+        description: "Mattermost web interface"
+    dns:
+      - "chat.{{ domain }}"
+      - "mattermost.{{ domain }}"
+      
+  container:
+    image: mattermost/mattermost-enterprise-edition:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: MM_SQLSETTINGS_DRIVERNAME
+      value: "postgres"
+      secret: false
+    - name: MM_SQLSETTINGS_DATASOURCE
+      value: "postgres://mattermost:{{ vault_mattermost_password }}@postgres:5432/mattermost?sslmode=disable"
+      secret: true
+    - name: MM_SERVICESETTINGS_SITEURL
+      value: "https://chat.{{ domain }}"
+      secret: false
+    - name: MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS
+      value: "true"
+      secret: false
+    - name: MM_EMAILSETTINGS_SMTPUSERNAME
+      value: "notifications@{{ domain }}"
+      secret: false
+    - name: MM_EMAILSETTINGS_SMTPPASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: MM_EMAILSETTINGS_SMTPHOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: MM_EMAILSETTINGS_SMTPPORT
+      value: "587"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v4/system/ping
+      port: 8065

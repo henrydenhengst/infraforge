@@ -1,0 +1,126 @@
+---
+# =============================================================================
+# JELLYFIN - MEDIA SERVER
+# =============================================================================
+# Beschrijving: Open-source mediaserver voor films, series en muziek
+# Website: https://jellyfin.org
+# =============================================================================
+
+application:
+  name: jellyfin
+  version: 10.8.13
+  description: "Jellyfin - Open-source mediaserver"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://jellyfin.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      gpu_required: false
+      
+    storage:
+      - name: config
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: cache
+        size_gb: 20
+        performance: ssd
+        backup_required: false
+        mount_path: /cache
+      - name: media
+        size_gb: 1000
+        performance: hdd
+        backup_required: false
+        mount_path: /media
+        description: "Films, series, muziek (NFS mount)"
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 8096
+        host: 8096
+        protocol: tcp
+        public: false
+        description: "Jellyfin web interface"
+      - container: 8920
+        host: 8920
+        protocol: tcp
+        public: true
+        description: "HTTPS"
+    dns:
+      - "jellyfin.{{ domain }}"
+      - "media.{{ domain }}"
+      
+  container:
+    image: jellyfin/jellyfin:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: JELLYFIN_PublishedServerUrl
+      value: "https://jellyfin.{{ domain }}"
+      secret: false
+      
+  libraries:
+    - name: Films
+      type: movies
+      path: /media/movies
+      language: nl
+    - name: Series
+      type: tvshows
+      path: /media/tv
+      language: nl
+    - name: Muziek
+      type: music
+      path: /media/music
+    - name: Foto's
+      type: photos
+      path: /media/photos
+      
+  users:
+    - username: admin
+      password: "{{ vault_jellyfin_admin_password }}"
+      is_admin: true
+    - username: guest
+      password: "{{ vault_jellyfin_guest_password }}"
+      is_admin: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8096
+      initial_delay: 60
+      
+  monitoring:
+    alerts:
+      - name: jellyfin_down
+        condition: up{app="jellyfin"} == 0
+        severity: critical

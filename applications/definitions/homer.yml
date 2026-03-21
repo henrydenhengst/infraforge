@@ -1,0 +1,75 @@
+---
+# =============================================================================
+# HOMER - SERVICE DASHBOARD
+# =============================================================================
+# Beschrijving: Eenvoudig en statisch service-dashboard
+# Website: https://github.com/bastienwirtz/homer
+# =============================================================================
+
+application:
+  name: homer
+  version: 24.0.0
+  description: "Homer - Service dashboard"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: tools-team
+    contact: tools@company.local
+    slack: "#tools"
+    documentation: "https://github.com/bastienwirtz/homer"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /www/assets
+        
+  network_requirements:
+    vlans:
+      - tools
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Homer web interface"
+    dns:
+      - "services.{{ domain }}"
+      - "homer.{{ domain }}"
+      
+  container:
+    image: b4bz/homer:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: HOMER_TITLE
+      value: "{{ company_name }} Services"
+      secret: false
+    - name: HOMER_SUBTITLE
+      value: "Toegang tot al je applicaties"
+      secret: false
+    - name: HOMER_FOOTER
+      value: "© {{ year }} {{ company_name }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

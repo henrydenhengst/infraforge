@@ -1,0 +1,11 @@
+{
+  "Libraries": [
+    {% for lib in jellyfin_libraries %}
+    {
+      "Name": "{{ lib.name }}",
+      "Type": "{{ lib.type }}",
+      "Path": "{{ lib.path }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}

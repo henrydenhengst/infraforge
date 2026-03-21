@@ -1,0 +1,27 @@
+---
+- name: '{{ ansible_os_family }} | Start Memcached container'
+  ansible.builtin.docker_container:
+    name: memcached
+    image: memcached:alpine
+    restart_policy: unless-stopped
+    ports:
+      - "11211:11211"
+    command: memcached -m {{ memcached_memory }} -I {{ memcached_item_size }}
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.memcached.rule: "Host(`memcached.{{ domain }}`)"
+      traefik.http.services.memcached.loadbalancer.server.port: "11211"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Memcached actief is'
+  ansible.builtin.wait_for:
+    port: 11211
+    timeout: 30
+  tags: [validate]
+
+- name: Toon Memcached informatie
+  ansible.builtin.debug:
+    msg:
+      - "Memcached: memcached.{{ domain }}:11211"
+      - "Memory limit: {{ memcached_memory }}MB"
+  tags: [validate]

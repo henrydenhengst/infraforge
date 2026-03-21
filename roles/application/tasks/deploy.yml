@@ -1,0 +1,72 @@
+---
+- name: '{{ ansible_os_family }} | Laad applicatie definitie'
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../applications/definitions/{{ app.name }}.yml"
+  register: app_def
+  tags: [deploy]
+
+- name: '{{ ansible_os_family }} | Maak applicatie directory'
+  ansible.builtin.file:
+    path: "/opt/applications/{{ app.name }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+  tags: [deploy]
+
+- name: '{{ ansible_os_family }} | Maak storage directories'
+  ansible.builtin.file:
+    path: "{{ item.mount_path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: '0755'
+  loop: "{{ application.hardware_requirements.storage }}"
+  when: application.hardware_requirements.storage is defined
+  tags: [deploy]
+
+- name: '{{ ansible_os_family }} | Genereer docker-compose.yml'
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "/opt/applications/{{ app.name }}/docker-compose.yml"
+    mode: '0644'
+  vars:
+    app: "{{ application }}"
+  tags: [deploy]
+
+- name: '{{ ansible_os_family }} | Genereer .env bestand'
+  ansible.builtin.template:
+    src: env.j2
+    dest: "/opt/applications/{{ app.name }}/.env"
+    mode: '0600'
+  vars:
+    app: "{{ application }}"
+  when: application.environment_variables is defined
+  tags: [deploy]
+
+- name: '{{ ansible_os_family }} | Deploy applicatie met docker-compose'
+  ansible.builtin.docker_compose:
+    project_src: "/opt/applications/{{ app.name }}"
+    state: present
+    restarted: yes
+  register: deploy_result
+  tags: [deploy]
+
+- name: '{{ ansible_os_family }} | Wacht op healthcheck'
+  ansible.builtin.uri:
+    url: "http://localhost:{{ application.health_checks.liveness.port }}{{ application.health_checks.liveness.path }}"
+    method: GET
+    status_code: 200
+  register: health_result
+  until: health_result.status == 200
+  retries: "{{ health_check_retries | default(30) }}"
+  delay: "{{ health_check_interval | default(5) | regex_replace('s$', '') | int }}"
+  when: application.health_checks.liveness is defined
+  tags: [deploy]
+
+- name: '{{ ansible_os_family }} | Log deploy resultaat'
+  ansible.builtin.debug:
+    msg:
+      - "Applicatie {{ app.name }} gedeployed"
+      - "URL: http{% if ssl_enabled %}s{% endif %}://{{ app.name }}.{{ domain }}"
+  tags: [deploy]

@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# KAVITA - MANGA/E-BOOK READER
+# =============================================================================
+# Beschrijving: Manga/E-book reader met web interface
+# Website: https://www.kavitareader.com
+# =============================================================================
+
+application:
+  name: kavita
+  version: 0.7.0
+  description: "Kavita - Manga/E-book reader"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://wiki.kavitareader.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /kavita/config
+      - name: manga
+        size_gb: 200
+        performance: hdd
+        backup_required: true
+        mount_path: /manga
+      - name: books
+        size_gb: 100
+        performance: hdd
+        backup_required: true
+        mount_path: /books
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 5000
+        host: 5000
+        protocol: tcp
+        public: false
+        description: "Kavita web interface"
+    dns:
+      - "kavita.{{ domain }}"
+      - "reader.{{ domain }}"
+      
+  container:
+    image: kizaing/kavita:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 5000

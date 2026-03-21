@@ -1,0 +1,3 @@
+---
+fluentd_data_path: /opt/fluentd
+fluentd_loki_url: "http://loki:3100"

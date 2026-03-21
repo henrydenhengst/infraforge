@@ -1,0 +1,105 @@
+---
+# =============================================================================
+# QDRANT - VECTOR DATABASE
+# =============================================================================
+# Beschrijving: Vector database voor AI-zoekopdrachten en geheugen
+# Website: https://qdrant.tech
+# =============================================================================
+
+application:
+  name: qdrant
+  version: 1.9.0
+  description: "Qdrant - Vector database voor AI"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ai-team
+    contact: ai@company.local
+    slack: "#ai"
+    documentation: "https://qdrant.tech/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /qdrant/storage
+      - name: snapshots
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /qdrant/snapshots
+        
+  network_requirements:
+    vlans:
+      - ai
+      - internal
+    ports:
+      - container: 6333
+        host: 6333
+        protocol: tcp
+        public: false
+        description: "Qdrant HTTP API"
+      - container: 6334
+        host: 6334
+        protocol: tcp
+        public: false
+        description: "Qdrant gRPC API"
+    dns:
+      - "qdrant.{{ domain }}"
+      - "vector.{{ domain }}"
+      
+  container:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: QDRANT__SERVICE__API_KEY
+      value: "{{ vault_qdrant_api_key }}"
+      secret: true
+    - name: QDRANT__SERVICE__GRPC_PORT
+      value: "6334"
+      secret: false
+    - name: QDRANT__SERVICE__HTTP_PORT
+      value: "6333"
+      secret: false
+    - name: QDRANT__LOG_LEVEL
+      value: "INFO"
+      secret: false
+      
+  collections:
+    - name: documents
+      vectors:
+        size: 768
+        distance: Cosine
+      optimizers_config:
+        indexing_threshold: 20000
+        memmap_threshold: 50000
+    - name: images
+      vectors:
+        size: 512
+        distance: Dot
+    - name: embeddings
+      vectors:
+        size: 1536
+        distance: Cosine
+        
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 6333

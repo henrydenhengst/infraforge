@@ -1,0 +1,101 @@
+---
+# =============================================================================
+# FLARUM - MODERN FORUM PLATFORM
+# =============================================================================
+# Beschrijving: Modern, elegant forumplatform
+# Website: https://flarum.org
+# =============================================================================
+
+application:
+  name: flarum
+  version: 1.8.0
+  description: "Flarum - Modern forum platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: community-team
+    contact: community@company.local
+    slack: "#community"
+    documentation: "https://docs.flarum.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /flarum/app/storage
+      - name: extensions
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /flarum/app/extensions
+        
+  network_requirements:
+    vlans:
+      - community
+      - dmz
+    ports:
+      - container: 80
+        host: 8081
+        protocol: tcp
+        public: true
+        description: "Flarum web interface"
+    dns:
+      - "forum.{{ domain }}"
+      - "flarum.{{ domain }}"
+      
+  container:
+    image: flarum/flarum:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: FLARUM_BASE_URL
+      value: "https://flarum.{{ domain }}"
+      secret: false
+    - name: FLARUM_FORUM_TITLE
+      value: "{{ company_name }} Community"
+      secret: false
+    - name: FLARUM_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: FLARUM_ADMIN_PASS
+      value: "{{ vault_flarum_password }}"
+      secret: true
+    - name: FLARUM_ADMIN_MAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: DB_HOST
+      value: "mysql"
+      secret: false
+    - name: DB_PORT
+      value: "3306"
+      secret: false
+    - name: DB_NAME
+      value: "flarum"
+      secret: false
+    - name: DB_USER
+      value: "flarum"
+      secret: false
+    - name: DB_PASSWORD
+      value: "{{ vault_flarum_db_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

@@ -1,0 +1,5 @@
+---
+- name: restart fluent-bit
+  ansible.builtin.docker_container:
+    name: fluent-bit
+    restart: yes

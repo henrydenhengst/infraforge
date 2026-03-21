@@ -1,0 +1,44 @@
+---
+- name: '{{ ansible_os_family }} | Maak ArgoCD directories'
+  ansible.builtin.file:
+    path: "{{ argocd_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start ArgoCD container'
+  ansible.builtin.docker_container:
+    name: argocd
+    image: argoproj/argocd:latest
+    restart_policy: unless-stopped
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - "{{ argocd_data_path }}:/home/argocd"
+    command: server --insecure
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.argocd.rule: "Host(`argocd.{{ domain }}`)"
+      traefik.http.services.argocd.loadbalancer.server.port: "8080"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot ArgoCD actief is'
+  ansible.builtin.wait_for:
+    port: 8080
+    timeout: 120
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Toon ArgoCD admin wachtwoord'
+  ansible.builtin.shell: |
+    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+  register: argocd_password
+  ignore_errors: yes
+  tags: [validate]
+
+- name: Toon ArgoCD informatie
+  ansible.builtin.debug:
+    msg:
+      - "ArgoCD: https://argocd.{{ domain }}"
+      - "Admin wachtwoord: {{ argocd_password.stdout }}"
+  tags: [validate]

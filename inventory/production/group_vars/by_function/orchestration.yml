@@ -1,0 +1,365 @@
+---
+# =============================================================================
+# ORCHESTRATION TOOLS
+# =============================================================================
+# Functie: orchestration
+# Beschrijving: Tools voor container orchestratie, workload management en clustering
+# =============================================================================
+
+orchestration_tools:
+  # ---------------------------------------------------------------------------
+  # CONTAINER ORCHESTRATIE
+  # ---------------------------------------------------------------------------
+  - name: Swarm
+    profiel_tag: IT
+    functie_tag: orchestration
+    beschrijving: "Docker Swarm voor container orchestratie"
+    categorie: container_orchestration
+    docker_image: docker:latest
+    ports:
+      - "2377:2377/tcp"
+      - "7946:7946/tcp"
+      - "7946:7946/udp"
+      - "4789:4789/udp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DOCKER_SWARM_ADVERTISE_ADDR: "{{ ansible_default_ipv4.address }}"
+    command: swarm init
+    url: "https://docs.docker.com/engine/swarm"
+    
+  - name: Nomad
+    profiel_tag: IT
+    functie_tag: orchestration
+    beschrijving: "Workload manager voor containers en applicaties"
+    categorie: workload_orchestration
+    docker_image: hashicorp/nomad:latest
+    ports:
+      - "4646:4646"
+      - "4647:4647"
+      - "4648:4648"
+    volumes:
+      - nomad_data:/nomad/data
+      - nomad_config:/etc/nomad
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      NOMAD_ADDR: "http://localhost:4646"
+      NOMAD_CLIENT_ADDR: "0.0.0.0"
+      NOMAD_SERVER_ADDR: "0.0.0.0"
+    command: agent -config /etc/nomad/nomad.hcl
+    url: "https://www.nomadproject.io"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+orchestration_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Cluster instellingen
+  cluster:
+    name: "prod-cluster"
+    datacenter: ams01
+    region: eu-west
+    domain: cluster.{{ domain }}
+    
+  # Orchestratie instellingen
+  orchestration:
+    scheduler: spread
+    max_parallel: 5
+    failure_retry: 3
+    deadline: 10m
+    
+  # Resource management
+  resources:
+    default_cpu: 1000
+    default_memory: 1024
+    default_disk: 10240
+    oversubscription: 1.2
+    
+  # Service discovery
+  service_discovery:
+    enabled: true
+    provider: consul
+    consul_address: consul:8500
+    
+  # Networking
+  networking:
+    overlay_network: "10.0.0.0/16"
+    service_cidr: "10.96.0.0/12"
+    dns_servers:
+      - 8.8.8.8
+      - 8.8.4.4
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+swarm_config:
+  # Swarm nodes
+  nodes:
+    managers:
+      - name: manager-01
+        role: manager
+        availability: active
+        labels:
+          type: management
+          
+    workers:
+      - name: worker-01
+        role: worker
+        availability: active
+        labels:
+          type: general
+      - name: worker-02
+        role: worker
+        availability: active
+        labels:
+          type: general
+      - name: worker-03
+        role: worker
+        availability: active
+        labels:
+          type: gpu
+          gpu: true
+          
+  # Swarm services
+  services:
+    - name: traefik
+      image: traefik:latest
+      ports:
+        - target: 80
+          published: 80
+          protocol: tcp
+          mode: host
+        - target: 443
+          published: 443
+          protocol: tcp
+          mode: host
+      deploy:
+        mode: global
+        placement:
+          constraints:
+            - node.role == manager
+      networks:
+        - ingress
+        - public
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.api.rule=Host(`traefik.{{ domain }}`)"
+        
+    - name: portainer
+      image: portainer/portainer-ce:latest
+      ports:
+        - target: 9000
+          published: 9000
+          protocol: tcp
+          mode: host
+        - target: 9443
+          published: 9443
+          protocol: tcp
+          mode: host
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - portainer_data:/data
+      deploy:
+        mode: replicated
+        replicas: 1
+        placement:
+          constraints:
+            - node.role == manager
+            
+    - name: prometheus
+      image: prom/prometheus:latest
+      ports:
+        - target: 9090
+          published: 9090
+          protocol: tcp
+          mode: host
+      volumes:
+        - prometheus_data:/prometheus
+        - prometheus_config:/etc/prometheus
+      deploy:
+        mode: replicated
+        replicas: 1
+        placement:
+          constraints:
+            - node.role == manager
+            
+  # Swarm networks
+  networks:
+    - name: ingress
+      driver: overlay
+      driver_opts:
+        encrypted: "true"
+    - name: public
+      driver: overlay
+      ipam:
+        config:
+          - subnet: 10.0.1.0/24
+    - name: private
+      driver: overlay
+      internal: true
+      ipam:
+        config:
+          - subnet: 10.0.2.0/24
+    - name: database
+      driver: overlay
+      internal: true
+      ipam:
+        config:
+          - subnet: 10.0.3.0/24
+          
+  # Swarm configs
+  configs:
+    - name: prometheus.yml
+      file: /configs/prometheus/prometheus.yml
+    - name: alert.rules
+      file: /configs/prometheus/alert.rules
+      
+  # Swarm secrets
+  secrets:
+    - name: db_password
+      external: true
+    - name: api_key
+      external: true
+      
+  # Swarm labels
+  labels:
+    environment: production
+    team: platform
+    backup: daily
+
+nomad_config:
+  # Nomad server config
+  server:
+    enabled: true
+    bootstrap_expect: 3
+    server_join:
+      retry_join:
+        - "nomad-server-01"
+        - "nomad-server-02"
+        - "nomad-server-03"
+        
+  # Nomad client config
+  client:
+    enabled: true
+    options:
+      driver.raw_exec.enable: "1"
+      docker.privileged.enabled: "true"
+    hosts:
+      - name: docker
+        address: "unix:///var/run/docker.sock"
+        
+  # Nomad plugins
+  plugins:
+    - name: docker
+      config:
+        allow_privileged: true
+        volumes:
+          enabled: true
+          selinuxlabel: "z"
+          
+  # Nomad jobs
+  jobs:
+    - name: redis
+      type: service
+      datacenters: ["ams01", "ams02"]
+      group:
+        - name: redis
+          count: 3
+          task:
+            - name: redis
+              driver: docker
+              config:
+                image: redis:7-alpine
+                ports:
+                  - redis
+              resources:
+                cpu: 500
+                memory: 256
+                network:
+                  mbits: 10
+                  
+    - name: webapp
+      type: service
+      datacenters: ["ams01"]
+      group:
+        - name: web
+          count: 5
+          task:
+            - name: web
+              driver: docker
+              config:
+                image: nginx:latest
+                ports:
+                  - http
+              resources:
+                cpu: 1000
+                memory: 512
+                network:
+                  mbits: 100
+                  
+  # Nomad volumes
+  volumes:
+    - name: mysql-data
+      type: host
+      read_only: false
+      source: /data/mysql
+      config:
+        driver: host
+        external_id: mysql-data
+        
+  # Nomad namespaces
+  namespaces:
+    - name: default
+      description: "Default namespace"
+    - name: production
+      description: "Production workloads"
+    - name: staging
+      description: "Staging workloads"
+    - name: development
+      description: "Development workloads"
+      
+  # Nomad ACLs
+  acls:
+    enabled: true
+    token_ttl: "30m"
+    policy_ttl: "30m"
+    policies:
+      - name: read-only
+        rules: |
+          namespace "default" {
+            policy = "read"
+          }
+      - name: write-all
+        rules: |
+          namespace "*" {
+            policy = "write"
+          }
+          
+  # Nomad quotas
+  quotas:
+    - name: production-quota
+      limits:
+        - region: global
+          resources:
+            cpu: 10000
+            memory: 10240
+            
+  # Nomad sentinel policies
+  sentinel:
+    policies:
+      - name: require-labels
+        description: "Require all jobs to have team label"
+        scope: submit-job
+        enforcement_level: advisory
+        policy: |
+          main = rule { all job.task_groups as tg {
+            all tg.tasks as t {
+              t.labels["team"] else false
+            }
+          } }

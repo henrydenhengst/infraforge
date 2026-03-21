@@ -1,0 +1,95 @@
+---
+# =============================================================================
+# CONSUL - SERVICE DISCOVERY
+# =============================================================================
+# Beschrijving: Service discovery tool voor dynamische infrastructuren
+# Website: https://www.consul.io
+# =============================================================================
+
+application:
+  name: consul
+  version: 1.17.0
+  description: "Consul - Service discovery"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://developer.hashicorp.com/consul/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /consul/data
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /consul/config
+        
+  network_requirements:
+    vlans:
+      - platform
+      - internal
+    ports:
+      - container: 8500
+        host: 8500
+        protocol: tcp
+        public: false
+        description: "Consul HTTP API"
+      - container: 8600
+        host: 8600
+        protocol: tcp
+        public: false
+        description: "Consul DNS"
+      - container: 8600
+        host: 8600
+        protocol: udp
+        public: false
+        description: "Consul DNS UDP"
+    dns:
+      - "consul.{{ domain }}"
+      
+  container:
+    image: hashicorp/consul:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -bind=0.0.0.0
+  
+  environment_variables:
+    - name: CONSUL_BIND_INTERFACE
+      value: "eth0"
+      secret: false
+      
+  config:
+    datacenter: "ams01"
+    data_dir: "/consul/data"
+    log_level: "INFO"
+    node_name: "consul-server"
+    server: true
+    ui: true
+    bootstrap_expect: 1
+    client_addr: "0.0.0.0"
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /v1/status/leader
+      port: 8500

@@ -1,0 +1,607 @@
+---
+# =============================================================================
+# ERP TOOLS (ENTERPRISE RESOURCE PLANNING)
+# =============================================================================
+# Functie: erp
+# Beschrijving: Tools voor bedrijfsresourceplanning, inclusief financiën, HR, voorraad en projecten
+# =============================================================================
+
+erp_tools:
+  # ---------------------------------------------------------------------------
+  # VOLLEDIGE ERP SUITES
+  # ---------------------------------------------------------------------------
+  - name: Odoo
+    profiel_tag: Financiën
+    functie_tag: erp
+    beschrijving: "ERP/CRM suite met uitgebreide functionaliteit"
+    categorie: full_erp
+    docker_image: odoo:17
+    ports:
+      - "8069:8069"
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - odoo_addons:/mnt/extra-addons
+      - odoo_config:/etc/odoo
+      - odoo_filestore:/var/lib/odoo/filestore
+    environment:
+      HOST: postgres
+      PORT: 5432
+      USER: odoo
+      PASSWORD: "{{ vault_odoo_password }}"
+      DB_NAME: odoo
+      ADMIN_PASSWORD: "{{ vault_odoo_admin_password }}"
+      EMAIL_FROM: odoo@{{ domain }}
+      SMTP_SERVER: smtp.{{ domain }}
+      SMTP_PORT: 587
+      SMTP_USER: odoo@{{ domain }}
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    database: postgresql
+    url: "https://www.odoo.com"
+    
+  - name: ERPNext
+    profiel_tag: HR
+    functie_tag: erp
+    beschrijving: "Volledig HR en ERP systeem"
+    categorie: full_erp
+    docker_image: frappe/erpnext:latest
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+    volumes:
+      - erpnext_data:/home/frappe/frappe-bench/sites
+      - erpnext_assets:/home/frappe/frappe-bench/sites/assets
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_ROOT_USER: root
+      DB_ROOT_PASSWORD: "{{ vault_mariadb_root_password }}"
+      SITE_NAME: "erpnext.{{ domain }}"
+      ADMIN_PASSWORD: "{{ vault_erpnext_admin_password }}"
+      INSTALL_ERPNext: true
+      FRAPPE_SITE_NAME_HEADER: erpnext
+      FRAPPE_USER: frappe
+      FRAPPE_PASSWORD: "{{ vault_frappe_password }}"
+    database: mariadb
+    redis: true
+    url: "https://erpnext.com"
+    
+  - name: Dolibarr
+    profiel_tag: Financiën
+    functie_tag: erp
+    beschrijving: "ERP en CRM voor MKB"
+    categorie: sme_erp
+    docker_image: dolibarr/dolibarr:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - dolibarr_documents:/var/www/documents
+      - dolibarr_scripts:/var/www/scripts
+      - dolibarr_custom:/var/www/html/custom
+    environment:
+      DOLI_DB_HOST: mysql
+      DOLI_DB_NAME: dolibarr
+      DOLI_DB_USER: dolibarr
+      DOLI_DB_PASSWORD: "{{ vault_dolibarr_password }}"
+      DOLI_ADMIN_LOGIN: admin
+      DOLI_ADMIN_PASSWORD: "{{ vault_dolibarr_admin_password }}"
+      DOLI_URL_ROOT: "https://dolibarr.{{ domain }}"
+      PHP_INI_DATE_TIMEZONE: Europe/Amsterdam
+      DOLI_SMTP_HOST: smtp.{{ domain }}
+      DOLI_SMTP_PORT: 587
+      DOLI_SMTP_USER: dolibarr@{{ domain }}
+      DOLI_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    database: mysql
+    url: "https://www.dolibarr.org"
+    
+  # ---------------------------------------------------------------------------
+  # HR & PERSONEEL
+  # ---------------------------------------------------------------------------
+  - name: OrangeHRM
+    profiel_tag: HR
+    functie_tag: erp
+    beschrijving: "Gespecialiseerde suite voor werving en personeelsbeheer"
+    categorie: hr
+    docker_image: orangehrm/orangehrm:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - orangehrm_data:/var/www/html
+      - orangehrm_logs:/var/www/html/src/logs
+    environment:
+      ORANGEHRM_DB_HOST: mysql
+      ORANGEHRM_DB_PORT: 3306
+      ORANGEHRM_DB_NAME: orangehrm
+      ORANGEHRM_DB_USER: orangehrm
+      ORANGEHRM_DB_PASSWORD: "{{ vault_orangehrm_password }}"
+      ORANGEHRM_ADMIN_USER: admin
+      ORANGEHRM_ADMIN_PASSWORD: "{{ vault_orangehrm_admin_password }}"
+      ORANGEHRM_ADMIN_EMAIL: admin@{{ domain }}
+    database: mysql
+    url: "https://www.orangehrm.com"
+    
+  # ---------------------------------------------------------------------------
+  # JURIDISCH
+  # ---------------------------------------------------------------------------
+  - name: Leantice
+    profiel_tag: Legal
+    functie_tag: erp
+    beschrijving: "Beheersysteem voor juridische dossiers en termijnen"
+    categorie: legal
+    docker_image: leantime/leantime:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - leantice_data:/var/www/html
+    environment:
+      LEANTIME_DB_HOST: mysql
+      LEANTIME_DB_DATABASE: leantice
+      LEANTIME_DB_USER: leantice
+      LEANTIME_DB_PASSWORD: "{{ vault_leantice_password }}"
+      LEANTIME_SESSION_PASSWORD: "{{ vault_leantice_session }}"
+      LEANTIME_EMAIL: legal@{{ domain }}
+      LEANTIME_PASSWORD: "{{ vault_leantice_admin_password }}"
+    database: mysql
+    url: "https://leantime.io"
+    
+  # ---------------------------------------------------------------------------
+  # VASTGOED
+  # ---------------------------------------------------------------------------
+  - name: Trantor
+    profiel_tag: Proptech
+    functie_tag: inventory
+    beschrijving: "Asset tracking voor facilitaire diensten"
+    categorie: asset_management
+    docker_image: trantor/trantor:latest
+    ports:
+      - "8083:80"
+    volumes:
+      - trantor_data:/data
+    environment:
+      TRANTOR_DB_HOST: postgres
+      TRANTOR_DB_NAME: trantor
+      TRANTOR_DB_USER: trantor
+      TRANTOR_DB_PASSWORD: "{{ vault_trantor_password }}"
+      TRANTOR_ADMIN_USER: admin
+      TRANTOR_ADMIN_PASSWORD: "{{ vault_trantor_admin_password }}"
+    database: postgresql
+    url: "https://trantor.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+erp_defaults:
+  # Algemene ERP instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Bedrijfsgegevens
+  company:
+    name: "{{ company_name }}"
+    legal_name: "{{ company_legal_name }}"
+    address: "{{ company_address }}"
+    postal_code: "{{ company_postal }}"
+    city: "{{ company_city }}"
+    country: "Nederland"
+    phone: "{{ company_phone }}"
+    email: info@{{ domain }}
+    website: "https://{{ domain }}"
+    vat_number: "{{ company_vat }}"
+    kvk_number: "{{ company_kvk }}"
+    iban: "{{ company_iban }}"
+    bic: "{{ company_bic }}"
+    
+  # Financiële instellingen
+  financial:
+    currency: EUR
+    currency_symbol: €
+    fiscal_year_start: "01-01"
+    fiscal_year_end: "31-12"
+    vat_rate: 21
+    vat_rates:
+      - name: High
+        rate: 21
+      - name: Low
+        rate: 9
+      - name: Zero
+        rate: 0
+    payment_terms: 30
+    invoice_prefix: "INV-{{ '%Y' | strftime }}-"
+    quote_prefix: "QTE-{{ '%Y' | strftime }}-"
+    
+  # Tijdzone en taal
+  locale:
+    timezone: Europe/Amsterdam
+    date_format: d-m-Y
+    time_format: H:i
+    language: nl_NL
+    week_start: monday
+    
+  # Modules
+  modules:
+    sales: true
+    purchases: true
+    inventory: true
+    accounting: true
+    hr: true
+    projects: true
+    crm: true
+    
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: erp@{{ domain }}
+    email_prefix: "[ERP]"
+    sms_enabled: false
+    push_enabled: true
+    
+  # Beveiliging
+  security:
+    session_timeout: 3600
+    max_login_attempts: 5
+    lockout_time: 900
+    password_min_length: 8
+    password_require_upper: true
+    password_require_lower: true
+    password_require_number: true
+    password_require_symbol: false
+    two_factor_auth: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+odoo_config:
+  # Odoo modules
+  modules:
+    # Verkoop
+    - name: sale
+      install: true
+    - name: sale_management
+      install: true
+    - name: sale_crm
+      install: true
+    
+    # Inkoop
+    - name: purchase
+      install: true
+    - name: stock
+      install: true
+    
+    # Financieel
+    - name: account
+      install: true
+    - name: account_accountant
+      install: true
+    - name: account_budget
+      install: true
+    - name: account_reports
+      install: true
+    
+    # HR
+    - name: hr
+      install: true
+    - name: hr_attendance
+      install: true
+    - name: hr_holidays
+      install: true
+    - name: hr_recruitment
+      install: true
+    
+    # Projecten
+    - name: project
+      install: true
+    - name: timesheet_grid
+      install: true
+    
+    # Website
+    - name: website
+      install: true
+    - name: website_sale
+      install: true
+    
+    # Extra
+    - name: pos
+      install: true
+    - name: lunch
+      install: true
+    - name: documents
+      install: true
+    - name: calendar
+      install: true
+    
+  # Odoo gebruikers
+  users:
+    - name: Administrator
+      login: admin
+      email: admin@{{ domain }}
+      groups: ["Administrator"]
+      company: "{{ company_name }}"
+      
+    - name: Finance Manager
+      login: finance_manager
+      email: finance@{{ domain }}
+      groups: ["Accountant", "Manager"]
+      
+    - name: Sales Manager
+      login: sales_manager
+      email: sales@{{ domain }}
+      groups: ["Sales Manager"]
+      
+    - name: HR Manager
+      login: hr_manager
+      email: hr@{{ domain }}
+      groups: ["HR Manager"]
+      
+    - name: Warehouse Manager
+      login: warehouse_manager
+      email: warehouse@{{ domain }}
+      groups: ["Inventory Manager"]
+      
+  # Odoo bedrijven
+  companies:
+    - name: "{{ company_name }}"
+      street: "{{ company_address }}"
+      city: "{{ company_city }}"
+      country_id: Netherlands
+      phone: "{{ company_phone }}"
+      email: info@{{ domain }}
+      vat: "{{ company_vat }}"
+      company_registry: "{{ company_kvk }}"
+      
+  # Odoo productcategorieën
+  product_categories:
+    - name: Services
+      description: "Diensten"
+    - name: Products
+      description: "Producten"
+    - name: Software
+      description: "Software licenties"
+    - name: Hardware
+      description: "Hardware componenten"
+      
+  # Odoo belastingen
+  taxes:
+    - name: BTW 21%
+      amount: 21
+      type: percent
+      applicable_on: sale
+    - name: BTW 9%
+      amount: 9
+      type: percent
+      applicable_on: sale
+    - name: BTW 0%
+      amount: 0
+      type: percent
+      applicable_on: sale
+      
+  # Odoo betalingstermijnen
+  payment_terms:
+    - name: 30 dagen
+      line_ids:
+        - days: 30
+          value: balance
+    - name: 14 dagen
+      line_ids:
+        - days: 14
+          value: balance
+          
+  # Odoo voorraadlocaties
+  stock_locations:
+    - name: Stock
+      usage: internal
+    - name: Customers
+      usage: customer
+    - name: Suppliers
+      usage: supplier
+    - name: Production
+      usage: production
+      
+  # Odoo e-mail templates
+  email_templates:
+    - name: Invoice Email
+      model: account.move
+      subject: "Factuur {{ object.name }}"
+      body_html: |
+        <p>Beste {{ object.partner_id.name }},</p>
+        <p>Hierbij ontvang je factuur {{ object.name }}.</p>
+        <p>Totaalbedrag: {{ object.amount_total }}</p>
+        <p>Met vriendelijke groet,<br/>{{ company_name }}</p>
+
+erpnext_config:
+  # ERPNext modules
+  modules:
+    - Accounts
+    - Stock
+    - Selling
+    - Buying
+    - HR
+    - Projects
+    - Support
+    - CRM
+    - Manufacturing
+    - Website
+    
+  # ERPNext gebruikers
+  users:
+    - email: admin@{{ domain }}
+      first_name: Admin
+      last_name: User
+      roles: ["Administrator"]
+    - email: finance@{{ domain }}
+      first_name: Finance
+      last_name: Manager
+      roles: ["Accounts Manager"]
+    - email: sales@{{ domain }}
+      first_name: Sales
+      last_name: Manager
+      roles: ["Sales Manager"]
+      
+  # ERPNext rollen
+  roles:
+    - name: Administrator
+      permissions: "*"
+    - name: Accounts Manager
+      permissions: ["Accounts", "Payment Entry", "Journal Entry"]
+    - name: Sales Manager
+      permissions: ["Sales Order", "Customer", "Quotation"]
+      
+  # ERPNext bedrijven
+  companies:
+    - name: "{{ company_name }}"
+      abbr: "{{ company_abbr }}"
+      default_currency: EUR
+      country: Netherlands
+      
+  # ERPNext belastingen
+  taxes:
+    - name: BTW 21%
+      rate: 21
+      account: BTW 21%
+    - name: BTW 9%
+      rate: 9
+      account: BTW 9%
+      
+  # ERPNext betalingstermijnen
+  payment_terms:
+    - term: 30 dagen
+      credit_days: 30
+    - term: 14 dagen
+      credit_days: 14
+
+dolibarr_config:
+  # Dolibarr modules
+  modules:
+    - facture  # Facturatie
+    - propal  # Offerte
+    - commande  # Orders
+    - expedition  # Verzending
+    - stock  # Voorraad
+    - produit  # Producten
+    - service  # Diensten
+    - societe  # Bedrijven
+    - contact  # Contacten
+    - adherent  # Leden
+    - banque  # Bank
+    - compte  # Boekhouding
+    - salarie  # Salarissen
+    - contrat  # Contracten
+    - projet  # Projecten
+    - agenda  # Agenda
+    - mailmanspip  # Nieuwsbrief
+    
+  # Dolibarr gebruikers
+  users:
+    - name: Admin
+      login: admin
+      email: admin@{{ domain }}
+      admin: true
+    - name: Finance
+      login: finance
+      email: finance@{{ domain }}
+      rights:
+        facture: rw
+        banque: rw
+        compte: r
+        
+  # Dolibarr instellingen
+  settings:
+    company_name: "{{ company_name }}"
+    company_logo: /custom/logo.png
+    default_country: NL
+    default_currency: EUR
+    vat_number: "{{ company_vat }}"
+    siret_number: "{{ company_kvk }}"
+    prof_id: 1  # BTW nummer type
+    
+  # Dolibarr producten
+  products:
+    - name: Consulting
+      type: service
+      price: 150
+      vat_rate: 21
+    - name: Support Package
+      type: service
+      price: 500
+      vat_rate: 21
+    - name: License
+      type: product
+      price: 1000
+      vat_rate: 21
+
+orangehrm_config:
+  # OrangeHRM modules
+  modules:
+    - admin
+    - pim
+    - leave
+    - time
+    - recruitment
+    - performance
+    - directory
+    
+  # OrangeHRM gebruikers
+  users:
+    - username: admin
+      password: "{{ vault_orangehrm_admin_password }}"
+      role: Administrator
+    - username: hr_manager
+      password: "{{ vault_orangehrm_hr_password }}"
+      role: HR Manager
+    - username: employee1
+      password: "{{ vault_orangehrm_employee1_password }}"
+      role: ESS
+      
+  # OrangeHRM rollen
+  roles:
+    - name: Administrator
+      permissions:
+        - admin: *
+        - pim: *
+        - leave: *
+        - time: *
+        - recruitment: *
+        - performance: *
+    - name: HR Manager
+      permissions:
+        - pim: view,edit
+        - leave: view,edit
+        - recruitment: view
+    - name: ESS
+      permissions:
+        - leave: view,create
+        - time: view,create
+        - attendance: view,create
+
+leantice_config:
+  # Leantime modules
+  modules:
+    - projects
+    - tasks
+    - timesheets
+    - goals
+    - ideas
+    
+  # Leantime gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      role: owner
+    - username: legal
+      email: legal@{{ domain }}
+      role: manager
+      
+  # Leantime rollen
+  roles:
+    - name: owner
+      permissions: "*"
+    - name: manager
+      permissions:
+        - projects: view,edit
+        - tasks: view,edit
+        - timesheets: view
+    - name: user
+      permissions:
+        - tasks: view,edit_own
+        - timesheets: view,edit_own

@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# HEDGEDOC - REAL-TIME COLLABORATIVE MARKDOWN
+# =============================================================================
+# Beschrijving: Real-time collaborative markdown editor
+# Website: https://hedgedoc.org
+# =============================================================================
+
+application:
+  name: hedgedoc
+  version: 1.9.0
+  description: "HedgeDoc - Real-time collaborative markdown"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: documentation-team
+    contact: docs@company.local
+    slack: "#docs"
+    documentation: "https://docs.hedgedoc.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /hedgedoc/uploads
+        
+  network_requirements:
+    vlans:
+      - documentation
+      - internal
+    ports:
+      - container: 3000
+        host: 3002
+        protocol: tcp
+        public: false
+        description: "HedgeDoc web interface"
+    dns:
+      - "notes.{{ domain }}"
+      - "hedgedoc.{{ domain }}"
+      
+  container:
+    image: quay.io/hedgedoc/hedgedoc:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: CMD_DB_URL
+      value: "postgresql://hedgedoc:{{ vault_hedgedoc_password }}@postgres:5432/hedgedoc"
+      secret: true
+    - name: CMD_SESSION_SECRET
+      value: "{{ vault_hedgedoc_session }}"
+      secret: true
+    - name: CMD_DOMAIN
+      value: "hedgedoc.{{ domain }}"
+      secret: false
+    - name: CMD_URL_ADDPORT
+      value: "false"
+      secret: false
+    - name: CMD_PROTOCOL_USESSL
+      value: "true"
+      secret: false
+    - name: CMD_EMAIL
+      value: "hedgedoc@{{ domain }}"
+      secret: false
+    - name: CMD_ALLOW_EMAIL_REGISTER
+      value: "false"
+      secret: false
+    - name: CMD_ALLOW_FREEURL
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /status
+      port: 3000

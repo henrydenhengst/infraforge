@@ -1,0 +1,8 @@
+---
+- name: Configureer zypper automatic updates (SUSE)
+  ansible.builtin.cron:
+    name: "zypper-auto-update"
+    minute: "0"
+    hour: "2"
+    job: "zypper --non-interactive update --auto-agree-with-licenses"
+    user: root

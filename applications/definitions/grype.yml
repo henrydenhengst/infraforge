@@ -1,0 +1,70 @@
+---
+# =============================================================================
+# GRYPE - VULNERABILITY SCANNER
+# =============================================================================
+# Beschrijving: Vulnerability scanner for containers and filesystems
+# Website: https://github.com/anchore/grype
+# =============================================================================
+
+application:
+  name: grype
+  version: 0.70.0
+  description: "Grype - Vulnerability scanner"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://github.com/anchore/grype"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /cache
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: anchore/grype:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: GRYPE_DB_CACHE_DIR
+      value: "/cache"
+      secret: false
+    - name: GRYPE_CHECK_FOR_APP_UPDATE
+      value: "false"
+      secret: false
+    - name: GRYPE_SEVERITY
+      value: "critical,high"
+      secret: false
+    - name: GRYPE_SHOW_SUPPRESSED
+      value: "false"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["grype", "version"]

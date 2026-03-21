@@ -1,0 +1,6 @@
+---
+wireguard_config_path: /opt/wireguard
+wireguard_peers: 5
+wireguard_dns: "1.1.1.1"
+wireguard_subnet: "10.13.13.0"
+timezone: Europe/Amsterdam

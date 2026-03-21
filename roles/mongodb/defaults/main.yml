@@ -1,0 +1,6 @@
+---
+mongodb_port: 27017
+mongodb_admin_password: "{{ vault_mongodb_admin_password }}"
+mongodb_databases: []
+mongodb_monitoring_enabled: true
+mongodb_monitoring_port: 9216

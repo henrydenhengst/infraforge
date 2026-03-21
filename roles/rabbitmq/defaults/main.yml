@@ -1,0 +1,5 @@
+---
+rabbitmq_data_path: /opt/rabbitmq
+rabbitmq_default_user: admin
+rabbitmq_default_pass: "{{ vault_rabbitmq_password }}"
+rabbitmq_default_vhost: "/"

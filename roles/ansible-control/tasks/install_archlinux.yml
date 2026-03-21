@@ -1,0 +1,5 @@
+---
+- name: Installeer Ansible via Pacman
+  ansible.builtin.package:
+    name: ansible
+    state: present

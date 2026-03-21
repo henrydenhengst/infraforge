@@ -1,0 +1,22 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Terraform'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Valideer Terraform installatie'
+  ansible.builtin.shell: terraform version
+  register: terraform_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Terraform versie
+  ansible.builtin.debug:
+    var: terraform_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Maak Terraform workspace'
+  ansible.builtin.file:
+    path: "{{ terraform_workspace }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]

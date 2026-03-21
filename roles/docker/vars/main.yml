@@ -1,0 +1,68 @@
+---
+# =============================================================================
+# DOCKER ROLE VARIABELEN
+# =============================================================================
+
+# Docker prerequisites per OS familie
+docker_prerequisites:
+  Debian:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg
+    - lsb-release
+    - software-properties-common
+  RedHat:
+    - yum-utils
+    - device-mapper-persistent-data
+    - lvm2
+    - curl
+    - ca-certificates
+    - gnupg2
+  Suse:
+    - curl
+    - ca-certificates
+    - gnupg
+    - device-mapper
+    - lvm2
+  Archlinux:
+    - curl
+    - ca-certificates
+  Alpine:
+    - curl
+    - ca-certificates
+    - libc6-compat
+
+# Docker packages per OS familie
+docker_packages:
+  Debian:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-compose-plugin
+  RedHat:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-compose-plugin
+  Suse:
+    - docker
+    - docker-compose
+    - docker-buildx
+  Archlinux:
+    - docker
+    - docker-compose
+    - docker-buildx
+  Alpine:
+    - docker
+    - docker-compose
+
+# Docker Python module per OS
+python_docker_package:
+  Debian: python3-docker
+  RedHat: python3-docker
+  Suse: python3-docker-py
+  Archlinux: python-docker
+  Alpine: py3-docker

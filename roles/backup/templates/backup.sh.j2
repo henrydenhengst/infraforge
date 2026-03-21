@@ -1,0 +1,77 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Hoofd backup script
+
+set -e
+
+BACKUP_TYPE="${1:-daily}"
+BACKUP_DIR="{{ backup_base_dir }}/$BACKUP_TYPE"
+LOG_FILE="{{ backup_log_dir }}/backup-${BACKUP_TYPE}.log"
+DATE=$(date +%Y%m%d-%H%M%S)
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "Starting $BACKUP_TYPE backup"
+
+# Maak backup directory
+mkdir -p "$BACKUP_DIR"
+
+# Run database backups
+{% if postgres_databases | length > 0 %}
+if [ -f /backup/scripts/backup_postgres.sh ]; then
+    /backup/scripts/backup_postgres.sh "$BACKUP_TYPE" >> "$LOG_FILE" 2>&1
+fi
+{% endif %}
+
+{% if mysql_databases | length > 0 %}
+if [ -f /backup/scripts/backup_mysql.sh ]; then
+    /backup/scripts/backup_mysql.sh "$BACKUP_TYPE" >> "$LOG_FILE" 2>&1
+fi
+{% endif %}
+
+{% if mongodb_databases | length > 0 %}
+if [ -f /backup/scripts/backup_mongodb.sh ]; then
+    /backup/scripts/backup_mongodb.sh "$BACKUP_TYPE" >> "$LOG_FILE" 2>&1
+fi
+{% endif %}
+
+# Run volume backups
+{% if backup_docker_volumes %}
+if [ -f /backup/scripts/backup_volumes.sh ]; then
+    /backup/scripts/backup_volumes.sh "$BACKUP_TYPE" >> "$LOG_FILE" 2>&1
+fi
+{% endif %}
+
+# Run application backups
+{% if backup_apps_list | length > 0 %}
+if [ -f /backup/scripts/backup_applications.sh ]; then
+    /backup/scripts/backup_applications.sh "$BACKUP_TYPE" >> "$LOG_FILE" 2>&1
+fi
+{% endif %}
+
+# Run config backup
+if [ -f /backup/scripts/backup_config.sh ]; then
+    /backup/scripts/backup_config.sh "$BACKUP_TYPE" >> "$LOG_FILE" 2>&1
+fi
+
+# Run remote sync (only for full/weekly/monthly)
+if [ "$BACKUP_TYPE" != "daily" ]; then
+    if [ -f /backup/scripts/backup_sync.sh ]; then
+        /backup/scripts/backup_sync.sh "$BACKUP_TYPE" >> "$LOG_FILE" 2>&1
+    fi
+fi
+
+log "Backup completed successfully"
+
+# Send notification
+{% if backup_notify_on_failure %}
+if [ $? -ne 0 ]; then
+    echo "Backup failed! Check logs at $LOG_FILE" | mail -s "Backup Failed - {{ inventory_hostname }}" {{ backup_notify_email }}
+fi
+{% endif %}
+
+{% if backup_notify_on_success %}
+echo "Backup completed successfully" | mail -s "Backup Success - {{ inventory_hostname }}" {{ backup_notify_email }}
+{% endif %}

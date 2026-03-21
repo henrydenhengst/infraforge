@@ -1,0 +1,31 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# PostgreSQL backup script
+
+BACKUP_DIR="{{ postgresql_data_dir }}/backups"
+DATE=$(date +%Y%m%d-%H%M%S)
+LOG_FILE="/var/log/postgres-backup.log"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "Starting PostgreSQL backup"
+
+# Full database backup
+pg_dumpall -U postgres | gzip > "$BACKUP_DIR/full-$DATE.sql.gz"
+
+if [ $? -eq 0 ]; then
+    log "Backup completed successfully: full-$DATE.sql.gz"
+else
+    log "ERROR: Backup failed!"
+    exit 1
+fi
+
+# Individual database backups
+{% for db in postgresql_databases %}
+pg_dump -U postgres -d {{ db.name }} | gzip > "$BACKUP_DIR/{{ db.name }}-$DATE.sql.gz"
+log "Backup for {{ db.name }} completed: {{ db.name }}-$DATE.sql.gz"
+{% endfor %}
+
+log "PostgreSQL backup finished"

@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "GitLab Runner CI/CD execution agent"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [gitlab, runner, cicd, ci]
+dependencies:
+  - docker

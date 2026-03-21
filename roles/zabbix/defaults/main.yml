@@ -1,0 +1,3 @@
+---
+zabbix_data_path: /opt/zabbix
+zabbix_db_password: "{{ vault_zabbix_db_password }}"

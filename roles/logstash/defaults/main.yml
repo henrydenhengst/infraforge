@@ -1,0 +1,5 @@
+---
+logstash_data_path: /opt/logstash
+logstash_pipeline_path: /opt/logstash/pipeline
+logstash_heap_size: "512m"
+elasticsearch_host: elasticsearch:9200

@@ -1,0 +1,132 @@
+---
+# =============================================================================
+# BITWARDEN - WACHTWOORD BEHEERDER
+# =============================================================================
+# Beschrijving: Self-hosted wachtwoordbeheerder voor teams
+# Website: https://bitwarden.com
+# =============================================================================
+
+application:
+  name: bitwarden
+  version: 1.30.0
+  description: "Bitwarden - Wachtwoordbeheerder voor teams"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://bitwarden.com/help"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: attachments
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data/attachments
+        
+  network_requirements:
+    vlans:
+      - management
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Bitwarden HTTP"
+      - container: 8443
+        host: 8443
+        protocol: tcp
+        public: true
+        description: "Bitwarden HTTPS"
+    dns:
+      - "bitwarden.{{ domain }}"
+      - "passwords.{{ domain }}"
+      
+  container:
+    image: vaultwarden/server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: ADMIN_TOKEN
+      value: "{{ vault_bitwarden_admin_token }}"
+      secret: true
+      description: "Admin panel token"
+    - name: SIGNUPS_ALLOWED
+      value: "false"
+      secret: false
+    - name: INVITATIONS_ALLOWED
+      value: "true"
+      secret: false
+    - name: DOMAIN
+      value: "https://bitwarden.{{ domain }}"
+      secret: false
+    - name: DATABASE_URL
+      value: "postgresql://bitwarden:{{ vault_bitwarden_db_password }}@postgres:5432/bitwarden"
+      secret: true
+    - name: SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: SMTP_PORT
+      value: "587"
+      secret: false
+    - name: SMTP_SSL
+      value: "true"
+      secret: false
+    - name: SMTP_USERNAME
+      value: "bitwarden@{{ domain }}"
+      secret: false
+    - name: SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: SMTP_FROM
+      value: "bitwarden@{{ domain }}"
+      secret: false
+    - name: WEBSOCKET_ENABLED
+      value: "true"
+      secret: false
+    - name: YUBICO_CLIENT_ID
+      value: "{{ vault_yubico_client_id }}"
+      secret: true
+    - name: YUBICO_SECRET_KEY
+      value: "{{ vault_yubico_secret_key }}"
+      secret: true
+      
+  organizations:
+    - name: "{{ company_name }}"
+      billing_email: admin@{{ domain }}
+      
+  users:
+    - email: admin@{{ domain }}
+      password: "{{ vault_bitwarden_admin_password }}"
+      role: owner
+    - email: security@{{ domain }}
+      password: "{{ vault_bitwarden_security_password }}"
+      role: admin
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080
+      initial_delay: 30

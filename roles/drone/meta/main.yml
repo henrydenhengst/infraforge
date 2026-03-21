@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "Drone CI/CD platform"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [drone, cicd, ci, cd]
+dependencies:
+  - docker

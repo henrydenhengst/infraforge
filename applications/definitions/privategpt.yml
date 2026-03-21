@@ -1,0 +1,116 @@
+---
+# =============================================================================
+# CHATWOOT-GPT - AI-CHATBOT VOOR KLANTENSERVICE
+# =============================================================================
+# Beschrijving: AI-chatbot voor automatische klantenservice
+# Website: https://www.chatwoot.com
+# =============================================================================
+
+application:
+  name: chatwoot-gpt
+  version: 3.0.0
+  description: "Chatwoot-GPT - AI-chatbot voor klantenservice"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: support-team
+    contact: support@company.local
+    slack: "#support"
+    documentation: "https://www.chatwoot.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/storage
+      - name: logs
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /app/log
+        
+  network_requirements:
+    vlans:
+      - support
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Chatwoot web interface"
+    dns:
+      - "ai-chat.{{ domain }}"
+      - "chatwoot-ai.{{ domain }}"
+      
+  container:
+    image: chatwoot/chatwoot:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: CHATWOOT_GPT_ENABLED
+      value: "true"
+      secret: false
+    - name: OPENAI_API_KEY
+      value: "{{ vault_openai_key }}"
+      secret: true
+    - name: OPENAI_MODEL
+      value: "gpt-3.5-turbo"
+      secret: false
+    - name: AI_BOT_NAME
+      value: "SupportBot"
+      secret: false
+    - name: AI_BOT_AVATAR
+      value: "/assets/bot.png"
+      secret: false
+    - name: AI_AUTO_RESPOND
+      value: "true"
+      secret: false
+    - name: AI_ESCALATE_TO_HUMAN
+      value: "true"
+      secret: false
+    - name: AI_ESCALATION_KEYWORDS
+      value: "agent,human,supervisor"
+      secret: false
+    - name: POSTGRES_HOST
+      value: "postgres"
+      secret: false
+    - name: POSTGRES_DATABASE
+      value: "chatwoot"
+      secret: false
+    - name: POSTGRES_USER
+      value: "chatwoot"
+      secret: false
+    - name: POSTGRES_PASSWORD
+      value: "{{ vault_chatwoot_password }}"
+      secret: true
+    - name: REDIS_URL
+      value: "redis://redis:6379"
+      secret: false
+    - name: SECRET_KEY_BASE
+      value: "{{ vault_chatwoot_secret }}"
+      secret: true
+    - name: FRONTEND_URL
+      value: "https://chat.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

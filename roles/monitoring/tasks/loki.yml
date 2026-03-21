@@ -1,0 +1,44 @@
+---
+- name: Download Loki
+  ansible.builtin.get_url:
+    url: "https://github.com/grafana/loki/releases/download/v{{ loki_version }}/loki-linux-{{ arch_map[ansible_architecture] }}.zip"
+    dest: "/tmp/loki-linux-{{ arch_map[ansible_architecture] }}.zip"
+  tags: [download]
+
+- name: Extract Loki
+  ansible.builtin.unarchive:
+    src: "/tmp/loki-linux-{{ arch_map[ansible_architecture] }}.zip"
+    dest: /usr/local/bin/
+    remote_src: yes
+    mode: '0755'
+  tags: [extract]
+
+- name: Configure Loki
+  ansible.builtin.template:
+    src: loki.yml.j2
+    dest: /etc/loki/loki.yml
+    mode: '0644'
+  notify: restart loki
+  tags: [config]
+
+- name: Create Loki systemd service
+  ansible.builtin.template:
+    src: loki.service.j2
+    dest: /etc/systemd/system/loki.service
+    mode: '0644'
+  notify: restart loki
+  tags: [service]
+
+- name: Start and enable Loki
+  ansible.builtin.systemd:
+    name: loki
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [service]
+
+- name: Cleanup Loki temp files
+  ansible.builtin.file:
+    path: "/tmp/loki-linux-{{ arch_map[ansible_architecture] }}.zip"
+    state: absent
+  tags: [cleanup]

@@ -1,0 +1,108 @@
+---
+# =============================================================================
+# JITSI MEET - VIDEO-CONFERENCING
+# =============================================================================
+# Beschrijving: Video-conferencing voor teams
+# Website: https://jitsi.org
+# =============================================================================
+
+application:
+  name: jitsi
+  version: stable
+  description: "Jitsi Meet - Video-conferencing"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: communication-team
+    contact: comms@company.local
+    slack: "#comms"
+    documentation: "https://jitsi.github.io/handbook"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: transcripts
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /transcripts
+      - name: recordings
+        size_gb: 100
+        performance: hdd
+        backup_required: true
+        mount_path: /recordings
+        
+  network_requirements:
+    vlans:
+      - communication
+      - internal
+    ports:
+      - container: 80
+        host: 8000
+        protocol: tcp
+        public: true
+        description: "Jitsi HTTP"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: true
+        description: "Jitsi HTTPS"
+    dns:
+      - "meet.{{ domain }}"
+      - "jitsi.{{ domain }}"
+      
+  container:
+    image: jitsi/web:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: JITSI_DOMAIN
+      value: "meet.{{ domain }}"
+      secret: false
+    - name: JITSI_ENABLE_AUTH
+      value: "true"
+      secret: false
+    - name: JITSI_AUTH_TYPE
+      value: "internal"
+      secret: false
+    - name: JITSI_ENABLE_GUESTS
+      value: "true"
+      secret: false
+    - name: JITSI_ENABLE_RECORDING
+      value: "false"
+      secret: false
+    - name: JITSI_ENABLE_TRANSCRIPTIONS
+      value: "false"
+      secret: false
+    - name: JITSI_PUBLIC_URL
+      value: "https://meet.{{ domain }}"
+      secret: false
+      
+  components:
+    - web
+    - prosody
+    - jicofo
+    - videobridge
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 80

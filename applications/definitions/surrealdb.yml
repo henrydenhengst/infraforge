@@ -1,0 +1,82 @@
+---
+# =============================================================================
+# HIGHLIGHT - FULL-STACK MONITORING
+# =============================================================================
+# Beschrijving: Full-stack monitoring for frontend and backend
+# Website: https://highlight.io
+# =============================================================================
+
+application:
+  name: highlight
+  version: 0.1.0
+  description: "Highlight - Full-stack monitoring"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://highlight.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: logs
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /logs
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Highlight UI"
+    dns:
+      - "highlight.{{ domain }}"
+      
+  container:
+    image: highlight/highlight:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: DATABASE_URL
+      value: "postgresql://highlight:{{ vault_highlight_password }}@postgres:5432/highlight"
+      secret: true
+    - name: REDIS_URL
+      value: "redis://redis:6379"
+      secret: false
+    - name: SECRET_KEY
+      value: "{{ vault_highlight_secret }}"
+      secret: true
+    - name: CLICKHOUSE_URL
+      value: "http://clickhouse:8123"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

@@ -1,0 +1,73 @@
+---
+- name: '{{ ansible_os_family }} | Maak GitLab directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ gitlab_config_path }}"
+    - "{{ gitlab_logs_path }}"
+    - "{{ gitlab_data_path }}"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Installeer GitLab via Docker'
+  ansible.builtin.include_tasks: docker.yml
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Start GitLab container'
+  ansible.builtin.docker_container:
+    name: gitlab
+    image: gitlab/gitlab-ce:latest
+    restart_policy: unless-stopped
+    hostname: "gitlab.{{ domain }}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "22:22"
+    volumes:
+      - "{{ gitlab_config_path }}:/etc/gitlab"
+      - "{{ gitlab_logs_path }}:/var/log/gitlab"
+      - "{{ gitlab_data_path }}:/var/opt/gitlab"
+    env:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.{{ domain }}'
+        gitlab_rails['gitlab_shell_ssh_port'] = 22
+        gitlab_rails['initial_root_password'] = '{{ gitlab_root_password }}'
+        gitlab_rails['time_zone'] = 'Europe/Amsterdam'
+        gitlab_rails['gitlab_email_enabled'] = true
+        gitlab_rails['gitlab_email_from'] = 'gitlab@{{ domain }}'
+        gitlab_rails['smtp_enable'] = true
+        gitlab_rails['smtp_address'] = 'smtp.{{ domain }}'
+        gitlab_rails['smtp_port'] = 587
+        gitlab_rails['smtp_user_name'] = 'gitlab@{{ domain }}'
+        gitlab_rails['smtp_password'] = '{{ vault_smtp_password }}'
+        gitlab_rails['smtp_domain'] = '{{ domain }}'
+        gitlab_rails['smtp_authentication'] = 'login'
+        gitlab_rails['smtp_enable_starttls_auto'] = true
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.gitlab.rule: "Host(`gitlab.{{ domain }}`)"
+      traefik.http.services.gitlab.loadbalancer.server.port: "80"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot GitLab actief is'
+  ansible.builtin.wait_for:
+    port: 80
+    timeout: 300
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Valideer GitLab installatie'
+  ansible.builtin.uri:
+    url: "https://gitlab.{{ domain }}/-/health"
+    status_code: 200
+  register: gitlab_test
+  until: gitlab_test.status == 200
+  retries: 60
+  delay: 10
+  ignore_errors: yes
+  tags: [validate]
+
+- name: Toon GitLab root wachtwoord
+  ansible.builtin.debug:
+    msg: "GitLab root wachtwoord: {{ gitlab_root_password }}"
+  tags: [validate]

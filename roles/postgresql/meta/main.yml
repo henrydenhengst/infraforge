@@ -1,0 +1,37 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "PostgreSQL database installatie en configuratie"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - bullseye
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+    - name: EL
+      versions:
+        - 9
+        - 8
+    - name: Fedora
+      versions:
+        - 39
+        - 38
+    - name: openSUSE
+      versions:
+        - 15.5
+    - name: Archlinux
+    - name: Alpine
+      versions:
+        - 3.19
+  galaxy_tags:
+    - postgresql
+    - database
+    - sql
+    - backup
+    - monitoring
+dependencies: []

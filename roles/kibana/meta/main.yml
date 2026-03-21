@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "Kibana visualization for Elasticsearch"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [kibana, visualization, dashboard, elastic]
+dependencies:
+  - docker

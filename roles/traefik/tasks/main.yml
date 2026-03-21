@@ -1,0 +1,36 @@
+---
+- name: '{{ ansible_os_family }} | Maak Traefik directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/traefik
+    - /etc/traefik/conf.d
+    - /var/lib/traefik
+    - /var/log/traefik
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Configureer Traefik'
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: /etc/traefik/traefik.yml
+    mode: '0644'
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Configureer Traefik dynamic config'
+  ansible.builtin.template:
+    src: dynamic.yml.j2
+    dest: /etc/traefik/conf.d/dynamic.yml
+    mode: '0644'
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Installeer Traefik als Docker container'
+  ansible.builtin.include_tasks: docker.yml
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Valideer Traefik configuratie'
+  ansible.builtin.shell: docker exec traefik traefik healthcheck
+  register: traefik_test
+  ignore_errors: yes
+  tags: [validate]

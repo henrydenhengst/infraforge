@@ -1,0 +1,33 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Ansible'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Valideer Ansible installatie'
+  ansible.builtin.shell: ansible --version
+  register: ansible_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Ansible versie
+  ansible.builtin.debug:
+    var: ansible_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Maak Ansible directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/ansible
+    - /opt/ansible/playbooks
+    - /opt/ansible/roles
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Configureer ansible.cfg'
+  ansible.builtin.template:
+    src: ansible.cfg.j2
+    dest: /etc/ansible/ansible.cfg
+    mode: '0644'
+  tags: [config]

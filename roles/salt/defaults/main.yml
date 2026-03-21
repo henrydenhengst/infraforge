@@ -1,0 +1,4 @@
+---
+salt_version: "3006.0"
+salt_config_dir: /etc/salt
+salt_roots_dir: /srv/salt

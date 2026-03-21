@@ -1,0 +1,11 @@
+---
+- name: Voeg Puppet repository toe
+  ansible.builtin.apt_repository:
+    repo: "deb https://apt.puppet.com {{ ansible_distribution_release }} puppet8"
+    state: present
+    update_cache: yes
+
+- name: Installeer Puppet
+  ansible.builtin.apt:
+    name: puppet-agent
+    state: present

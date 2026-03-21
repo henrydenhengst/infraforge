@@ -1,0 +1,4 @@
+---
+couchdb_data_path: /opt/couchdb
+couchdb_admin_user: admin
+couchdb_admin_password: "{{ vault_couchdb_password }}"

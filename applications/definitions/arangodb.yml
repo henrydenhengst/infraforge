@@ -1,0 +1,63 @@
+---
+# =============================================================================
+# BUSYBOX - UNIX-UTILITIES SET
+# =============================================================================
+# Beschrijving: Unix-utilities set in een kleine container
+# Website: https://busybox.net
+# =============================================================================
+
+application:
+  name: busybox
+  version: 1.36.0
+  description: "BusyBox - Unix-utilities set"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://busybox.net/documentation.html"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 0.5
+      min_ram_gb: 0.25
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 0.5
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - os
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: busybox:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 512Mi
+      requests:
+        cpu: "0.5"
+        memory: 256Mi
+        
+  command: ["tail", "-f", "/dev/null"]
+  
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["busybox", "--help"]

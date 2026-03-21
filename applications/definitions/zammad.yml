@@ -1,0 +1,86 @@
+---
+# =============================================================================
+# STIRLING-PDF - PDF BEWERKINGSTOOL
+# =============================================================================
+# Beschrijving: PDF-bewerkingstool voor splitsen, samenvoegen, converteren
+# Website: https://www.stirlingpdf.com
+# =============================================================================
+
+application:
+  name: stirling-pdf
+  version: 0.20.0
+  description: "Stirling-PDF - PDF bewerkingstool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: office-team
+    contact: office@company.local
+    slack: "#office"
+    documentation: "https://github.com/Stirling-Tools/Stirling-PDF"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /usr/share/tesseract-ocr/5/tessdata
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /configs
+        
+  network_requirements:
+    vlans:
+      - office
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Stirling-PDF web UI"
+    dns:
+      - "pdf.{{ domain }}"
+      - "stirling.{{ domain }}"
+      
+  container:
+    image: frooodle/s-pdf:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DOCKER_ENABLE_SECURITY
+      value: "false"
+      secret: false
+    - name: SECURITY_ENABLE_LOGIN
+      value: "false"
+      secret: false
+    - name: SYSTEM_DEFAULTLOCALE
+      value: "nl-NL"
+      secret: false
+    - name: UI_APP_NAME
+      value: "Stirling-PDF"
+      secret: false
+    - name: UI_HOME_DESCRIPTION
+      value: "PDF bewerkingstools"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

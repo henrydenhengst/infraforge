@@ -1,0 +1,141 @@
+---
+# =============================================================================
+# AUTHELIA - 2FA EN SSO PORTAL
+# =============================================================================
+# Beschrijving: 2-factor authenticatie en Single Sign-On portaal
+# Website: https://www.authelia.com
+# =============================================================================
+
+application:
+  name: authelia
+  version: 4.38.0
+  description: "Authelia - 2FA en SSO portaal"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://www.authelia.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - management
+      - internal
+    ports:
+      - container: 9091
+        host: 9091
+        protocol: tcp
+        public: false
+        description: "Authelia API"
+    dns:
+      - "auth.{{ domain }}"
+      - "login.{{ domain }}"
+      
+  container:
+    image: authelia/authelia:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  config:
+    host: "0.0.0.0"
+    port: 9091
+    log_level: info
+    jwt_secret: "{{ vault_authelia_jwt }}"
+    default_redirection_url: "https://{{ domain }}"
+    
+    totp:
+      issuer: "{{ company_name }}"
+      period: 30
+      skew: 1
+    
+    authentication_backend:
+      file:
+        path: /config/users.yml
+        password:
+          algorithm: argon2id
+          iterations: 1
+          salt_length: 16
+          parallelism: 8
+          memory: 64
+          
+    access_control:
+      default_policy: deny
+      rules:
+        - domain: "{{ domain }}"
+          policy: bypass
+        - domain: "app.{{ domain }}"
+          policy: one_factor
+        - domain: "admin.{{ domain }}"
+          policy: two_factor
+        - domain: "grafana.{{ domain }}"
+          policy: one_factor
+          
+    session:
+      name: authelia_session
+      secret: "{{ vault_authelia_session }}"
+      expiration: 3600
+      inactivity: 300
+      domain: "{{ domain }}"
+      
+    regulation:
+      max_retries: 5
+      find_time: 120
+      ban_time: 300
+      
+    storage:
+      local:
+        path: /data/db.sqlite3
+      
+    notifier:
+      smtp:
+        username: authelia@{{ domain }}
+        password: "{{ vault_smtp_password }}"
+        host: smtp.{{ domain }}
+        port: 587
+        sender: authelia@{{ domain }}
+        subject: "[Authelia] {title}"
+        
+  users:
+    - username: admin
+      password: "{{ vault_authelia_admin_password }}"
+      email: admin@{{ domain }}
+      groups:
+        - admins
+    - username: user
+      password: "{{ vault_authelia_user_password }}"
+      email: user@{{ domain }}
+      groups:
+        - users
+        
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 9091
+      initial_delay: 30

@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# JUPYTERHUB - DATA SCIENCE PLATFORM
+# =============================================================================
+# Beschrijving: Multi-user platform voor Data Science en Python notebooks
+# Website: https://jupyter.org/hub
+# =============================================================================
+
+application:
+  name: jupyterhub
+  version: 4.0.0
+  description: "JupyterHub - Data Science platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://jupyterhub.readthedocs.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /srv/jupyterhub/data
+      - name: user_data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /home
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "JupyterHub web interface"
+    dns:
+      - "jupyter.{{ domain }}"
+      - "notebooks.{{ domain }}"
+      
+  container:
+    image: jupyterhub/jupyterhub:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: JUPYTERHUB_CRYPT_KEY
+      value: "{{ vault_jupyterhub_crypt_key }}"
+      secret: true
+    - name: JUPYTERHUB_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: JUPYTERHUB_ADMIN_PASSWORD
+      value: "{{ vault_jupyterhub_admin_password }}"
+      secret: true
+    - name: OAUTH_CLIENT_ID
+      value: "{{ vault_google_client_id }}"
+      secret: true
+    - name: OAUTH_CLIENT_SECRET
+      value: "{{ vault_google_client_secret }}"
+      secret: true
+    - name: DOCKER_JUPYTER_IMAGE
+      value: "jupyter/datascience-notebook:latest"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /hub/api
+      port: 8000

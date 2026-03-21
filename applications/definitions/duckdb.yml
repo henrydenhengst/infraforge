@@ -1,0 +1,130 @@
+---
+# =============================================================================
+# TELEPORT - IDENTITY-AWARE INFRASTRUCTURE ACCESS
+# =============================================================================
+# Beschrijving: Identity-aware infrastructure access platform
+# Website: https://goteleport.com
+# =============================================================================
+
+application:
+  name: teleport
+  version: 14.0.0
+  description: "Teleport - Identity-aware infrastructure access"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://goteleport.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/teleport
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/teleport
+        
+  network_requirements:
+    vlans:
+      - security
+      - management
+    ports:
+      - container: 3080
+        host: 3080
+        protocol: tcp
+        public: false
+        description: "Teleport Web UI"
+      - container: 3023
+        host: 3023
+        protocol: tcp
+        public: false
+        description: "Teleport SSH"
+      - container: 3024
+        host: 3024
+        protocol: tcp
+        public: false
+        description: "Teleport SSH proxy"
+      - container: 3025
+        host: 3025
+        protocol: tcp
+        public: false
+        description: "Teleport auth"
+      - container: 3026
+        host: 3026
+        protocol: tcp
+        public: false
+        description: "Teleport Kubernetes"
+    dns:
+      - "teleport.{{ domain }}"
+      - "ssh.{{ domain }}"
+      
+  container:
+    image: public.ecr.aws/gravitational/teleport:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: TELEPORT_ROLE
+      value: "auth,proxy"
+      secret: false
+    - name: TELEPORT_AUTH_SERVER
+      value: "teleport:3025"
+      secret: false
+    - name: TELEPORT_PUBLIC_ADDR
+      value: "teleport.{{ domain }}:3080"
+      secret: false
+    - name: TELEPORT_SSH_PUBLIC_ADDR
+      value: "teleport.{{ domain }}:3023"
+      secret: false
+    - name: TELEPORT_KUBERNETES_PUBLIC_ADDR
+      value: "teleport.{{ domain }}:3026"
+      secret: false
+    - name: TELEPORT_LICENSE_FILE
+      value: "/etc/teleport/license.pem"
+      secret: true
+    - name: TELEPORT_CLUSTER_NAME
+      value: "{{ domain }}"
+      secret: false
+    - name: TELEPORT_STORAGE_BACKEND
+      value: "postgres"
+      secret: false
+    - name: TELEPORT_STORAGE_POSTGRES_HOST
+      value: "postgres"
+      secret: false
+    - name: TELEPORT_STORAGE_POSTGRES_PORT
+      value: "5432"
+      secret: false
+    - name: TELEPORT_STORAGE_POSTGRES_USER
+      value: "teleport"
+      secret: false
+    - name: TELEPORT_STORAGE_POSTGRES_PASSWORD
+      value: "{{ vault_teleport_password }}"
+      secret: true
+    - name: TELEPORT_STORAGE_POSTGRES_DATABASE
+      value: "teleport"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /webapi/ping
+      port: 3080

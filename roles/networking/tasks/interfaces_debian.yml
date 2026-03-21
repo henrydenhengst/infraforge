@@ -1,0 +1,16 @@
+---
+- name: Configureer /etc/network/interfaces (Debian)
+  ansible.builtin.template:
+    src: interfaces_debian.j2
+    dest: /etc/network/interfaces
+    mode: '0644'
+  notify: restart networking
+
+- name: Configureer interface specific files
+  ansible.builtin.template:
+    src: interface_debian.j2
+    dest: "/etc/network/interfaces.d/{{ item.name }}"
+    mode: '0644'
+  loop: "{{ network_interfaces }}"
+  when: network_interfaces | length > 0
+  notify: restart networking

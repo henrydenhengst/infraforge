@@ -1,0 +1,8 @@
+---
+vagrant_version: "2.4.0"
+vagrant_workspace: /opt/vagrant
+vagrant_plugins:
+  - vagrant-vbguest
+  - vagrant-hostmanager
+  - vagrant-docker-compose
+  - vagrant-scp

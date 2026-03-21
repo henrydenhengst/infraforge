@@ -1,0 +1,101 @@
+---
+# =============================================================================
+# APACHE SPARK - DATA PROCESSING ENGINE
+# =============================================================================
+# Beschrijving: Unified analytics engine voor large-scale data processing
+# Website: https://spark.apache.org
+# =============================================================================
+
+application:
+  name: spark
+  version: 3.5.0
+  description: "Apache Spark - Data processing engine"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://spark.apache.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: logs
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /logs
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Spark master web UI"
+      - container: 7077
+        host: 7077
+        protocol: tcp
+        public: false
+        description: "Spark master RPC"
+      - container: 8081
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Spark worker web UI"
+    dns:
+      - "spark.{{ domain }}"
+      
+  container:
+    image: bitnami/spark:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: SPARK_MODE
+      value: "master"
+      secret: false
+    - name: SPARK_MASTER_HOST
+      value: "spark-master"
+      secret: false
+    - name: SPARK_MASTER_PORT
+      value: "7077"
+      secret: false
+    - name: SPARK_MASTER_WEBUI_PORT
+      value: "8080"
+      secret: false
+    - name: SPARK_WORKER_CORES
+      value: "4"
+      secret: false
+    - name: SPARK_WORKER_MEMORY
+      value: "8g"
+      secret: false
+    - name: SPARK_SUBMIT_ARGS
+      value: "--class org.apache.spark.examples.SparkPi"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /json/
+      port: 8080

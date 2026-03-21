@@ -1,0 +1,3 @@
+---
+unleash_data_path: /opt/unleash
+unleash_db_password: "{{ vault_unleash_db_password }}"

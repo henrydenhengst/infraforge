@@ -1,0 +1,119 @@
+---
+# =============================================================================
+# MOODLE - LEERMANAGEMENTSYSTEEM
+# =============================================================================
+# Beschrijving: Het meest gebruikte open-source leerplatform voor cursussen
+# Website: https://moodle.org
+# =============================================================================
+
+application:
+  name: moodle
+  version: 4.3.0
+  description: "Moodle - Learning Management System"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: education-team
+    contact: education@company.local
+    slack: "#education"
+    documentation: "https://docs.moodle.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/moodledata
+      - name: html
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        
+  network_requirements:
+    vlans:
+      - education
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Moodle web interface"
+    dns:
+      - "moodle.{{ domain }}"
+      - "learn.{{ domain }}"
+      
+  container:
+    image: moodle/moodle:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: MOODLE_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: MOODLE_DB_PORT
+      value: "3306"
+      secret: false
+    - name: MOODLE_DB_NAME
+      value: "moodle"
+      secret: false
+    - name: MOODLE_DB_USER
+      value: "moodle"
+      secret: false
+    - name: MOODLE_DB_PASSWORD
+      value: "{{ vault_moodle_password }}"
+      secret: true
+    - name: MOODLE_URL
+      value: "https://moodle.{{ domain }}"
+      secret: false
+    - name: MOODLE_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: MOODLE_ADMIN_PASSWORD
+      value: "{{ vault_moodle_admin_password }}"
+      secret: true
+    - name: MOODLE_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: MOODLE_SITE_NAME
+      value: "{{ company_name }} Learning Platform"
+      secret: false
+    - name: MOODLE_LANG
+      value: "nl"
+      secret: false
+    - name: MOODLE_SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: MOODLE_SMTP_PORT
+      value: "587"
+      secret: false
+    - name: MOODLE_SMTP_USER
+      value: "moodle@{{ domain }}"
+      secret: false
+    - name: MOODLE_SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: MOODLE_SMTP_SECURITY
+      value: "tls"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /admin/tool/health/index.php
+      port: 80

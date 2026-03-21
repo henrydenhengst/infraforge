@@ -1,0 +1,47 @@
+---
+- name: '{{ ansible_os_family }} | Maak Nexus directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "200"  # Nexus user id in container
+    group: "200"
+    mode: '0755'
+  loop:
+    - "{{ nexus_data_path }}"
+    - "{{ nexus_data_path }}/sonatype-work"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Nexus container'
+  ansible.builtin.docker_container:
+    name: nexus
+    image: sonatype/nexus3:latest
+    restart_policy: unless-stopped
+    ports:
+      - "8081:8081"
+    volumes:
+      - "{{ nexus_data_path }}:/nexus-data"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.nexus.rule: "Host(`nexus.{{ domain }}`)"
+      traefik.http.services.nexus.loadbalancer.server.port: "8081"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Nexus actief is'
+  ansible.builtin.wait_for:
+    port: 8081
+    timeout: 120
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Toon Nexus admin wachtwoord'
+  ansible.builtin.shell: |
+    docker exec nexus cat /nexus-data/admin.password
+  register: nexus_password
+  ignore_errors: yes
+  tags: [validate]
+
+- name: Toon Nexus informatie
+  ansible.builtin.debug:
+    msg:
+      - "Nexus: https://nexus.{{ domain }}"
+      - "Admin wachtwoord: {{ nexus_password.stdout }}"
+  tags: [validate]

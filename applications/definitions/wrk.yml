@@ -1,0 +1,77 @@
+---
+# =============================================================================
+# FLUENT BIT - LIGHTWEIGHT LOG PROCESSOR
+# =============================================================================
+# Beschrijving: Lichtgewicht log processor voor edge en IoT
+# Website: https://fluentbit.io
+# =============================================================================
+
+application:
+  name: fluent-bit
+  version: 2.2.0
+  description: "Fluent Bit - Lightweight log processor"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://docs.fluentbit.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /var/lib/fluent-bit
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 2020
+        host: 2020
+        protocol: tcp
+        public: false
+        description: "Fluent Bit metrics"
+    dns: []
+    
+  container:
+    image: fluent/fluent-bit:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: FLUENTBIT_HTTP_SERVER
+      value: "On"
+      secret: false
+    - name: FLUENTBIT_HTTP_PORT
+      value: "2020"
+      secret: false
+    - name: FLUENTBIT_HTTP_LISTEN
+      value: "0.0.0.0"
+      secret: false
+      
+  volumes:
+    - /var/log:/var/log:ro
+    - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/health
+      port: 2020

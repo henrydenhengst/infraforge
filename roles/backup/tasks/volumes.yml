@@ -1,0 +1,26 @@
+---
+- name: Maak volumes backup directory
+  ansible.builtin.file:
+    path: "{{ backup_base_dir }}/volumes"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  tags: [volumes]
+
+- name: Configureer Docker volumes backup
+  ansible.builtin.template:
+    src: backup_volumes.sh.j2
+    dest: /backup/scripts/backup_volumes.sh
+    mode: '0750'
+  when: backup_docker_volumes
+  tags: [volumes, docker]
+
+- name: Voeg volumes backup cron job toe
+  ansible.builtin.cron:
+    name: "volumes-backup"
+    minute: "30"
+    hour: "2"
+    job: "/backup/scripts/backup_volumes.sh >> /var/log/backup/volumes.log 2>&1"
+  when: backup_docker_volumes or backup_volumes_list | length > 0
+  tags: [volumes, cron]

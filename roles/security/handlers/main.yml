@@ -1,0 +1,24 @@
+---
+- name: restart ssh
+  ansible.builtin.service:
+    name: "{{ ssh_service_name[ansible_os_family] }}"
+    state: restarted
+
+- name: restart fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted
+
+- name: restart firewall
+  ansible.builtin.service:
+    name: "{{ firewall_service[ansible_os_family] }}"
+    state: restarted
+
+- name: restart auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+
+- name: reload sysctl
+  ansible.builtin.command: sysctl -p
+  listen: "reload sysctl"

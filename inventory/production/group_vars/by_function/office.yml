@@ -1,0 +1,477 @@
+---
+# =============================================================================
+# OFFICE TOOLS
+# =============================================================================
+# Functie: office
+# Beschrijving: Tools voor productiviteit, documentbeheer, PDF-bewerking en samenwerking
+# =============================================================================
+
+office_tools:
+  # ---------------------------------------------------------------------------
+  # PDF BEWERKING
+  # ---------------------------------------------------------------------------
+  - name: Stirling-PDF
+    profiel_tag: HR
+    functie_tag: office
+    beschrijving: "PDF-bewerkingstool voor splitsen, samenvoegen, converteren"
+    categorie: pdf
+    docker_image: frooodle/s-pdf:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - stirling_pdf_data:/usr/share/tesseract-ocr/5/tessdata
+      - stirling_pdf_config:/configs
+    environment:
+      DOCKER_ENABLE_SECURITY: "false"
+      SECURITY_ENABLE_LOGIN: "false"
+      SYSTEM_DEFAULTLOCALE: nl-NL
+      UI_APP_NAME: Stirling-PDF
+      UI_HOME_DESCRIPTION: "PDF bewerkingstools"
+      UI_APP_NAVBAR_NAME: Stirling-PDF
+      ALLOW_GOOGLE_VISIBILITY: "false"
+    url: "https://www.stirlingpdf.com"
+    
+  - name: Stirling-PDF-AI
+    profiel_tag: AI-Ops
+    functie_tag: office
+    beschrijving: "PDF-bewerking met AI-samenvattingen en OCR"
+    categorie: pdf_ai
+    docker_image: frooodle/s-pdf:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - stirling_pdf_ai_data:/usr/share/tesseract-ocr/5/tessdata
+      - stirling_pdf_ai_config:/configs
+    environment:
+      DOCKER_ENABLE_SECURITY: "false"
+      SECURITY_ENABLE_LOGIN: "false"
+      SYSTEM_DEFAULTLOCALE: nl-NL
+      UI_APP_NAME: Stirling-PDF AI
+      OCR_LAYER: "true"
+      OCR_LANGUAGES: "nld+eng"
+      AI_ENABLED: "true"
+      AI_MODEL: "llama3"
+      AI_API_URL: "http://ollama:11434"
+    url: "https://www.stirlingpdf.com"
+    
+  - name: Paperless-ngx
+    profiel_tag: HR
+    functie_tag: office
+    beschrijving: "Digitaal archief (OCR) voor documentbeheer"
+    categorie: document_management
+    docker_image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    ports:
+      - "8082:8000"
+    volumes:
+      - paperless_data:/usr/src/paperless/data
+      - paperless_media:/usr/src/paperless/media
+      - paperless_export:/usr/src/paperless/export
+      - paperless_consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://redis:6379
+      PAPERLESS_DBHOST: postgres
+      PAPERLESS_DBPORT: 5432
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: "{{ vault_paperless_password }}"
+      PAPERLESS_TIME_ZONE: Europe/Amsterdam
+      PAPERLESS_OCR_LANGUAGE: nld+eng
+      PAPERLESS_SECRET_KEY: "{{ vault_paperless_secret }}"
+      PAPERLESS_URL: https://paperless.{{ domain }}
+      PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+    database: postgresql
+    queue: redis
+    url: "https://docs.paperless-ngx.com"
+    
+  - name: Paperless-GPT
+    profiel_tag: HR
+    functie_tag: office
+    beschrijving: "Automatische classificatie van documenten via LLM"
+    categorie: document_ai
+    docker_image: icereed/paperless-gpt:latest
+    ports:
+      - "8083:8080"
+    volumes:
+      - paperless_gpt_data:/app/data
+      - paperless_gpt_config:/app/config
+    environment:
+      PAPERLESS_GPT_API_KEY: "{{ vault_openai_key }}"
+      PAPERLESS_GPT_MODEL: "gpt-3.5-turbo"
+      PAPERLESS_GPT_PAPERLESS_URL: "http://paperless:8000"
+      PAPERLESS_GPT_PAPERLESS_TOKEN: "{{ vault_paperless_token }}"
+      PAPERLESS_GPT_AUTO_TAGGING: "true"
+      PAPERLESS_GPT_AUTO_CORRESPONDENT: "true"
+      PAPERLESS_GPT_AUTO_DOCUMENT_TYPE: "true"
+      PAPERLESS_GPT_SUMMARY: "true"
+    url: "https://github.com/icereed/paperless-gpt"
+    
+  # ---------------------------------------------------------------------------
+  # SAMENWERKING
+  # ---------------------------------------------------------------------------
+  - name: Cryptpad
+    profiel_tag: Algemeen
+    functie_tag: office
+    beschrijving: "Privacy-vriendelijke samenwerking (docs, sheets, presentaties)"
+    categorie: collaboration
+    docker_image: cryptpad/cryptpad:latest
+    ports:
+      - "8084:80"
+      - "8085:443"
+    volumes:
+      - cryptpad_data:/cryptpad/datastore
+      - cryptpad_blob:/cryptpad/blob
+      - cryptpad_config:/cryptpad/config
+    environment:
+      CPAD_HTTP_PORT: 80
+      CPAD_HTTPS_PORT: 443
+      CPAD_DOMAIN: "cryptpad.{{ domain }}"
+      CPAD_ADMIN_EMAIL: admin@{{ domain }}
+      CPAD_ADMIN_PASSWORD: "{{ vault_cryptpad_password }}"
+      CPAD_MAIL: "cryptpad@{{ domain }}"
+      CPAD_SMTP_HOST: smtp.{{ domain }}
+      CPAD_SMTP_PORT: 587
+      CPAD_SMTP_AUTH: "true"
+      CPAD_SMTP_USERNAME: "cryptpad@{{ domain }}"
+      CPAD_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    url: "https://cryptpad.fr"
+    
+  - name: Etherpad
+    profiel_tag: Algemeen
+    functie_tag: office
+    beschrijving: "Real-time teksteditor voor samenwerking"
+    categorie: collaborative_editing
+    docker_image: etherpad/etherpad:latest
+    ports:
+      - "8086:9001"
+    volumes:
+      - etherpad_data:/opt/etherpad/var
+    environment:
+      ETHERPAD_TITLE: "Team Notities"
+      ETHERPAD_ADMIN_PASSWORD: "{{ vault_etherpad_password }}"
+      ETHERPAD_DB_HOST: postgres
+      ETHERPAD_DB_USER: etherpad
+      ETHERPAD_DB_PASSWORD: "{{ vault_etherpad_db_password }}"
+      ETHERPAD_DB_DATABASE: etherpad
+      ETHERPAD_DB_CHARSET: utf8mb4
+      ETHERPAD_TRUST_PROXY: "true"
+      ETHERPAD_DEFAULT_PAD_TEXT: "Welkom bij Etherpad!\n\nDit is een gezamenlijke tekst-editor."
+    database: postgresql
+    url: "https://etherpad.org"
+    
+  - name: Excalidraw
+    profiel_tag: Marketing
+    functie_tag: office
+    beschrijving: "Whiteboard tool voor diagrammen en wireframes"
+    categorie: diagramming
+    docker_image: excalidraw/excalidraw:latest
+    ports:
+      - "8087:80"
+    volumes:
+      - excalidraw_data:/data
+    environment:
+      EXCALIDRAW_BACKEND_URL: "https://excalidraw.{{ domain }}"
+      EXCALIDRAW_WS_URL: "wss://excalidraw.{{ domain }}"
+      EXCALIDRAW_STORAGE_BACKEND: "filesystem"
+      EXCALIDRAW_STORAGE_PATH: "/data"
+    url: "https://excalidraw.com"
+    
+  - name: Trilium
+    profiel_tag: Algemeen
+    functie_tag: office
+    beschrijving: "Notitiebeheer met hiërarchische structuur"
+    categorie: notes
+    docker_image: zadam/trilium:latest
+    ports:
+      - "8088:8080"
+    volumes:
+      - trilium_data:/home/node/trilium-data
+    environment:
+      TRILIUM_PORT: 8080
+      TRILIUM_TRUST_PROXY: "true"
+    url: "https://github.com/zadam/trilium"
+    
+  # ---------------------------------------------------------------------------
+  # JURIDISCHE TOOLS
+  # ---------------------------------------------------------------------------
+  - name: Docuseal
+    profiel_tag: Legal
+    functie_tag: office
+    beschrijving: "Open-source alternatief voor DocuSign"
+    categorie: e_signature
+    docker_image: docuseal/docuseal:latest
+    ports:
+      - "8089:3000"
+    volumes:
+      - docuseal_data:/data
+    environment:
+      DATABASE_URL: "postgresql://docuseal:{{ vault_docuseal_password }}@postgres:5432/docuseal"
+      SECRET_KEY_BASE: "{{ vault_docuseal_secret }}"
+      HOST: "https://docuseal.{{ domain }}"
+      SMTP_HOST: smtp.{{ domain }}
+      SMTP_PORT: 587
+      SMTP_USER: docuseal@{{ domain }}
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    database: postgresql
+    url: "https://www.docuseal.co"
+    
+  - name: LibreSign
+    profiel_tag: Legal
+    functie_tag: office
+    beschrijving: "Digitale handtekeningen geïntegreerd in Nextcloud"
+    categorie: e_signature
+    docker_image: libresign/libresign:latest
+    ports:
+      - "8090:80"
+    volumes:
+      - libresign_data:/var/www/html
+      - libresign_config:/var/www/html/config
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: libresign
+      POSTGRES_USER: libresign
+      POSTGRES_PASSWORD: "{{ vault_libresign_password }}"
+      NEXTCLOUD_URL: "https://nextcloud.{{ domain }}"
+      NEXTCLOUD_ADMIN_USER: admin
+      NEXTCLOUD_ADMIN_PASSWORD: "{{ vault_nextcloud_admin_password }}"
+    database: postgresql
+    url: "https://libresign.github.io"
+    
+  - name: DocuMind
+    profiel_tag: Legal
+    functie_tag: office
+    beschrijving: "AI-analyse van juridische contracten"
+    categorie: legal_ai
+    docker_image: documind/documind:latest
+    ports:
+      - "8091:3000"
+    volumes:
+      - documind_data:/app/data
+    environment:
+      DATABASE_URL: "postgresql://documind:{{ vault_documind_password }}@postgres:5432/documind"
+      OPENAI_API_KEY: "{{ vault_openai_key }}"
+      OPENAI_MODEL: "gpt-4"
+      SECRET_KEY: "{{ vault_documind_secret }}"
+    database: postgresql
+    url: "https://documind.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+office_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Document instellingen
+  documents:
+    storage_path: /data/documents
+    max_upload_size: 100MB
+    allowed_extensions:
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - md
+      - jpg
+      - png
+      
+  # OCR instellingen
+  ocr:
+    enabled: true
+    language: nld+eng
+    dpi: 300
+    mode: skip_text
+    
+  # AI instellingen
+  ai:
+    enabled: true
+    model: llama3
+    api_url: http://ollama:11434
+    temperature: 0.3
+    
+  # E-signature
+  e_signature:
+    expires_in_days: 30
+    require_authentication: true
+    audit_trail: true
+    
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: office@{{ domain }}
+    email_prefix: "[Office]"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+stirling_pdf_config:
+  # Stirling-PDF functies
+  features:
+    merge: true
+    split: true
+    compress: true
+    rotate: true
+    watermark: true
+    encrypt: true
+    decrypt: true
+    convert_to_pdf:
+      - images
+      - office
+      - html
+    convert_from_pdf:
+      - images
+      - text
+      
+  # Stirling-PDF beveiliging
+  security:
+    max_file_size: 200MB
+    allowed_files: 10
+    rate_limit: 100/hour
+    remove_metadata: true
+    
+  # Stirling-PDF UI
+  ui:
+    theme: light
+    language: nl
+    show_download: true
+    show_print: true
+    show_share: true
+
+paperless_config:
+  # Paperless correspondents
+  correspondents:
+    - name: Belastingdienst
+    - name: Zorgverzekeraar
+    - name: Energieleverancier
+    - name: Telecomprovider
+    
+  # Paperless document types
+  document_types:
+    - name: Factuur
+      matching_algorithm: auto
+    - name: Contract
+      matching_algorithm: auto
+    - name: Rapport
+      matching_algorithm: auto
+    - name: Nota
+      matching_algorithm: auto
+    - name: Correspondentie
+      matching_algorithm: auto
+      
+  # Paperless tags
+  tags:
+    - name: Belangrijk
+      color: "#ff0000"
+    - name: Te betalen
+      color: "#00ff00"
+    - name: Betaald
+      color: "#0000ff"
+    - name: Wachten op
+      color: "#ffff00"
+      
+  # Paperless storage paths
+  storage_paths:
+    - name: Jaar
+      path: "{created_year}"
+    - name: Maand
+      path: "{created_year}/{created_month}"
+      
+  # Paperless workflows
+  workflows:
+    - name: Factuur verwerking
+      triggers:
+        - type: consumption
+          sources:
+            - consume_folder
+      actions:
+        - type: assignment
+          assign_tags:
+            - Te betalen
+          assign_correspondent: "automatic"
+          assign_document_type: Factuur
+
+cryptpad_config:
+  # Cryptpad instances
+  instances:
+    - name: docs
+      type: pad
+      quota: 100MB
+    - name: sheets
+      type: sheet
+      quota: 100MB
+    - name: presentations
+      type: presentation
+      quota: 100MB
+    - name: forms
+      type: form
+      quota: 50MB
+      
+  # Cryptpad users
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      quota: 1GB
+      plan: admin
+    - username: user1
+      email: user1@{{ domain }}
+      quota: 500MB
+      plan: premium
+      
+  # Cryptpad settings
+  settings:
+    allow_registration: false
+    allow_anonymous: true
+    max_upload_size: 50MB
+    session_duration: 7
+    enable_telemetry: false
+    
+  # Cryptpad features
+  features:
+    realtime: true
+    history: true
+    chat: true
+    comments: true
+    mentions: true
+    notifications: true
+
+docuseal_config:
+  # Docuseal templates
+  templates:
+    - name: Algemene Voorwaarden
+      description: "Standaard algemene voorwaarden"
+      folder: Juridisch
+    - name: Geheimhoudingsovereenkomst
+      description: "NDA voor nieuwe medewerkers"
+      folder: Juridisch
+    - name: Offerte
+      description: "Standaard offerte template"
+      folder: Verkoop
+    - name: Factuur
+      description: "Standaard factuur template"
+      folder: Financieel
+      
+  # Docuseal submissions
+  submissions:
+    - name: NDA Jan Jansen
+      template: Geheimhoudingsovereenkomst
+      status: pending
+      signers:
+        - email: jan@example.com
+          role: Medewerker
+        - email: hr@{{ domain }}
+          role: Werkgever
+          
+  # Docuseal webhooks
+  webhooks:
+    - url: "https://webhook.{{ domain }}/docuseal"
+      events:
+        - submission.completed
+        - submission.expired

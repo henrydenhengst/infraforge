@@ -1,0 +1,11 @@
+---
+- name: Voeg Salt repository toe
+  ansible.builtin.apt_repository:
+    repo: "deb https://packages.broadcom.com/artifactory/saltproject-deb/ focal main"
+    state: present
+    update_cache: yes
+
+- name: Installeer Salt Minion
+  ansible.builtin.apt:
+    name: salt-minion
+    state: present

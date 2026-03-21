@@ -1,0 +1,571 @@
+---
+# =============================================================================
+# AUTHENTIK - IDENTITY PROVIDER (SSO)
+# =============================================================================
+# Beschrijving: Modern identity platform voor Single Sign-On en authenticatie
+# Website: https://goauthentik.io
+# =============================================================================
+
+application:
+  name: authentik
+  version: 2024.2.0
+  description: "Authentik - Identity Provider voor SSO en authenticatie"
+  environment: "{{ environment | default('production') }}"
+  
+  # ===========================================================================
+  # EIGENAAR & CONTACT
+  # ===========================================================================
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://goauthentik.io/docs/"
+    
+  # ===========================================================================
+  # HARDWARE VEREISTEN
+  # ===========================================================================
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      cpu_architecture: x86_64
+      gpu_required: false
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        description: "Authentik data (certificaten, tokens, sessions)"
+        
+      - name: media
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /media
+        description: "Geüploade bestanden en avatars"
+        
+      - name: certs
+        size_gb: 1
+        performance: any
+        backup_required: true
+        mount_path: /certs
+        description: "SSL certificaten"
+        
+      - name: templates
+        size_gb: 1
+        performance: any
+        backup_required: false
+        mount_path: /templates
+        description: "Custom templates"
+        
+  # ===========================================================================
+  # NETWERK VEREISTEN
+  # ===========================================================================
+  network_requirements:
+    vlans:
+      - management
+      - internal
+      
+    ports:
+      - container: 9000
+        host: 9000
+        protocol: tcp
+        public: false
+        description: "Authentik server (HTTP)"
+        
+      - container: 9443
+        host: 9443
+        protocol: tcp
+        public: true
+        ingress: true
+        description: "Authentik server (HTTPS)"
+        
+    dns:
+      - "auth.{{ domain }}"
+      - "authentik.{{ domain }}"
+      - "sso.{{ domain }}"
+      - "accounts.{{ domain }}"
+      
+    load_balancer:
+      enabled: true
+      method: round_robin
+      ssl_termination: true
+      sticky_sessions: true
+      
+  # ===========================================================================
+  # CONTAINER CONFIGURATIE
+  # ===========================================================================
+  container:
+    image: ghcr.io/goauthentik/server:2024.2.0
+    replicas: 2
+    restart: unless-stopped
+    
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+    security_context:
+      run_as_user: 1000
+      run_as_group: 1000
+      fs_group: 1000
+      
+  # ===========================================================================
+  # SIDECARS (EXTRA CONTAINERS)
+  # ===========================================================================
+  sidecars:
+    - name: worker
+      image: ghcr.io/goauthentik/server:2024.2.0
+      command: worker
+      replicas: 2
+      resources:
+        limits:
+          cpu: "2"
+          memory: 4Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+      environment:
+        AUTHENTIK_REDIS__HOST: redis
+        AUTHENTIK_POSTGRESQL__HOST: postgres
+        
+    - name: redis
+      image: redis:7-alpine
+      command: redis-server --appendonly yes --requirepass {{ vault_authentik_redis_password }}
+      volumes:
+        - redis_data:/data
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: "0.5"
+          memory: 1Gi
+          
+    - name: postgres
+      image: postgres:15-alpine
+      environment:
+        POSTGRES_DB: authentik
+        POSTGRES_USER: authentik
+        POSTGRES_PASSWORD: "{{ vault_authentik_db_password }}"
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+      resources:
+        limits:
+          cpu: "2"
+          memory: 4Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+          
+  # ===========================================================================
+  # OMGEVINGSVARIABELEN
+  # ===========================================================================
+  environment_variables:
+    - name: AUTHENTIK_REDIS__HOST
+      value: redis
+      secret: false
+      description: "Redis host"
+      
+    - name: AUTHENTIK_REDIS__PORT
+      value: "6379"
+      secret: false
+      
+    - name: AUTHENTIK_REDIS__PASSWORD
+      value: "{{ vault_authentik_redis_password }}"
+      secret: true
+      
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      value: postgres
+      secret: false
+      
+    - name: AUTHENTIK_POSTGRESQL__PORT
+      value: "5432"
+      secret: false
+      
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      value: authentik
+      secret: false
+      
+    - name: AUTHENTIK_POSTGRESQL__USER
+      value: authentik
+      secret: false
+      
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      value: "{{ vault_authentik_db_password }}"
+      secret: true
+      
+    - name: AUTHENTIK_SECRET_KEY
+      value: "{{ vault_authentik_secret_key }}"
+      secret: true
+      description: "Hoofdsleutel voor encryptie"
+      
+    - name: AUTHENTIK_ERROR_REPORTING__ENABLED
+      value: "false"
+      secret: false
+      
+    - name: AUTHENTIK_EMAIL__HOST
+      value: smtp.{{ domain }}
+      secret: false
+      
+    - name: AUTHENTIK_EMAIL__PORT
+      value: "587"
+      secret: false
+      
+    - name: AUTHENTIK_EMAIL__USERNAME
+      value: authentik@{{ domain }}
+      secret: false
+      
+    - name: AUTHENTIK_EMAIL__PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+      
+    - name: AUTHENTIK_EMAIL__USE_TLS
+      value: "true"
+      secret: false
+      
+    - name: AUTHENTIK_EMAIL__FROM
+      value: authentik@{{ domain }}
+      secret: false
+      
+    - name: AUTHENTIK_LOG_LEVEL
+      value: info
+      secret: false
+      
+    - name: AUTHENTIK_DISABLE_UPDATE_CHECK
+      value: "false"
+      secret: false
+      
+    - name: AUTHENTIK_AVATARS
+      value: "initials"
+      secret: false
+      
+    - name: AUTHENTIK_DEFAULT_USER_CHANGE_NAME
+      value: "true"
+      secret: false
+      
+    - name: AUTHENTIK_DEFAULT_USER_CHANGE_EMAIL
+      value: "true"
+      secret: false
+      
+    - name: AUTHENTIK_FOOTER_LINKS
+      value: '[{"name": "Documentation", "href": "https://goauthentik.io/docs/"}]'
+      secret: false
+      
+  # ===========================================================================
+  # CONFIGURATIE
+  # ===========================================================================
+  authentik_config:
+    version: 2024.2
+    
+    # Blueprints (automatische configuratie)
+    blueprints:
+      - name: default
+        path: /templates/default.yaml
+        context:
+          domain: "{{ domain }}"
+          
+      - name: applications
+        path: /templates/applications.yaml
+        context:
+          domain: "{{ domain }}"
+          
+    # Branding
+    branding:
+      title: "{{ company_name }} SSO"
+      logo: /static/logo.png
+      favicon: /static/favicon.ico
+      background: /static/background.jpg
+      footer_links:
+        - name: Privacy
+          href: /privacy
+        - name: Terms
+          href: /terms
+          
+    # Avatars
+    avatars: "initials"
+    
+  # ===========================================================================
+  # PROVIDERS
+  # ===========================================================================
+  providers:
+    - name: OAuth2
+      type: oauth2
+      client_id: "{{ vault_authentik_oauth_client_id }}"
+      client_secret: "{{ vault_authentik_oauth_client_secret }}"
+      redirect_uris:
+        - "https://app.{{ domain }}/callback"
+        - "https://nextcloud.{{ domain }}/apps/sociallogin/callback"
+        - "https://gitlab.{{ domain }}/users/auth/authentik/callback"
+      authorization_flow: "default-provider-authorization-implicit-consent"
+      
+    - name: SAML
+      type: saml
+      acs_url: "https://app.{{ domain }}/saml/acs"
+      issuer: "authentik"
+      sp_binding: "post"
+      name_id_mapping: "default-saml-name-id"
+      
+    - name: LDAP
+      type: ldap
+      base_dn: "dc={{ domain.split('.')[0] }},dc={{ domain.split('.')[1] }}"
+      bind_dn: "cn=admin,dc={{ domain.split('.')[0] }},dc={{ domain.split('.')[1] }}"
+      bind_password: "{{ vault_authentik_ldap_password }}"
+      user_dn: "ou=users"
+      group_dn: "ou=groups"
+      
+  # ===========================================================================
+  # APPLICATIES
+  # ===========================================================================
+  applications:
+    - name: Nextcloud
+      slug: nextcloud
+      provider: OAuth2
+      group: Productiviteit
+      meta_launch_url: "https://nextcloud.{{ domain }}"
+      meta_icon: /static/nextcloud.png
+      meta_description: "Bestandshub en samenwerking"
+      policy_engine_mode: any
+      
+    - name: GitLab
+      slug: gitlab
+      provider: OAuth2
+      group: Development
+      meta_launch_url: "https://gitlab.{{ domain }}"
+      meta_icon: /static/gitlab.png
+      meta_description: "Git repository management"
+      
+    - name: Grafana
+      slug: grafana
+      provider: OAuth2
+      group: Monitoring
+      meta_launch_url: "https://grafana.{{ domain }}"
+      meta_icon: /static/grafana.png
+      
+    - name: Portainer
+      slug: portainer
+      provider: OAuth2
+      group: Infrastructuur
+      meta_launch_url: "https://portainer.{{ domain }}"
+      meta_icon: /static/portainer.png
+      
+    - name: Home Assistant
+      slug: homeassistant
+      provider: OAuth2
+      group: IoT
+      meta_launch_url: "https://homeassistant.{{ domain }}"
+      meta_icon: /static/homeassistant.png
+      
+  # ===========================================================================
+  # GROEPEN
+  # ===========================================================================
+  groups:
+    - name: Administrators
+      parent: null
+      roles:
+        - authentik_admin
+        - authentik_superuser
+      users:
+        - admin@{{ domain }}
+        
+    - name: Developers
+      parent: null
+      users:
+        - developer1@{{ domain }}
+        - developer2@{{ domain }}
+        
+    - name: Finance
+      parent: null
+      users:
+        - finance@{{ domain }}
+        
+    - name: HR
+      parent: null
+      users:
+        - hr@{{ domain }}
+        
+    - name: Marketing
+      parent: null
+      users:
+        - marketing@{{ domain }}
+        
+  # ===========================================================================
+  # GEBRUIKERS
+  # ===========================================================================
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      name: "Administrator"
+      password: "{{ vault_authentik_admin_password }}"
+      is_active: true
+      is_superuser: true
+      
+    - username: developer1
+      email: developer1@{{ domain }}
+      name: "Developer One"
+      password: "{{ vault_authentik_dev1_password }}"
+      is_active: true
+      groups:
+        - Developers
+        
+    - username: developer2
+      email: developer2@{{ domain }}
+      name: "Developer Two"
+      password: "{{ vault_authentik_dev2_password }}"
+      is_active: true
+      groups:
+        - Developers
+        
+    - username: finance
+      email: finance@{{ domain }}
+      name: "Finance User"
+      password: "{{ vault_authentik_finance_password }}"
+      is_active: true
+      groups:
+        - Finance
+        
+  # ===========================================================================
+  # POLICIES
+  # ===========================================================================
+  policies:
+    - name: require-2fa
+      execution_mode: any
+      policy:
+        type: expression
+        expression: "request.user.attributes.get('2fa_enabled', False)"
+      binding_type: "grant"
+      
+    - name: admin-access
+      execution_mode: any
+      policy:
+        type: expression
+        expression: "'Administrators' in request.user.attributes.get('groups', [])"
+      binding_type: "grant"
+      
+    - name: time-restricted
+      execution_mode: all
+      policy:
+        type: expression
+        expression: "datetime.now().hour >= 9 and datetime.now().hour <= 17"
+      binding_type: "deny"
+      
+  # ===========================================================================
+  # SOURCES (EXTERNE AUTHENTICATIEBRONNEN)
+  # ===========================================================================
+  sources:
+    - name: Google
+      type: oauth
+      provider_type: google
+      client_id: "{{ vault_google_client_id }}"
+      client_secret: "{{ vault_google_client_secret }}"
+      
+    - name: GitHub
+      type: oauth
+      provider_type: github
+      client_id: "{{ vault_github_client_id }}"
+      client_secret: "{{ vault_github_client_secret }}"
+      
+    - name: Microsoft
+      type: oauth
+      provider_type: azuread
+      client_id: "{{ vault_azure_client_id }}"
+      client_secret: "{{ vault_azure_client_secret }}"
+      tenant_id: "{{ vault_azure_tenant_id }}"
+      
+    - name: LDAP
+      type: ldap
+      server_uri: ldap://openldap:389
+      bind_dn: "cn=admin,dc={{ domain.split('.')[0] }},dc={{ domain.split('.')[1] }}"
+      bind_password: "{{ vault_authentik_ldap_password }}"
+      user_base_dn: "ou=users"
+      group_base_dn: "ou=groups"
+      
+  # ===========================================================================
+  # HEALTH CHECKS
+  # ===========================================================================
+  health_checks:
+    liveness:
+      type: http
+      path: /-/health/live/
+      port: 9000
+      initial_delay: 60
+      period: 30
+      timeout: 10
+      retries: 3
+      
+    readiness:
+      type: http
+      path: /-/health/ready/
+      port: 9000
+      initial_delay: 30
+      period: 15
+      timeout: 5
+      retries: 5
+      
+  # ===========================================================================
+  # MONITORING
+  # ===========================================================================
+  monitoring:
+    metrics:
+      enabled: true
+      exporter: authentik-exporter
+      port: 9300
+      path: /metrics
+      scrape_interval: 30s
+      
+    logs:
+      enabled: true
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+      locations:
+        - /data/logs/authentik.log
+        
+    alerts:
+      - name: authentik_down
+        condition: up{app="authentik"} == 0
+        duration: 2m
+        severity: critical
+        action: pagerduty
+        description: "Authentik is niet bereikbaar"
+        
+      - name: failed_logins
+        condition: rate(authentik_failed_login_total[5m]) > 10
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Meerdere mislukte inlogpogingen gedetecteerd"
+        
+      - name: high_latency
+        condition: authentik_request_duration_seconds > 2
+        duration: 5m
+        severity: warning
+        action: email
+        
+  # ===========================================================================
+  # BACKUP
+  # ===========================================================================
+  backup:
+    enabled: true
+    schedule: "0 1 * * *"
+    retention_days: 30
+    volumes:
+      - data
+      - media
+      - certs
+      - postgres_data
+      - redis_data
+    databases:
+      - type: postgres
+        name: authentik
+    pre_backup:
+      - command: "authentik-manager migrate"
+        when: backup_type == "full"

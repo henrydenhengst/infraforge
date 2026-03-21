@@ -1,0 +1,204 @@
+---
+# =============================================================================
+# MESSAGING TOOLS
+# =============================================================================
+# Functie: messaging
+# Beschrijving: Tools voor push notificaties, messaging en alerts
+# =============================================================================
+
+messaging_tools:
+  # ---------------------------------------------------------------------------
+  # PUSH NOTIFICATIES
+  # ---------------------------------------------------------------------------
+  - name: Gotify
+    profiel_tag: IT
+    functie_tag: messaging
+    beschrijving: "Push-notificatie server voor applicaties en services"
+    categorie: push_notifications
+    docker_image: gotify/server:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - gotify_data:/app/data
+    environment:
+      GOTIFY_DEFAULTUSER_NAME: admin
+      GOTIFY_DEFAULTUSER_PASS: "{{ vault_gotify_password }}"
+      GOTIFY_DATABASE_DIALECT: sqlite3
+      GOTIFY_DATABASE_CONNECTION: /app/data/gotify.db
+      GOTIFY_SERVER_PORT: 80
+      GOTIFY_SERVER_KEEPALIVEPERIOD: 10
+      GOTIFY_SERVER_READTIMEOUT: 10
+      GOTIFY_SERVER_WRITETIMEOUT: 10
+      GOTIFY_UPLOADEDIMAGES_DIR: /app/data/images
+    url: "https://gotify.net"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+messaging_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Notificatie instellingen
+  notifications:
+    default_priority: 5
+    default_ttl: 3600
+    max_message_length: 4096
+    retention_days: 30
+    
+  # Clients
+  clients:
+    web_enabled: true
+    mobile_enabled: true
+    desktop_enabled: true
+    
+  # Integraties
+  integrations:
+    slack_enabled: true
+    telegram_enabled: false
+    email_enabled: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+gotify_config:
+  # Gotify applicaties
+  applications:
+    - name: Jenkins
+      description: "Jenkins build notificaties"
+      token: "{{ vault_gotify_jenkins_token }}"
+      image: "/static/jenkins.png"
+    - name: Monitoring
+      description: "Monitoring alerts"
+      token: "{{ vault_gotify_monitoring_token }}"
+      image: "/static/prometheus.png"
+    - name: Backup
+      description: "Backup notificaties"
+      token: "{{ vault_gotify_backup_token }}"
+      image: "/static/backup.png"
+    - name: Security
+      description: "Security alerts"
+      token: "{{ vault_gotify_security_token }}"
+      image: "/static/security.png"
+    - name: Updates
+      description: "Systeem updates"
+      token: "{{ vault_gotify_updates_token }}"
+      image: "/static/updates.png"
+      
+  # Gotify gebruikers
+  users:
+    - name: admin
+      email: admin@{{ domain }}
+      admin: true
+      password: "{{ vault_gotify_admin_password }}"
+      
+    - name: monitoring
+      email: monitoring@{{ domain }}
+      admin: false
+      password: "{{ vault_gotify_monitoring_user_password }}"
+      
+    - name: backup
+      email: backup@{{ domain }}
+      admin: false
+      password: "{{ vault_gotify_backup_user_password }}"
+      
+  # Gotify clients
+  clients:
+    - name: Desktop
+      description: "Desktop client"
+      token: "{{ vault_gotify_desktop_token }}"
+    - name: Mobile-Android
+      description: "Android app"
+      token: "{{ vault_gotify_android_token }}"
+    - name: Mobile-iOS
+      description: "iOS app"
+      token: "{{ vault_gotify_ios_token }}"
+      
+  # Gotify plugins
+  plugins:
+    - name: telegram
+      enabled: false
+      config:
+        token: "{{ vault_telegram_token }}"
+        chat_id: "{{ vault_telegram_chat_id }}"
+    - name: slack
+      enabled: true
+      config:
+        webhook: "{{ vault_slack_webhook }}"
+        channel: "#notifications"
+    - name: email
+      enabled: true
+      config:
+        smtp_host: smtp.{{ domain }}
+        smtp_port: 587
+        smtp_user: gotify@{{ domain }}
+        smtp_password: "{{ vault_smtp_password }}"
+        from: gotify@{{ domain }}
+        to: alerts@{{ domain }}
+        
+  # Gotify notificatie templates
+  templates:
+    - name: build_success
+      title: "✅ Build succesvol"
+      message: |
+        Project: {{ .project }}
+        Branch: {{ .branch }}
+        Duur: {{ .duration }}
+        URL: {{ .url }}
+      priority: 3
+      
+    - name: build_failed
+      title: "❌ Build mislukt"
+      message: |
+        Project: {{ .project }}
+        Branch: {{ .branch }}
+        Fout: {{ .error }}
+        URL: {{ .url }}
+      priority: 8
+      
+    - name: backup_completed
+      title: "📦 Backup voltooid"
+      message: |
+        Backup: {{ .name }}
+        Grootte: {{ .size }}
+        Duur: {{ .duration }}
+        Status: {{ .status }}
+      priority: 4
+      
+    - name: security_alert
+      title: "🚨 Security alert"
+      message: |
+        Type: {{ .type }}
+        Severity: {{ .severity }}
+        Source: {{ .source }}
+        Details: {{ .details }}
+      priority: 10
+      
+  # Gotify UI instellingen
+  ui:
+    title: "Notificaties"
+    theme: dark
+    show_apps: true
+    show_messages: true
+    messages_per_page: 50
+    enable_sounds: true
+    enable_notifications: true
+    enable_desktop_notifications: true
+    
+  # Gotify rate limiting
+  rate_limiting:
+    enabled: true
+    messages_per_app_per_minute: 60
+    messages_per_user_per_minute: 120
+    
+  # Gotify logging
+  logging:
+    level: info
+    file: /app/data/gotify.log
+    max_size: 100MB
+    max_backups: 5
+    max_age: 30

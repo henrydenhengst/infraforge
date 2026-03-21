@@ -1,0 +1,10 @@
+---
+- name: restart zabbix-server
+  ansible.builtin.docker_container:
+    name: zabbix-server
+    restart: yes
+
+- name: restart zabbix-web
+  ansible.builtin.docker_container:
+    name: zabbix-web
+    restart: yes

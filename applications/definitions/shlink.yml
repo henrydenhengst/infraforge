@@ -1,0 +1,115 @@
+---
+# =============================================================================
+# OPENMETADATA - DATA CATALOG
+# =============================================================================
+# Beschrijving: Centraal beheer van data-assets en lineage
+# Website: https://open-metadata.org
+# =============================================================================
+
+application:
+  name: openmetadata
+  version: 1.3.0
+  description: "OpenMetadata - Data catalog en lineage"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://docs.open-metadata.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: index
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /index
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8585
+        host: 8585
+        protocol: tcp
+        public: false
+        description: "OpenMetadata UI"
+      - container: 8586
+        host: 8586
+        protocol: tcp
+        public: false
+        description: "OpenMetadata API"
+    dns:
+      - "metadata.{{ domain }}"
+      - "openmetadata.{{ domain }}"
+      
+  container:
+    image: openmetadata/server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: OPENMETADATA_DATABASE_HOST
+      value: "postgres"
+      secret: false
+    - name: OPENMETADATA_DATABASE_PORT
+      value: "5432"
+      secret: false
+    - name: OPENMETADATA_DATABASE_DBNAME
+      value: "openmetadata"
+      secret: false
+    - name: OPENMETADATA_DATABASE_USER
+      value: "openmetadata"
+      secret: false
+    - name: OPENMETADATA_DATABASE_PASSWORD
+      value: "{{ vault_openmetadata_password }}"
+      secret: true
+    - name: OPENMETADATA_ELASTICSEARCH_HOST
+      value: "elasticsearch"
+      secret: false
+    - name: OPENMETADATA_ELASTICSEARCH_PORT
+      value: "9200"
+      secret: false
+    - name: OPENMETADATA_REDIS_HOST
+      value: "redis"
+      secret: false
+    - name: OPENMETADATA_REDIS_PORT
+      value: "6379"
+      secret: false
+    - name: OPENMETADATA_AIRFLOW_HOST
+      value: "airflow"
+      secret: false
+    - name: OPENMETADATA_AIRFLOW_PORT
+      value: "8080"
+      secret: false
+    - name: OPENMETADATA_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: OPENMETADATA_ADMIN_PASSWORD
+      value: "{{ vault_openmetadata_admin_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/health
+      port: 8585

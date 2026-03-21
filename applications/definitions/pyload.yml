@@ -1,0 +1,84 @@
+---
+# =============================================================================
+# AUDIOBOOKSHELF - AUDIOBOEKEN EN PODCASTS
+# =============================================================================
+# Beschrijving: Zelfgehoste server voor audioboeken en podcasts
+# Website: https://www.audiobookshelf.org
+# =============================================================================
+
+application:
+  name: audiobookshelf
+  version: 2.7.0
+  description: "Audiobookshelf - Audioboeken en podcasts"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://www.audiobookshelf.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: metadata
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /metadata
+      - name: audiobooks
+        size_gb: 500
+        performance: hdd
+        backup_required: true
+        mount_path: /audiobooks
+      - name: podcasts
+        size_gb: 100
+        performance: hdd
+        backup_required: false
+        mount_path: /podcasts
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 13378
+        host: 13378
+        protocol: tcp
+        public: false
+        description: "Audiobookshelf web interface"
+    dns:
+      - "audiobooks.{{ domain }}"
+      - "podcasts.{{ domain }}"
+      
+  container:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 13378

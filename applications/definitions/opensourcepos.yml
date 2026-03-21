@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# TIKA - CONTENT ANALYSE EN EXTRACTIE
+# =============================================================================
+# Beschrijving: Content analyse en extractie voor grote datasets
+# Website: https://tika.apache.org
+# =============================================================================
+
+application:
+  name: tika
+  version: 2.9.0
+  description: "Tika - Content analyse en extractie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://tika.apache.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: cache
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /cache
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 9998
+        host: 9998
+        protocol: tcp
+        public: false
+        description: "Tika API"
+    dns:
+      - "tika.{{ domain }}"
+      - "extract.{{ domain }}"
+      
+  container:
+    image: apache/tika:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: TIKA_CHILD_FETCH_MAX
+      value: "100"
+      secret: false
+    - name: TIKA_CHILD_TIMEOUT
+      value: "60s"
+      secret: false
+    - name: TIKA_MAX_FILESIZE
+      value: "100000000"
+      secret: false
+    - name: TIKA_OCR_ENABLED
+      value: "true"
+      secret: false
+    - name: TIKA_OCR_LANGUAGE
+      value: "nld+eng"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /tika
+      port: 9998

@@ -1,0 +1,97 @@
+---
+# =============================================================================
+# ETCD - DISTRIBUTED KEY-VALUE STORE
+# =============================================================================
+# Beschrijving: Gedistribueerde key-value store voor configuratie en service discovery
+# Website: https://etcd.io
+# =============================================================================
+
+application:
+  name: etcd
+  version: 3.5.0
+  description: "etcd - Distributed key-value store"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://etcd.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /etcd-data
+        
+  network_requirements:
+    vlans:
+      - platform
+      - internal
+    ports:
+      - container: 2379
+        host: 2379
+        protocol: tcp
+        public: false
+        description: "etcd client API"
+      - container: 2380
+        host: 2380
+        protocol: tcp
+        public: false
+        description: "etcd peer communication"
+    dns:
+      - "etcd.{{ domain }}"
+      
+  container:
+    image: quay.io/coreos/etcd:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: ETCD_NAME
+      value: "etcd-node"
+      secret: false
+    - name: ETCD_DATA_DIR
+      value: "/etcd-data"
+      secret: false
+    - name: ETCD_ADVERTISE_CLIENT_URLS
+      value: "http://etcd:2379"
+      secret: false
+    - name: ETCD_LISTEN_CLIENT_URLS
+      value: "http://0.0.0.0:2379"
+      secret: false
+    - name: ETCD_INITIAL_ADVERTISE_PEER_URLS
+      value: "http://etcd:2380"
+      secret: false
+    - name: ETCD_LISTEN_PEER_URLS
+      value: "http://0.0.0.0:2380"
+      secret: false
+    - name: ETCD_INITIAL_CLUSTER
+      value: "etcd-node=http://etcd:2380"
+      secret: false
+    - name: ETCD_INITIAL_CLUSTER_STATE
+      value: "new"
+      secret: false
+    - name: ETCD_INITIAL_CLUSTER_TOKEN
+      value: "etcd-cluster"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 2379

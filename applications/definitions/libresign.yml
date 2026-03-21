@@ -1,0 +1,101 @@
+---
+# =============================================================================
+# GROCY - HUISHOUDBEHEER
+# =============================================================================
+# Beschrijving: Huishoudbeheer voor voorraad, maaltijden en taken
+# Website: https://grocy.info
+# =============================================================================
+
+application:
+  name: grocy
+  version: 4.0.0
+  description: "Grocy - Huishoudbeheer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: lifestyle-team
+    contact: lifestyle@company.local
+    slack: "#lifestyle"
+    documentation: "https://grocy.info/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - lifestyle
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Grocy web interface"
+    dns:
+      - "household.{{ domain }}"
+      - "grocy.{{ domain }}"
+      
+  container:
+    image: linuxserver/grocy:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: GROCY_CULTURE
+      value: "nl"
+      secret: false
+    - name: GROCY_CURRENCY
+      value: "EUR"
+      secret: false
+    - name: DB_HOST
+      value: "postgres"
+      secret: false
+    - name: DB_PORT
+      value: "5432"
+      secret: false
+    - name: DB_NAME
+      value: "grocy"
+      secret: false
+    - name: DB_USER
+      value: "grocy"
+      secret: false
+    - name: DB_PASSWORD
+      value: "{{ vault_grocy_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

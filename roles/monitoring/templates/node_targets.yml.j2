@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+# Node Exporter targets
+- targets:
+    - localhost:{{ node_exporter_listen_port }}
+  labels:
+    instance: {{ inventory_hostname }}
+    job: node

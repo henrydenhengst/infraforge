@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+# Traefik labels voor {{ app.name }}
+
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.{{ app.name }}.rule=Host(`{{ app.name }}.{{ domain }}`)"
+  - "traefik.http.routers.{{ app.name }}.entrypoints=websecure"
+  - "traefik.http.routers.{{ app.name }}.tls=true"
+  - "traefik.http.services.{{ app.name }}.loadbalancer.server.port={{ app.network_requirements.ports[0].host }}"
+  {% if health_endpoint is defined %}
+  - "traefik.http.routers.{{ app.name }}.healthcheck.path={{ health_endpoint }}"
+  {% endif %}

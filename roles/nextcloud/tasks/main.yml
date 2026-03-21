@@ -1,0 +1,87 @@
+---
+- name: '{{ ansible_os_family }} | Maak Nextcloud directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ nextcloud_user | default('www-data') }}"
+    group: "{{ nextcloud_group | default('www-data') }}"
+    mode: '0755'
+  loop:
+    - "{{ nextcloud_install_path }}"
+    - "{{ nextcloud_data_path }}"
+    - "{{ nextcloud_install_path }}/apps"
+    - "{{ nextcloud_install_path }}/config"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Download Nextcloud'
+  ansible.builtin.get_url:
+    url: "https://download.nextcloud.com/server/releases/nextcloud-{{ nextcloud_version }}.zip"
+    dest: "/tmp/nextcloud.zip"
+  tags: [download]
+
+- name: Extract Nextcloud
+  ansible.builtin.unarchive:
+    src: "/tmp/nextcloud.zip"
+    dest: "{{ nextcloud_install_path | dirname }}"
+    remote_src: yes
+    owner: "{{ nextcloud_user | default('www-data') }}"
+    group: "{{ nextcloud_group | default('www-data') }}"
+  tags: [extract]
+
+- name: Configureer Nextcloud
+  ansible.builtin.template:
+    src: config.php.j2
+    dest: "{{ nextcloud_install_path }}/config/config.php"
+    mode: '0640'
+  tags: [config]
+
+- name: Configureer Nginx virtual host voor Nextcloud
+  ansible.builtin.template:
+    src: nextcloud.conf.j2
+    dest: /etc/nginx/conf.d/nextcloud.conf
+    mode: '0644'
+  notify: reload nginx
+  when: configure_nginx | default(true)
+  tags: [nginx]
+
+- name: Set Nextcloud permissions
+  ansible.builtin.file:
+    path: "{{ nextcloud_install_path }}"
+    owner: "{{ nextcloud_user | default('www-data') }}"
+    group: "{{ nextcloud_group | default('www-data') }}"
+    recurse: yes
+  tags: [permissions]
+
+- name: '{{ ansible_os_family }} | Run Nextcloud installation'
+  ansible.builtin.shell: |
+    php occ maintenance:install \
+      --database=postgresql \
+      --database-name={{ nextcloud_db_name }} \
+      --database-user={{ nextcloud_db_user }} \
+      --database-pass={{ nextcloud_db_password }} \
+      --database-host={{ nextcloud_db_host }} \
+      --admin-user={{ nextcloud_admin_user }} \
+      --admin-pass={{ nextcloud_admin_password }} \
+      --admin-email={{ nextcloud_admin_email }}
+  args:
+    chdir: "{{ nextcloud_install_path }}"
+  when: run_install | default(true)
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Configureer Nextcloud trusted domains'
+  ansible.builtin.shell: |
+    php occ config:system:set trusted_domains 0 --value={{ nextcloud_domain }}
+  args:
+    chdir: "{{ nextcloud_install_path }}"
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Valideer Nextcloud installatie'
+  ansible.builtin.uri:
+    url: "https://{{ nextcloud_domain }}/status.php"
+    status_code: 200
+  register: nc_test
+  until: nc_test.status == 200
+  retries: 30
+  delay: 5
+  ignore_errors: yes
+  tags: [validate]

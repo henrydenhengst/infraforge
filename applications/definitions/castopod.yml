@@ -1,0 +1,100 @@
+---
+# =============================================================================
+# AZURACAST - RADIO-BEHEERSOFTWARE
+# =============================================================================
+# Beschrijving: Radio-beheersoftware voor internetradio
+# Website: https://www.azuracast.com
+# =============================================================================
+
+application:
+  name: azuracast
+  version: 0.19.0
+  description: "AzuraCast - Radio-beheersoftware"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://www.azuracast.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/azuracast
+      - name: music
+        size_gb: 100
+        performance: hdd
+        backup_required: false
+        mount_path: /var/azuracast/music
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "AzuraCast web interface"
+      - container: 2022
+        host: 2022
+        protocol: tcp
+        public: false
+        description: "SFTP"
+    dns:
+      - "radio.{{ domain }}"
+      - "azuracast.{{ domain }}"
+      
+  container:
+    image: azuracast/azuracast:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: AZURACAST_HTTP_PORT
+      value: "80"
+      secret: false
+    - name: AZURACAST_HTTPS_PORT
+      value: "443"
+      secret: false
+    - name: AZURACAST_SFTP_PORT
+      value: "2022"
+      secret: false
+    - name: AZURACAST_STATION_NAME
+      value: "{{ company_name }} Radio"
+      secret: false
+    - name: AZURACAST_ADMIN_NAME
+      value: "Admin"
+      secret: false
+    - name: AZURACAST_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: AZURACAST_ADMIN_PASSWORD
+      value: "{{ vault_azuracast_admin_password }}"
+      secret: true
+    - name: LANG
+      value: "nl_NL.UTF-8"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

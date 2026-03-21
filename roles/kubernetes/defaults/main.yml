@@ -1,0 +1,49 @@
+---
+# =============================================================================
+# KUBERNETES ROLE DEFAULTS
+# =============================================================================
+
+# Cluster configuratie
+cluster_name: "prod-cluster"
+cluster_domain: "cluster.local"
+pod_network_cidr: "10.244.0.0/16"
+service_cidr: "10.96.0.0/12"
+dns_service_ip: "10.96.0.10"
+
+# Node configuratie
+node_role: "worker"  # master, worker
+control_plane_endpoint: ""
+api_server_advertise_address: ""
+
+# CNI plugin (calico, flannel, weave, cilium)
+cni_plugin: "calico"
+cni_version: "v3.27.0"
+
+# Container runtime
+container_runtime: "containerd"  # containerd, docker, cri-o
+
+# Kubernetes addons
+enable_metrics_server: true
+enable_ingress_controller: true
+ingress_controller: "nginx"  # nginx, traefik
+enable_dashboard: true
+enable_helm: true
+
+# Ingress controller settings
+ingress_http_port: 80
+ingress_https_port: 443
+
+# Dashboard settings
+dashboard_token: "{{ vault_kubernetes_dashboard_token }}"
+
+# Node labels
+node_labels: {}
+node_taints: []
+
+# Autoscaling
+enable_cluster_autoscaler: false
+cluster_autoscaler_version: "v1.29.0"
+
+# Monitoring
+enable_prometheus: false
+enable_grafana: false

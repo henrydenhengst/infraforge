@@ -1,0 +1,297 @@
+---
+# =============================================================================
+# HOME ASSISTANT - HOME AUTOMATION PLATFORM
+# =============================================================================
+# Beschrijving: Open-source home automation platform voor smart home integratie
+# GitHub: https://github.com/home-assistant/core
+# =============================================================================
+
+application:
+  name: homeassistant
+  version: 2024.2.0
+  description: "Home Assistant - Open-source home automation platform"
+  environment: "{{ environment | default('production') }}"
+  
+  # ===========================================================================
+  # EIGENAAR & CONTACT
+  # ===========================================================================
+  owner:
+    team: iot-team
+    contact: iot@company.local
+    slack: "#iot"
+    documentation: "https://www.home-assistant.io/docs/"
+    
+  # ===========================================================================
+  # HARDWARE VEREISTEN
+  # ===========================================================================
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      cpu_architecture: any
+      gpu_required: false
+      
+    storage:
+      - name: config
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+        description: "Configuratiebestanden, automations, scenes"
+        
+      - name: media
+        size_gb: 100
+        performance: hdd
+        backup_required: false
+        mount_path: /media
+        description: "Media bestanden voor TTS en notificaties"
+        
+  # ===========================================================================
+  # SPECIALE VEREISTEN
+  # ===========================================================================
+  special_requirements:
+    usb_devices: true
+    bluetooth: true
+    privileged: true
+    host_network: true
+    description: |
+      Home Assistant heeft toegang nodig tot USB devices (Zigbee/Zwave),
+      Bluetooth adapters, en draait vaak in host network mode voor
+      optimale netwerkcommunicatie met IoT apparaten.
+      
+  # ===========================================================================
+  # NETWERK VEREISTEN
+  # ===========================================================================
+  network_requirements:
+    vlans:
+      - iot
+      - management
+      
+    ports:
+      - container: 8123
+        host: 8123
+        protocol: tcp
+        public: false
+        ingress: true
+        description: "Home Assistant web interface"
+        
+      - container: 1883
+        host: 1883
+        protocol: tcp
+        public: false
+        description: "MQTT broker (optioneel)"
+        
+    dns:
+      - "homeassistant.{{ domain }}"
+      - "ha.{{ domain }}"
+      
+  # ===========================================================================
+  # CONTAINER CONFIGURATIE
+  # ===========================================================================
+  container:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    network_mode: host
+    privileged: true
+    restart: unless-stopped
+    
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/ttyUSB1:/dev/ttyUSB1"
+      - "/dev/ttyACM0:/dev/ttyACM0"
+      - "/dev/ttyACM1:/dev/ttyACM1"
+      
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+      
+  # ===========================================================================
+  # OMGEVINGSVARIABELEN
+  # ===========================================================================
+  environment_variables:
+    - name: TZ
+      value: Europe/Amsterdam
+      secret: false
+      description: "Tijdzone"
+      
+    - name: HOME_ASSISTANT_CONFIG
+      value: /config
+      secret: false
+      description: "Configuratiepad"
+      
+  # ===========================================================================
+  # HEALTH CHECKS
+  # ===========================================================================
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8123
+      initial_delay: 60
+      period: 30
+      timeout: 10
+      retries: 3
+      
+    readiness:
+      type: http
+      path: /api/
+      port: 8123
+      initial_delay: 30
+      period: 15
+      timeout: 5
+      retries: 5
+      
+  # ===========================================================================
+  # MONITORING
+  # ===========================================================================
+  monitoring:
+    metrics:
+      enabled: true
+      exporter: prometheus
+      port: 8123
+      path: /api/prometheus
+      scrape_interval: 30s
+      
+    logs:
+      enabled: true
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+      locations:
+        - /config/home-assistant.log
+        
+    alerts:
+      - name: homeassistant_down
+        condition: up{app="homeassistant"} == 0
+        duration: 2m
+        severity: critical
+        action: pagerduty
+        description: "Home Assistant is niet bereikbaar"
+        
+      - name: zigbee_offline
+        condition: zigbee_devices_offline > 5
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Meerdere Zigbee devices offline"
+        
+      - name: disk_space_low
+        condition: disk_usage > 85%
+        duration: 1h
+        severity: warning
+        action: email
+        description: "Weinig schijfruimte voor configuratie"
+        
+  # ===========================================================================
+  # BACKUP
+  # ===========================================================================
+  backup:
+    enabled: true
+    schedule: "0 3 * * *"
+    retention_days: 30
+    volumes:
+      - config
+    pre_backup:
+      - command: "curl -X POST http://localhost:8123/api/services/homeassistant/check_config"
+        when: backup_type == "full"
+    post_backup:
+      - command: "curl -X POST http://localhost:8123/api/services/persistent_notification/create"
+        when: backup_type == "full"
+        data:
+          message: "Backup completed"
+          title: "Home Assistant Backup"
+          
+  # ===========================================================================
+  # INTEGRATIES
+  # ===========================================================================
+  integrations:
+    - name: zigbee2mqtt
+      description: "Zigbee bridge"
+      required: false
+      config: |
+        mqtt:
+          broker: localhost
+          port: 1883
+          
+    - name: esphome
+      description: "ESPHome device management"
+      required: false
+      
+    - name: mqtt
+      description: "MQTT broker"
+      required: true
+      config: |
+        mqtt:
+          broker: localhost
+          port: 1883
+          discovery: true
+          discovery_prefix: homeassistant
+          
+    - name: google_assistant
+      description: "Google Assistant integration"
+      required: false
+      
+    - name: alexa
+      description: "Amazon Alexa integration"
+      required: false
+      
+  # ===========================================================================
+  # DASHBOARDS
+  # ===========================================================================
+  dashboards:
+    - name: default
+      title: "Home"
+      icon: mdi:home
+      views:
+        - title: "Algemeen"
+          cards:
+            - type: glance
+              entities:
+                - sun.sun
+                - sensor.weather_temperature
+                - sensor.weather_condition
+        - title: "Verlichting"
+          cards:
+            - type: entities
+              entities:
+                - light.woonkamer
+                - light.slaapkamer
+                - light.keuken
+        - title: "Klimaat"
+          cards:
+            - type: thermostat
+              entity: climate.woonkamer
+              
+  # ===========================================================================
+  # AUTOMATISERINGEN
+  # ===========================================================================
+  automations:
+    - name: "Verlichting aan bij zonsondergang"
+      trigger:
+        platform: sun
+        event: sunset
+      action:
+        service: light.turn_on
+        target:
+          entity_id: light.woonkamer
+          
+    - name: "Notificatie bij beweging"
+      trigger:
+        platform: state
+        entity_id: binary_sensor.beweging
+        to: "on"
+      action:
+        service: notify.mobile_app
+        data:
+          message: "Beweging gedetecteerd!"
+          title: "Huis"

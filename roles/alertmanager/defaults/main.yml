@@ -1,0 +1,3 @@
+---
+alertmanager_data_path: /opt/alertmanager
+alertmanager_slack_webhook: "{{ vault_slack_webhook }}"

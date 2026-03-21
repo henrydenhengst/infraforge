@@ -1,0 +1,451 @@
+---
+# =============================================================================
+# DAM TOOLS (DIGITAL ASSET MANAGEMENT)
+# =============================================================================
+# Functie: dam
+# Beschrijving: Tools voor het beheren van digitale assets zoals media, documenten en creatieve content
+# =============================================================================
+
+dam_tools:
+  # ---------------------------------------------------------------------------
+  # DIGITAL ASSET MANAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: ResourceSpace
+    profiel_tag: Creative-Ops
+    functie_tag: dam
+    beschrijving: "Digital Asset Management voor media en marketingbureaus"
+    categorie: enterprise_dam
+    docker_image: resourcespace/resourcespace:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - resourcespace_data:/var/www/html
+      - resourcespace_filestore:/var/www/html/filestore
+      - resourcespace_plugins:/var/www/html/plugins
+    environment:
+      RESOURCESPACE_DB_HOST: mysql
+      RESOURCESPACE_DB_NAME: resourcespace
+      RESOURCESPACE_DB_USER: resourcespace
+      RESOURCESPACE_DB_PASSWORD: "{{ vault_resourcespace_password }}"
+      RESOURCESPACE_ADMIN_USER: admin
+      RESOURCESPACE_ADMIN_PASSWORD: "{{ vault_resourcespace_admin_password }}"
+      RESOURCESPACE_ADMIN_EMAIL: admin@{{ domain }}
+      RESOURCESPACE_BASE_URL: "https://assets.{{ domain }}"
+      RESOURCESPACE_SMTP_HOST: smtp.{{ domain }}
+      RESOURCESPACE_SMTP_PORT: 587
+      RESOURCESPACE_SMTP_USER: resourcespace@{{ domain }}
+      RESOURCESPACE_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    database: mysql
+    url: "https://www.resourcespace.com"
+    
+  - name: ResourceSpace
+    profiel_tag: Creative-Ops
+    functie_tag: dam
+    beschrijving: "Digital Asset Management voor media en marketingbureaus"
+    categorie: enterprise_dam
+    docker_image: resourcespace/resourcespace:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - resourcespace_data:/var/www/html
+      - resourcespace_filestore:/var/www/html/filestore
+    environment:
+      RESOURCESPACE_DB_HOST: mysql
+      RESOURCESPACE_DB_NAME: resourcespace
+      RESOURCESPACE_DB_USER: resourcespace
+      RESOURCESPACE_DB_PASSWORD: "{{ vault_resourcespace_password }}"
+      RESOURCESPACE_ADMIN_USER: admin
+      RESOURCESPACE_ADMIN_PASSWORD: "{{ vault_resourcespace_admin_password }}"
+    database: mysql
+    url: "https://www.resourcespace.com"
+    
+  # ---------------------------------------------------------------------------
+  # MEDIA ASSET MANAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: ResourceSpace
+    profiel_tag: Creative-Ops
+    functie_tag: dam
+    beschrijving: "Digital Asset Management voor media en marketingbureaus"
+    categorie: enterprise_dam
+    docker_image: resourcespace/resourcespace:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - resourcespace_data:/var/www/html
+      - resourcespace_filestore:/var/www/html/filestore
+    environment:
+      RESOURCESPACE_DB_HOST: mysql
+      RESOURCESPACE_DB_NAME: resourcespace
+      RESOURCESPACE_DB_USER: resourcespace
+      RESOURCESPACE_DB_PASSWORD: "{{ vault_resourcespace_password }}"
+    database: mysql
+    url: "https://www.resourcespace.com"
+    
+  # ---------------------------------------------------------------------------
+  # INSPIRATION & PINBOARDS
+  # ---------------------------------------------------------------------------
+  - name: Pinry
+    profiel_tag: Creative-Ops
+    functie_tag: media
+    beschrijving: "Inspiratieboard (Pinterest-kloon) voor designers"
+    categorie: inspiration
+    docker_image: getpinry/pinry:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - pinry_data:/data
+    environment:
+      PINRY_SECRET_KEY: "{{ vault_pinry_secret }}"
+      PINRY_ALLOW_REGISTRATION: "false"
+      PINRY_DEFAULT_USERNAME: admin
+      PINRY_DEFAULT_PASSWORD: "{{ vault_pinry_password }}"
+      PINRY_DEFAULT_EMAIL: admin@{{ domain }}
+      PINRY_SOCIAL_AUTH_GOOGLE_OAUTH2_KEY: "{{ vault_google_client_id }}"
+      PINRY_SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET: "{{ vault_google_client_secret }}"
+    database: sqlite
+    url: "https://getpinry.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+dam_defaults:
+  # Algemene DAM instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Asset instellingen
+  assets:
+    max_file_size: 500MB
+    allowed_types:
+      # Afbeeldingen
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - svg
+      - webp
+      - bmp
+      - tiff
+      - psd
+      - ai
+      - eps
+      
+      # Video
+      - mp4
+      - mov
+      - avi
+      - mkv
+      - webm
+      - flv
+      - wmv
+      
+      # Audio
+      - mp3
+      - wav
+      - flac
+      - aac
+      - ogg
+      
+      # Documenten
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - md
+      - rtf
+      
+      # Archives
+      - zip
+      - rar
+      - 7z
+      - tar
+      - gz
+      
+      # 3D/CAD
+      - stl
+      - obj
+      - fbx
+      - blend
+      - cad
+      
+    thumbnail_sizes:
+      - name: small
+        size: 150x150
+        crop: true
+      - name: medium
+        size: 300x300
+        crop: false
+      - name: large
+        size: 1024x1024
+        crop: false
+        
+  # Metadata
+  metadata:
+    enabled: true
+    auto_extract:
+      - exif
+      - iptc
+      - xmp
+      - duration
+      - dimensions
+      - color_space
+    custom_fields:
+      - name: photographer
+        type: text
+      - name: copyright
+        type: text
+      - name: location
+        type: text
+      - name: tags
+        type: tags
+        
+  # Gebruikers
+  users:
+    allow_registration: false
+    default_quota: 10GB
+    admin_quota: 100GB
+    
+  # Zoeken
+  search:
+    full_text: true
+    filters:
+      - type
+      - tags
+      - date
+      - uploader
+    ocr_enabled: true
+    ocr_languages:
+      - nld
+      - eng
+      
+  # Versiebeheer
+  versioning:
+    enabled: true
+    keep_versions: 10
+    auto_version: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+resourcespace_config:
+  # ResourceSpace collecties
+  collections:
+    - name: Marketing Materials
+      description: "Alle marketing gerelateerde assets"
+      keywords: marketing,advertising,brochure
+      allow_sharing: true
+      
+    - name: Product Images
+      description: "Productfoto's en afbeeldingen"
+      keywords: product,photo,image
+      allow_sharing: false
+      
+    - name: Brand Assets
+      description: "Logo's, fonts en huisstijl materialen"
+      keywords: brand,logo,font,styleguide
+      allow_sharing: false
+      
+  # ResourceSpace velden
+  fields:
+    - name: Title
+      type: text
+      required: true
+      searchable: true
+      
+    - name: Description
+      type: textarea
+      required: false
+      searchable: true
+      
+    - name: Keywords
+      type: tags
+      required: false
+      searchable: true
+      
+    - name: Photographer
+      type: text
+      required: false
+      searchable: true
+      
+    - name: Copyright
+      type: text
+      required: false
+      searchable: false
+      
+    - name: Location
+      type: text
+      required: false
+      searchable: true
+      
+    - name: Date Taken
+      type: date
+      required: false
+      searchable: true
+      
+    - name: Category
+      type: dropdown
+      options:
+        - Marketing
+        - Product
+        - Brand
+        - Event
+        - Internal
+      required: true
+      
+  # ResourceSpace thema's
+  themes:
+    - name: Dark
+      colors:
+        primary: "#333333"
+        secondary: "#666666"
+        accent: "#0099ff"
+    - name: Light
+      default: true
+      colors:
+        primary: "#ffffff"
+        secondary: "#f5f5f5"
+        accent: "#0066cc"
+        
+  # ResourceSpace plugins
+  plugins:
+    - name: video_player
+      enabled: true
+    - name: pdf_preview
+      enabled: true
+    - name: ocr
+      enabled: true
+      languages:
+        - nld
+        - eng
+    - name: exif_extract
+      enabled: true
+    - name: slideshow
+      enabled: true
+    - name: social_media
+      enabled: false
+      
+  # ResourceSpace workflows
+  workflows:
+    - name: Approval Workflow
+      states:
+        - name: Pending Review
+          actions:
+            - approve
+            - reject
+        - name: Approved
+          actions:
+            - publish
+        - name: Rejected
+          actions:
+            - revise
+            
+  # ResourceSpace gebruikers
+  users:
+    - name: Admin User
+      username: admin
+      email: admin@{{ domain }}
+      role: Administrator
+      quota: 100GB
+      
+    - name: Marketing Manager
+      username: marketing_manager
+      email: marketing@{{ domain }}
+      role: Manager
+      quota: 50GB
+      groups:
+        - Marketing Materials
+        
+    - name: Designer
+      username: designer
+      email: designer@{{ domain }}
+      role: Contributor
+      quota: 20GB
+      groups:
+        - Brand Assets
+        - Marketing Materials
+        
+  # ResourceSpace groepen
+  groups:
+    - name: Administrators
+      permissions:
+        - admin: *
+        - collections: *
+        - fields: *
+        - users: *
+        
+    - name: Managers
+      permissions:
+        - collections: create,edit,delete
+        - assets: view,edit,delete
+        - users: view
+        
+    - name: Contributors
+      permissions:
+        - collections: view
+        - assets: upload,edit_own
+        
+    - name: Viewers
+      permissions:
+        - collections: view
+        - assets: view
+
+pinry_config:
+  # Pinry instellingen
+  settings:
+    site_title: "Design Inspiration"
+    site_description: "Inspiratieboard voor designers"
+    logo_url: "/static/logo.png"
+    favicon_url: "/static/favicon.ico"
+    
+  # Pinry thema's
+  theme:
+    primary_color: "#2196F3"
+    secondary_color: "#FF4081"
+    background_color: "#FAFAFA"
+    
+  # Pinry social media
+  social:
+    facebook_url: "https://facebook.com/{{ company_name }}"
+    twitter_url: "https://twitter.com/{{ company_name }}"
+    instagram_url: "https://instagram.com/{{ company_name }}"
+    
+  # Pinry categorieën
+  categories:
+    - name: UI Design
+      description: "User interface inspiratie"
+    - name: UX Design
+      description: "User experience voorbeelden"
+    - name: Graphic Design
+      description: "Grafisch ontwerp"
+    - name: Illustration
+      description: "Illustraties"
+    - name: Photography
+      description: "Fotografie"
+    - name: Typography
+      description: "Lettertypen"
+    - name: Color Palettes
+      description: "Kleurenschema's"
+    - name: Web Design
+      description: "Website ontwerpen"
+    - name: Mobile Design
+      description: "App ontwerpen"
+      
+  # Pinry gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      is_staff: true
+      is_superuser: true
+    - username: designer1
+      email: designer1@{{ domain }}
+      is_staff: false
+    - username: designer2
+      email: designer2@{{ domain }}
+      is_staff: false

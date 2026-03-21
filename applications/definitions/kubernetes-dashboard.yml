@@ -1,0 +1,70 @@
+---
+# =============================================================================
+# METRICS SERVER - KUBERNETES METRICS
+# =============================================================================
+# Beschrijving: Kubernetes metrics aggregator for resource usage
+# Website: https://github.com/kubernetes-sigs/metrics-server
+# =============================================================================
+
+application:
+  name: metrics-server
+  version: 0.7.0
+  description: "Metrics Server - Kubernetes metrics aggregator"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://github.com/kubernetes-sigs/metrics-server"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 0.5
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 443
+        host: 6443
+        protocol: tcp
+        public: false
+        description: "Metrics Server API"
+    dns: []
+    
+  container:
+    image: registry.k8s.io/metrics-server/metrics-server:v0.7.0
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: METRICS_SERVER_KUBELET_INSECURE_TLS
+      value: "true"
+      secret: false
+    - name: METRICS_SERVER_KUBELET_PREFER_ADDRESS_TYPE
+      value: "InternalIP"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /healthz
+      port: 443

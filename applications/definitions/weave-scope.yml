@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# WEAVE SCOPE - CONTAINER VISUALIZATION
+# =============================================================================
+# Beschrijving: Real-time container visualization en monitoring
+# Website: https://www.weave.works/oss/scope/
+# =============================================================================
+
+application:
+  name: weave-scope
+  version: 1.24.0
+  description: "Weave Scope - Container visualization"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://www.weave.works/docs/scope/latest"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/lib/scope
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - management
+    ports:
+      - container: 4040
+        host: 4040
+        protocol: tcp
+        public: false
+        description: "Weave Scope UI"
+    dns:
+      - "scope.{{ domain }}"
+      - "weave.{{ domain }}"
+      
+  container:
+    image: weaveworks/scope:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: SCOPE_HOSTNAME
+      value: "weave-scope"
+      secret: false
+    - name: SCOPE_WEAVE_ADDR
+      value: ""
+      secret: false
+    - name: CHECKPOINT_DISABLE
+      value: "true"
+      secret: false
+      
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - /sys/kernel/debug:/sys/kernel/debug:ro
+    - /var/run/docker.sock:/var/run/docker.sock
+    - /proc:/host/proc:ro
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /api/report
+      port: 4040

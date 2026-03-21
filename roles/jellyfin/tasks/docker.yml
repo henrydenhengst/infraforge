@@ -1,0 +1,13 @@
+---
+- name: Maak Jellyfin directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ jellyfin_uid | default('1000') }}"
+    group: "{{ jellyfin_gid | default('1000') }}"
+    mode: '0755'
+  loop:
+    - "{{ jellyfin_config_path }}"
+    - "{{ jellyfin_cache_path }}"
+    - "{{ jellyfin_media_path }}"
+  tags: [directories]

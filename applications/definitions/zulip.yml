@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# ZULIP - THREADED CHAT
+# =============================================================================
+# Beschrijving: Threaded chat met sterke organisatie
+# Website: https://zulip.com
+# =============================================================================
+
+application:
+  name: zulip
+  version: 8.0.0
+  description: "Zulip - Threaded chat"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: communication-team
+    contact: comms@company.local
+    slack: "#comms"
+    documentation: "https://zulip.com/help"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - communication
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "Zulip HTTP"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: true
+        description: "Zulip HTTPS"
+    dns:
+      - "zulip.{{ domain }}"
+      - "threads.{{ domain }}"
+      
+  container:
+    image: zulip/docker-zulip:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: ZULIP_DOMAIN
+      value: "zulip.{{ domain }}"
+      secret: false
+    - name: ZULIP_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: ZULIP_ADMIN_PASSWORD
+      value: "{{ vault_zulip_admin_password }}"
+      secret: true
+    - name: ZULIP_AUTH_BACKENDS
+      value: "EmailAuthBackend, GoogleAuthBackend"
+      secret: false
+    - name: ZULIP_EMAIL_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: ZULIP_EMAIL_HOST_USER
+      value: "zulip@{{ domain }}"
+      secret: false
+    - name: ZULIP_EMAIL_HOST_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: ZULIP_EMAIL_PORT
+      value: "587"
+      secret: false
+    - name: ZULIP_EMAIL_USE_TLS
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 80

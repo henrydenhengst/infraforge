@@ -1,0 +1,108 @@
+---
+# =============================================================================
+# SYNTHESIA-LOCAL - AI-AVATAR VIDEO GENERATIE
+# =============================================================================
+# Beschrijving: AI-avatar video generatie tools
+# Website: https://www.synthesia.io
+# =============================================================================
+
+application:
+  name: synthesia-local
+  version: 1.0.0
+  description: "Synthesia-Local - AI-avatar video generatie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: creative-team
+    contact: creative@company.local
+    slack: "#creative"
+    documentation: "https://www.synthesia.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      gpu_required: true
+      
+    storage:
+      - name: models
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /app/models
+      - name: output
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /app/output
+      - name: avatars
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/avatars
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /app/config
+        
+  network_requirements:
+    vlans:
+      - creative
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Synthesia web interface"
+    dns:
+      - "avatar.{{ domain }}"
+      - "synthesia.{{ domain }}"
+      
+  container:
+    image: synthesia/local:latest
+    restart: unless-stopped
+    gpu_support: true
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, video]
+              
+  environment_variables:
+    - name: SYNTHESIA_API_KEY
+      value: "{{ vault_synthesia_api_key }}"
+      secret: true
+    - name: SYNTHESIA_MODEL
+      value: "standard"
+      secret: false
+    - name: SYNTHESIA_RESOLUTION
+      value: "1080p"
+      secret: false
+    - name: SYNTHESIA_FPS
+      value: "30"
+      secret: false
+    - name: SYNTHESIA_MAX_DURATION
+      value: "300"
+      secret: false
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: "all"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

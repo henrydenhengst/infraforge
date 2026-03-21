@@ -1,0 +1,495 @@
+---
+# =============================================================================
+# CRM TOOLS (CUSTOMER RELATIONSHIP MANAGEMENT)
+# =============================================================================
+# Functie: crm
+# Beschrijving: Tools voor klantrelatiebeheer, verkoop en contactmanagement
+# =============================================================================
+
+crm_tools:
+  # ---------------------------------------------------------------------------
+  # ENTERPRISE CRM
+  # ---------------------------------------------------------------------------
+  - name: SuiteCRM
+    profiel_tag: Marketing/Sales
+    functie_tag: crm
+    beschrijving: "Enterprise Salesforce alternatief"
+    categorie: enterprise_crm
+    docker_image: suitecrm/suitecrm:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - suitecrm_data:/var/www/html
+      - suitecrm_uploads:/var/www/html/upload
+    environment:
+      SUITECRM_DB_HOST: mysql
+      SUITECRM_DB_PORT: 3306
+      SUITECRM_DB_USER: suitecrm
+      SUITECRM_DB_PASSWORD: "{{ vault_suitecrm_password }}"
+      SUITECRM_DB_NAME: suitecrm
+      SUITECRM_URL: "https://crm.{{ domain }}"
+      SUITECRM_ADMIN_USER: admin
+      SUITECRM_ADMIN_PASSWORD: "{{ vault_suitecrm_admin_password }}"
+      SUITECRM_ADMIN_EMAIL: admin@{{ domain }}
+      SUITECRM_SMTP_HOST: smtp.{{ domain }}
+      SUITECRM_SMTP_PORT: 587
+      SUITECRM_SMTP_USER: crm@{{ domain }}
+      SUITECRM_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    database: mysql
+    url: "https://suitecrm.com"
+    
+  - name: Odoo
+    profiel_tag: Financiën
+    functie_tag: erp
+    beschrijving: "ERP/CRM suite met uitgebreide functionaliteit"
+    categorie: erp_crm
+    docker_image: odoo:latest
+    ports:
+      - "8069:8069"
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - odoo_addons:/mnt/extra-addons
+      - odoo_config:/etc/odoo
+    environment:
+      HOST: postgres
+      PORT: 5432
+      USER: odoo
+      PASSWORD: "{{ vault_odoo_password }}"
+      DB_NAME: odoo
+      ADMIN_PASSWORD: "{{ vault_odoo_admin_password }}"
+      EMAIL_FROM: odoo@{{ domain }}
+      SMTP_SERVER: smtp.{{ domain }}
+      SMTP_PORT: 587
+      SMTP_USER: odoo@{{ domain }}
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    database: postgresql
+    url: "https://www.odoo.com"
+    
+  # ---------------------------------------------------------------------------
+  # LICHTGEWICHT CRM
+  # ---------------------------------------------------------------------------
+  - name: EspoCRM
+    profiel_tag: Marketing
+    functie_tag: crm
+    beschrijving: "Modern CRM voor klant- en verkoopbeheer"
+    categorie: lightweight_crm
+    docker_image: espocrm/espocrm:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - espocrm_data:/var/www/html
+    environment:
+      ESPOCRM_DATABASE_HOST: mysql
+      ESPOCRM_DATABASE_NAME: espocrm
+      ESPOCRM_DATABASE_USER: espocrm
+      ESPOCRM_DATABASE_PASSWORD: "{{ vault_espocrm_password }}"
+      ESPOCRM_ADMIN_USERNAME: admin
+      ESPOCRM_ADMIN_PASSWORD: "{{ vault_espocrm_admin_password }}"
+      ESPOCRM_SITE_URL: "https://crm-light.{{ domain }}"
+      ESPOCRM_WEBSOCKET_URL: "wss://crm-light.{{ domain }}:8080"
+    database: mysql
+    url: "https://www.espocrm.com"
+    
+  - name: EspoCRM_Sales
+    profiel_tag: Marketing/Sales
+    functie_tag: crm
+    beschrijving: "Lichtgewicht CRM specifiek voor verkoop"
+    categorie: sales_crm
+    docker_image: espocrm/espocrm:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - espocrm_sales_data:/var/www/html
+    environment:
+      ESPOCRM_DATABASE_HOST: mysql
+      ESPOCRM_DATABASE_NAME: espocrm_sales
+      ESPOCRM_DATABASE_USER: espocrm_sales
+      ESPOCRM_DATABASE_PASSWORD: "{{ vault_espocrm_sales_password }}"
+      ESPOCRM_ADMIN_USERNAME: admin
+      ESPOCRM_ADMIN_PASSWORD: "{{ vault_espocrm_sales_admin_password }}"
+      ESPOCRM_SITE_URL: "https://sales.{{ domain }}"
+    database: mysql
+    url: "https://www.espocrm.com"
+    
+  # ---------------------------------------------------------------------------
+  # ERP MET CRM
+  # ---------------------------------------------------------------------------
+  - name: Dolibarr
+    profiel_tag: Financiën
+    functie_tag: erp
+    beschrijving: "ERP en CRM voor MKB"
+    categorie: erp_crm
+    docker_image: dolibarr/dolibarr:latest
+    ports:
+      - "8083:80"
+    volumes:
+      - dolibarr_documents:/var/www/documents
+      - dolibarr_scripts:/var/www/scripts
+    environment:
+      DOLI_DB_HOST: mysql
+      DOLI_DB_NAME: dolibarr
+      DOLI_DB_USER: dolibarr
+      DOLI_DB_PASSWORD: "{{ vault_dolibarr_password }}"
+      DOLI_ADMIN_LOGIN: admin
+      DOLI_ADMIN_PASSWORD: "{{ vault_dolibarr_admin_password }}"
+      DOLI_URL_ROOT: "https://dolibarr.{{ domain }}"
+      PHP_INI_DATE_TIMEZONE: Europe/Amsterdam
+    database: mysql
+    url: "https://www.dolibarr.org"
+    
+  - name: ERPNext
+    profiel_tag: HR
+    functie_tag: erp
+    beschrijving: "Volledig HR en ERP systeem"
+    categorie: erp_crm
+    docker_image: frappe/erpnext:latest
+    ports:
+      - "8084:80"
+      - "8085:443"
+    volumes:
+      - erpnext_data:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_ROOT_USER: root
+      DB_ROOT_PASSWORD: "{{ vault_mariadb_root_password }}"
+      SITE_NAME: "erpnext.{{ domain }}"
+      ADMIN_PASSWORD: "{{ vault_erpnext_admin_password }}"
+      INSTALL_ERPNext: true
+    database: mariadb
+    redis: true
+    url: "https://erpnext.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+crm_defaults:
+  # Algemene CRM instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Bedrijfsgegevens
+  company:
+    name: "{{ company_name }}"
+    address: "{{ company_address }}"
+    phone: "{{ company_phone }}"
+    email: info@{{ domain }}
+    website: "https://{{ domain }}"
+    vat_number: "{{ company_vat }}"
+    kvk_number: "{{ company_kvk }}"
+    
+  # Standaard valuta
+  currency: EUR
+  currency_symbol: €
+  
+  # Tijdzone
+  timezone: Europe/Amsterdam
+  date_format: d-m-Y
+  time_format: H:i
+  
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: crm@{{ domain }}
+    email_prefix: "[CRM]"
+    sms_enabled: false
+    push_enabled: true
+    
+  # Import/Export
+  import:
+    max_file_size: 50MB
+    allowed_types:
+      - csv
+      - xls
+      - xlsx
+      - vcf
+      
+  # Beveiliging
+  security:
+    session_timeout: 3600
+    max_login_attempts: 5
+    lockout_time: 900
+    password_min_length: 8
+    password_require_upper: true
+    password_require_lower: true
+    password_require_number: true
+    password_require_symbol: false
+    two_factor_auth: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+suitecrm_config:
+  # SuiteCRM modules
+  modules:
+    - Accounts
+    - Contacts
+    - Leads
+    - Opportunities
+    - Cases
+    - Calls
+    - Meetings
+    - Tasks
+    - Notes
+    - Documents
+    - Campaigns
+    - Quotes
+    - Invoices
+    - Contracts
+    - Knowledge Base
+    - Projects
+    - Project Tasks
+    
+  # SuiteCRM gebruikers
+  users:
+    - name: Admin User
+      username: admin
+      email: admin@{{ domain }}
+      role: Administrator
+    - name: Sales Manager
+      username: sales_manager
+      email: sales.manager@{{ domain }}
+      role: Sales Manager
+    - name: Sales Rep
+      username: sales_rep
+      email: sales@{{ domain }}
+      role: Sales Representative
+      
+  # SuiteCRM rollen
+  roles:
+    - name: Administrator
+      description: "Full system access"
+      permissions:
+        - admin: *
+        - accounts: *
+        - contacts: *
+        - opportunities: *
+        - leads: *
+        - cases: *
+        
+    - name: Sales Manager
+      description: "Manage sales team"
+      permissions:
+        - accounts: list,view,edit
+        - contacts: list,view,edit
+        - opportunities: list,view,edit,create,delete
+        - leads: list,view,edit,create
+        - reports: view,create
+        
+    - name: Sales Representative
+      description: "Handle sales"
+      permissions:
+        - accounts: list,view,edit
+        - contacts: list,view,edit
+        - opportunities: list,view,edit,create
+        - leads: list,view,edit,create
+        - calls: list,view,edit,create
+        
+  # SuiteCRM werkstromen
+  workflows:
+    - name: Lead Assignment
+      description: "Assign leads to sales reps based on region"
+      trigger: after_save
+      module: Leads
+      conditions:
+        - field: status
+          operator: equals
+          value: New
+      actions:
+        - type: assign
+          user: "{{ round_robin('sales_reps') }}"
+          
+    - name: Opportunity Follow-up
+      description: "Create follow-up task for opportunities"
+      trigger: after_save
+      module: Opportunities
+      conditions:
+        - field: date_closed
+          operator: less_than
+          value: "+7 days"
+      actions:
+        - type: create_task
+          name: "Follow up on {{ name }}"
+          assigned_user: assigned_user_id
+          date_due: date_closed
+          
+  # SuiteCRM e-mail templates
+  email_templates:
+    - name: Welcome Email
+      module: Leads
+      subject: "Welcome to {{ company_name }}"
+      body: |
+        Beste {{ first_name }},
+        
+        Welkom bij {{ company_name }}! We zijn blij dat je interesse hebt.
+        
+        We nemen binnenkort contact met je op.
+        
+        Met vriendelijke groet,
+        Het {{ company_name }} team
+        
+    - name: Quote Follow-up
+      module: Quotes
+      subject: "Your quote from {{ company_name }}"
+      body: |
+        Beste {{ contact_name }},
+        
+        Hierbij ontvang je de offerte zoals besproken.
+        
+        Bekijk de offerte in de bijlage.
+        
+        Met vriendelijke groet,
+        {{ assigned_user_name }}
+
+espocrm_config:
+  # EspoCRM entiteiten
+  entities:
+    - Account
+    - Contact
+    - Lead
+    - Opportunity
+    - Case
+    - Call
+    - Meeting
+    - Task
+    - Email
+    - Document
+    - Campaign
+    - Quote
+    - Invoice
+    
+  # EspoCRM dashboards
+  dashboards:
+    - name: Sales Dashboard
+      layout:
+        - name: My Opportunities
+          type: list
+          entity: Opportunity
+          filters:
+            - assignedUser: current
+            - stage: != Closed Won,Closed Lost
+        - name: Tasks Today
+          type: list
+          entity: Task
+          filters:
+            - assignedUser: current
+            - dateDue: today
+        - name: Recent Leads
+          type: list
+          entity: Lead
+          filters:
+            - createdDate: last7days
+            
+    - name: Management Dashboard
+      layout:
+        - name: Sales Pipeline
+          type: chart
+          entity: Opportunity
+          chart_type: funnel
+        - name: Team Performance
+          type: chart
+          entity: Opportunity
+          chart_type: bar
+        - name: Recent Activities
+          type: stream
+          
+  # EspoCRM workflows
+  workflows:
+    - name: Lead Conversion
+      description: "Convert lead to contact and opportunity"
+      trigger: after_save
+      entity: Lead
+      conditions:
+        - field: status
+          operator: equals
+          value: Converted
+      actions:
+        - type: create_contact
+        - type: create_opportunity
+          name: "Opportunity from {{ lead_name }}"
+          
+  # EspoCRM rapporten
+  reports:
+    - name: Sales by Month
+      entity: Opportunity
+      type: sum
+      group_by: month
+      aggregate_field: amount
+      filters:
+        - stage: Closed Won
+        
+    - name: Lead Sources
+      entity: Lead
+      type: count
+      group_by: source
+      charts:
+        - type: pie
+          
+    - name: Pipeline Value
+      entity: Opportunity
+      type: sum
+      group_by: stage
+      aggregate_field: amount
+
+dolibarr_config:
+  # Dolibarr modules
+  modules:
+    - facture  # Facturatie
+    - propal  # Offerte
+    - commande  # Orders
+    - expedition  # Verzending
+    - stock  # Voorraad
+    - produit  # Producten
+    - service  # Diensten
+    - societe  # Bedrijven
+    - contact  # Contacten
+    - adherent  # Leden
+    - banque  # Bank
+    - compte  # Boekhouding
+    - salarie  # Salarissen
+    - contrat  # Contracten
+    - projet  # Projecten
+    - agenda  # Agenda
+    - mailmanspip  # Nieuwsbrief
+    
+  # Dolibarr gebruikers
+  users:
+    - name: Admin
+      login: admin
+      email: admin@{{ domain }}
+      admin: true
+    - name: Finance
+      login: finance
+      email: finance@{{ domain }}
+      rights:
+        facture: rw
+        banque: rw
+        compte: r
+        
+  # Dolibarr instellingen
+  settings:
+    company_name: "{{ company_name }}"
+    company_logo: /custom/logo.png
+    default_country: NL
+    default_currency: EUR
+    vat_number: "{{ company_vat }}"
+    siret_number: "{{ company_kvk }}"
+    prof_id: 1  # BTW nummer type
+    
+  # Dolibarr producten
+  products:
+    - name: Consulting
+      type: service
+      price: 150
+      vat_rate: 21
+    - name: Support Package
+      type: service
+      price: 500
+      vat_rate: 21
+    - name: License
+      type: product
+      price: 1000
+      vat_rate: 21

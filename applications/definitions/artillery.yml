@@ -1,0 +1,85 @@
+---
+# =============================================================================
+# LOCUST - LOAD TESTING
+# =============================================================================
+# Beschrijving: Python-based load testing tool
+# Website: https://locust.io
+# =============================================================================
+
+application:
+  name: locust
+  version: 2.22.0
+  description: "Locust - Load testing tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://docs.locust.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: scripts
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /locust
+      - name: results
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /results
+        
+  network_requirements:
+    vlans:
+      - testing
+      - internal
+    ports:
+      - container: 8089
+        host: 8089
+        protocol: tcp
+        public: false
+        description: "Locust web UI"
+    dns:
+      - "locust.{{ domain }}"
+      
+  container:
+    image: locustio/locust:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: LOCUST_MODE
+      value: "web"
+      secret: false
+    - name: LOCUST_HOST
+      value: "https://{{ domain }}"
+      secret: false
+    - name: LOCUST_CSV
+      value: "/results/locust"
+      secret: false
+    - name: LOCUST_HTML
+      value: "/results/locust.html"
+      secret: false
+    - name: LOCUST_HEADLESS
+      value: "false"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8089

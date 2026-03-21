@@ -1,0 +1,146 @@
+---
+# =============================================================================
+# WAZUH - ENTERPRISE EDR/XDR
+# =============================================================================
+# Beschrijving: Enterprise EDR/XDR voor endpoint monitoring en compliance
+# Website: https://wazuh.com
+# =============================================================================
+
+application:
+  name: wazuh
+  version: 4.7.0
+  description: "Wazuh - Enterprise EDR/XDR platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://documentation.wazuh.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: manager_data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /var/ossec/data
+      - name: manager_logs
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /var/ossec/logs
+      - name: indexer_data
+        size_gb: 200
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/share/wazuh-indexer/data
+      - name: dashboard_data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/share/wazuh-dashboard/data
+        
+  network_requirements:
+    vlans:
+      - security
+      - management
+    ports:
+      - container: 55000
+        host: 55000
+        protocol: tcp
+        public: false
+        description: "Wazuh API"
+      - container: 1514
+        host: 1514
+        protocol: tcp
+        public: false
+        description: "Wazuh agent (TCP)"
+      - container: 1514
+        host: 1514
+        protocol: udp
+        public: false
+        description: "Wazuh agent (UDP)"
+      - container: 1515
+        host: 1515
+        protocol: tcp
+        public: false
+        description: "Wazuh registration"
+      - container: 9200
+        host: 9200
+        protocol: tcp
+        public: false
+        description: "Elasticsearch"
+      - container: 5601
+        host: 5601
+        protocol: tcp
+        public: false
+        description: "Wazuh Dashboard"
+    dns:
+      - "wazuh.{{ domain }}"
+      - "security.{{ domain }}"
+      
+  container:
+    image: wazuh/wazuh-manager:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  sidecars:
+    - name: indexer
+      image: wazuh/wazuh-indexer:latest
+      ports:
+        - container: 9200
+        - container: 9300
+      resources:
+        limits:
+          cpu: "4"
+          memory: 8Gi
+        requests:
+          cpu: "2"
+          memory: 4Gi
+    - name: dashboard
+      image: wazuh/wazuh-dashboard:latest
+      ports:
+        - container: 5601
+      resources:
+        limits:
+          cpu: "2"
+          memory: 4Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+        
+  environment_variables:
+    - name: WAZUH_MANAGER
+      value: "wazuh-manager"
+      secret: false
+    - name: WAZUH_REGISTRATION_SERVER
+      value: "wazuh-manager"
+      secret: false
+    - name: WAZUH_REGISTRATION_PASSWORD
+      value: "{{ vault_wazuh_registration }}"
+      secret: true
+    - name: INDEXER_USERNAME
+      value: "admin"
+      secret: false
+    - name: INDEXER_PASSWORD
+      value: "{{ vault_wazuh_indexer_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 55000

@@ -1,0 +1,107 @@
+---
+# =============================================================================
+# WALLABAG - READ-IT-LATER
+# =============================================================================
+# Beschrijving: Read-it-later service voor artikelen
+# Website: https://wallabag.org
+# =============================================================================
+
+application:
+  name: wallabag
+  version: 2.6.0
+  description: "Wallabag - Read-it-later service"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: office-team
+    contact: office@company.local
+    slack: "#office"
+    documentation: "https://doc.wallabag.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/wallabag/data
+      - name: images
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/wallabag/web/uploads
+        
+  network_requirements:
+    vlans:
+      - office
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Wallabag web interface"
+    dns:
+      - "read.{{ domain }}"
+      - "wallabag.{{ domain }}"
+      
+  container:
+    image: wallabag/wallabag:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: SYMFONY__ENV__DATABASE_DRIVER
+      value: "pdo_pgsql"
+      secret: false
+    - name: SYMFONY__ENV__DATABASE_HOST
+      value: "postgres"
+      secret: false
+    - name: SYMFONY__ENV__DATABASE_PORT
+      value: "5432"
+      secret: false
+    - name: SYMFONY__ENV__DATABASE_NAME
+      value: "wallabag"
+      secret: false
+    - name: SYMFONY__ENV__DATABASE_USER
+      value: "wallabag"
+      secret: false
+    - name: SYMFONY__ENV__DATABASE_PASSWORD
+      value: "{{ vault_wallabag_password }}"
+      secret: true
+    - name: SYMFONY__ENV__SECRET
+      value: "{{ vault_wallabag_secret }}"
+      secret: true
+    - name: SYMFONY__ENV__MAILER_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: SYMFONY__ENV__MAILER_PORT
+      value: "587"
+      secret: false
+    - name: SYMFONY__ENV__MAILER_USER
+      value: "wallabag@{{ domain }}"
+      secret: false
+    - name: SYMFONY__ENV__MAILER_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: SYMFONY__ENV__DOMAIN_NAME
+      value: "https://wallabag.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

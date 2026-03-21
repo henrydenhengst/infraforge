@@ -1,0 +1,135 @@
+---
+# =============================================================================
+# DEPLOY APPLICATION PLAYBOOK - Applicatie deployment
+# =============================================================================
+# Dit playbook deployt specifieke applicaties.
+# Gebruik: ansible-playbook playbooks/deploy-app.yml -e app_name=nextcloud
+# =============================================================================
+
+- name: Valideer applicatie configuratie
+  hosts: localhost
+  gather_facts: no
+  vars:
+    app_name: "{{ app_name | default('') }}"
+  tasks:
+    - name: Controleer of app_name is meegegeven
+      fail:
+        msg: "Geef app_name variabele mee: -e app_name=nextcloud"
+      when: app_name == ''
+
+    - name: Laad applicatie definitie
+      include_vars:
+        file: "{{ playbook_dir }}/../applications/definitions/{{ app_name }}.yml"
+      register: app_config
+
+    - name: Toon applicatie informatie
+      debug:
+        msg:
+          - "Applicatie: {{ application.name }} v{{ application.version }}"
+          - "Omgeving: {{ application.environment }}"
+          - "Replicas: {{ application.container.replicas }}"
+
+- name: Bereid host voor op applicatie deployment
+  hosts: "{{ groups['application_servers'] | first }}"
+  become: yes
+  vars:
+    app_name: "{{ hostvars['localhost']['app_name'] }}"
+    application: "{{ hostvars['localhost']['application'] }}"
+  tasks:
+    - name: Maak applicatie directory
+      file:
+        path: "/opt/applications/{{ app_name }}"
+        state: directory
+        mode: '0755'
+
+    - name: Maak storage directories
+      file:
+        path: "{{ item.mount_path }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ application.hardware_requirements.storage }}"
+      when: application.hardware_requirements.storage is defined
+
+    - name: Genereer docker-compose.yml
+      template:
+        src: "{{ playbook_dir }}/../templates/docker-compose.yml.j2"
+        dest: "/opt/applications/{{ app_name }}/docker-compose.yml"
+        mode: '0644'
+      vars:
+        app: "{{ application }}"
+
+    - name: Genereer .env bestand
+      template:
+        src: "{{ playbook_dir }}/../templates/env.j2"
+        dest: "/opt/applications/{{ app_name }}/.env"
+        mode: '0600'
+      when: application.environment_variables is defined
+
+- name: Deploy applicatie
+  hosts: "{{ groups['application_servers'] | first }}"
+  become: yes
+  vars:
+    app_name: "{{ hostvars['localhost']['app_name'] }}"
+    application: "{{ hostvars['localhost']['application'] }}"
+  tasks:
+    - name: Start applicatie met docker-compose
+      docker_compose:
+        project_src: "/opt/applications/{{ app_name }}"
+        state: present
+        restarted: yes
+
+    - name: Wacht op healthcheck
+      uri:
+        url: "http://localhost:{{ application.health_checks.liveness.port }}{{ application.health_checks.liveness.path }}"
+        method: GET
+        status_code: 200
+      register: health_result
+      until: health_result.status == 200
+      retries: 30
+      delay: 5
+      when: application.health_checks.liveness is defined
+
+    - name: Toon applicatie URL
+      debug:
+        msg: "Applicatie beschikbaar op: https://{{ app_name }}.{{ domain }}"
+
+- name: Configureer monitoring
+  hosts: monitoring
+  become: yes
+  vars:
+    app_name: "{{ hostvars['localhost']['app_name'] }}"
+    application: "{{ hostvars['localhost']['application'] }}"
+  tasks:
+    - name: Voeg Prometheus target toe
+      copy:
+        content: |
+          - targets:
+            - "{{ hostvars[groups['application_servers'][0]]['ansible_default_ipv4']['address'] }}:{{ application.monitoring.metrics.port }}"
+          labels:
+            app: "{{ app_name }}"
+            environment: "{{ application.environment }}"
+        dest: "/etc/prometheus/targets/{{ app_name }}.yml"
+        mode: '0644'
+      when: application.monitoring.metrics.enabled | default(false)
+      notify: reload prometheus
+
+- name: Configureer backup
+  hosts: backup
+  become: yes
+  vars:
+    app_name: "{{ hostvars['localhost']['app_name'] }}"
+    application: "{{ hostvars['localhost']['application'] }}"
+  tasks:
+    - name: Configureer backup cronjob
+      cron:
+        name: "backup-{{ app_name }}"
+        minute: "{{ application.backup.schedule.split()[0] }}"
+        hour: "{{ application.backup.schedule.split()[1] }}"
+        job: "/usr/local/bin/backup-{{ app_name }}.sh"
+      when: application.backup.enabled | default(false)
+
+  handlers:
+    - name: reload prometheus
+      uri:
+        url: http://localhost:9090/-/reload
+        method: POST

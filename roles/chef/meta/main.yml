@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "Chef configuration management"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [chef, configuration-management]
+dependencies: []

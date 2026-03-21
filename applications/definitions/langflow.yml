@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# STABLE-DIFFUSION-WEBUI - AI BEELDGENERATIE
+# =============================================================================
+# Beschrijving: AI-beeldgeneratie (Text-to-Image) op eigen hardware
+# Website: https://github.com/AUTOMATIC1111/stable-diffusion-webui
+# =============================================================================
+
+application:
+  name: stable-diffusion-webui
+  version: 1.8.0
+  description: "Stable Diffusion WebUI - AI-beeldgeneratie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ai-team
+    contact: ai@company.local
+    slack: "#ai"
+    documentation: "https://github.com/AUTOMATIC1111/stable-diffusion-webui"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      gpu_required: true
+      gpu_memory_gb: 8
+      
+    storage:
+      - name: models
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /app/models
+      - name: outputs
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /app/outputs
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /app/config
+        
+  network_requirements:
+    vlans:
+      - ai
+      - internal
+    ports:
+      - container: 7860
+        host: 7860
+        protocol: tcp
+        public: true
+        description: "Stable Diffusion WebUI"
+    dns:
+      - "sd.{{ domain }}"
+      - "imageai.{{ domain }}"
+      
+  container:
+    image: sd-webui/sd-webui:latest
+    restart: unless-stopped
+    gpu_support: true
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility]
+              
+  environment_variables:
+    - name: COMMANDLINE_ARGS
+      value: "--medvram --xformers --listen --api"
+      secret: false
+    - name: MODEL
+      value: "sd_xl_base_1.0.safetensors"
+      secret: false
+    - name: GRADIO_SERVER_NAME
+      value: "0.0.0.0"
+      secret: false
+    - name: GRADIO_SERVER_PORT
+      value: "7860"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 7860

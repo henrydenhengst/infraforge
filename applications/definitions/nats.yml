@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# ORY OATHKEEPER - IDENTITY PROXY
+# =============================================================================
+# Beschrijving: Identity and access proxy
+# Website: https://www.ory.sh/oathkeeper
+# =============================================================================
+
+application:
+  name: ory-oathkeeper
+  version: 0.38.0
+  description: "ORY Oathkeeper - Identity proxy"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://www.ory.sh/docs/oathkeeper"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/oathkeeper
+        
+  network_requirements:
+    vlans:
+      - security
+      - dmz
+    ports:
+      - container: 4455
+        host: 4455
+        protocol: tcp
+        public: true
+        description: "Oathkeeper proxy"
+      - container: 4456
+        host: 4456
+        protocol: tcp
+        public: false
+        description: "Oathkeeper API"
+    dns:
+      - "proxy.{{ domain }}"
+      - "oathkeeper.{{ domain }}"
+      
+  container:
+    image: oryd/oathkeeper:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: OATHKEEPER_SERVE_PROXY_PORT
+      value: "4455"
+      secret: false
+    - name: OATHKEEPER_SERVE_API_PORT
+      value: "4456"
+      secret: false
+    - name: OATHKEEPER_AUTHENTICATOR_ANONYMOUS_ENABLED
+      value: "true"
+      secret: false
+    - name: OATHKEEPER_AUTHORIZER_ALLOW_ENABLED
+      value: "true"
+      secret: false
+    - name: OATHKEEPER_CREDENTIALS_ISSUER_ID_TOKEN_ISSUER_URL
+      value: "https://oauth.{{ domain }}"
+      secret: false
+    - name: OATHKEEPER_CREDENTIALS_ISSUER_ID_TOKEN_JWKS_URL
+      value: "https://oauth.{{ domain }}/.well-known/jwks.json"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health/alive
+      port: 4456

@@ -1,0 +1,21 @@
+---
+mongodb_packages:
+  Debian: [mongodb-org, mongodb-org-server, mongodb-org-shell, mongodb-org-tools]
+  RedHat: [mongodb-org, mongodb-org-server, mongodb-org-shell, mongodb-org-tools]
+  Suse: [mongodb, mongodb-server, mongodb-shell]
+  Archlinux: [mongodb]
+  Alpine: [mongodb]
+
+mongodb_service:
+  Debian: mongod
+  RedHat: mongod
+  Suse: mongodb
+  Archlinux: mongodb
+  Alpine: mongodb
+
+mongodb_config_path:
+  Debian: /etc
+  RedHat: /etc
+  Suse: /etc
+  Archlinux: /etc
+  Alpine: /etc

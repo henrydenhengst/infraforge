@@ -1,0 +1,117 @@
+# {{ ansible_managed }}
+# Docker Compose voor {{ app.name }}
+# Genereerd op {{ ansible_date_time.iso8601 }}
+
+version: '3.8'
+
+networks:
+  default:
+    name: {{ app.name }}-network
+{% if app.network_requirements.vlans is defined %}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.{{ 16 + (app.name | hash('int') % 16) }}.0.0/16
+{% endif %}
+
+volumes:
+{% for vol in app.hardware_requirements.storage %}
+  {{ vol.name }}:
+    driver: local
+    driver_opts:
+      type: none
+      device: {{ vol.mount_path }}
+      o: bind
+{% endfor %}
+
+services:
+  {{ app.name }}:
+    image: {{ app.container.image }}
+    container_name: {{ app.name }}
+    restart: unless-stopped
+{% if app.container.network_mode is defined %}
+    network_mode: {{ app.container.network_mode }}
+{% endif %}
+{% if app.container.privileged is defined and app.container.privileged %}
+    privileged: true
+{% endif %}
+{% if app.sidecars is defined %}
+    depends_on:
+{% for sidecar in app.sidecars %}
+      - {{ sidecar.name }}
+{% endfor %}
+{% endif %}
+{% if app.network_requirements.ports is defined %}
+    ports:
+{% for port in app.network_requirements.ports %}
+      - "{{ port.host | default(port.container) }}:{{ port.container }}"
+{% endfor %}
+{% endif %}
+    volumes:
+{% for vol in app.hardware_requirements.storage %}
+      - {{ vol.name }}:{{ vol.mount_path }}
+{% endfor %}
+{% if app.environment_variables is defined %}
+    environment:
+{% for env in app.environment_variables %}
+{% if not env.secret %}
+      {{ env.name }}: "{{ env.value }}"
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if app.health_checks.liveness is defined %}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ app.health_checks.liveness.port }}{{ app.health_checks.liveness.path }}"]
+      interval: {{ health_check_interval }}
+      timeout: {{ health_check_timeout }}
+      retries: {{ health_check_retries }}
+      start_period: {{ health_check_start_period }}
+{% endif %}
+    {% if app.container.resources is defined %}
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ app.container.resources.limits.cpu | default(default_cpu_limit) }}'
+          memory: {{ app.container.resources.limits.memory | default(default_memory_limit) }}
+        reservations:
+          cpus: '{{ app.container.resources.requests.cpu | default(default_cpu_reservation) }}'
+          memory: {{ app.container.resources.requests.memory | default(default_memory_reservation) }}
+    {% endif %}
+    logging:
+      driver: {{ log_driver }}
+      options:
+        max-size: {{ log_max_size }}
+        max-file: {{ log_max_files }}
+
+{% if app.sidecars is defined %}
+{% for sidecar in app.sidecars %}
+  {{ sidecar.name }}:
+    image: {{ sidecar.image }}
+    container_name: {{ app.name }}-{{ sidecar.name }}
+    restart: unless-stopped
+{% if sidecar.ports is defined %}
+    ports:
+{% for port in sidecar.ports %}
+      - "{{ port.host | default(port.container) }}:{{ port.container }}"
+{% endfor %}
+{% endif %}
+{% if sidecar.volumes is defined %}
+    volumes:
+{% for volume in sidecar.volumes %}
+      - {{ volume }}
+{% endfor %}
+{% endif %}
+{% if sidecar.environment is defined %}
+    environment:
+{% for key, value in sidecar.environment.items() %}
+      {{ key }}: "{{ value }}"
+{% endfor %}
+{% endif %}
+{% if sidecar.devices is defined %}
+    devices:
+{% for device in sidecar.devices %}
+      - "{{ device }}"
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}

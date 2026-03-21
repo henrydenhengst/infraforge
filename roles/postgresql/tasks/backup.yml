@@ -1,0 +1,37 @@
+---
+- name: Maak backup directory
+  ansible.builtin.file:
+    path: "{{ postgresql_data_dir }}/backups"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0750'
+  tags: [backup]
+
+- name: Configureer backup script
+  ansible.builtin.template:
+    src: backup.sh.j2
+    dest: /usr/local/bin/postgres-backup.sh
+    mode: '0750'
+    owner: postgres
+    group: postgres
+  tags: [backup]
+
+- name: Configureer backup cron job
+  ansible.builtin.cron:
+    name: "postgres-backup"
+    minute: "{{ postgresql_backup_schedule.split()[0] }}"
+    hour: "{{ postgresql_backup_schedule.split()[1] }}"
+    job: "/usr/local/bin/postgres-backup.sh >> /var/log/postgres-backup.log 2>&1"
+    user: postgres
+  tags: [backup]
+
+- name: Configureer retention cleanup
+  ansible.builtin.cron:
+    name: "postgres-backup-cleanup"
+    minute: "0"
+    hour: "3"
+    day: "*"
+    job: "find {{ postgresql_data_dir }}/backups -name '*.sql.gz' -mtime +{{ postgresql_backup_retention_days }} -delete"
+    user: postgres
+  tags: [backup]

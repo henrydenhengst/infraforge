@@ -1,0 +1,68 @@
+---
+# =============================================================================
+# TASMOTA - OPEN-SOURCE FIRMWARE VOOR ESP DEVICES
+# =============================================================================
+# Beschrijving: Open-source firmware voor ESP8266/ESP32 apparaten
+# Website: https://tasmota.github.io
+# =============================================================================
+
+application:
+  name: tasmota
+  version: 13.0.0
+  description: "Tasmota - Open-source firmware voor ESP devices"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: iot-team
+    contact: iot@company.local
+    slack: "#iot"
+    documentation: "https://tasmota.github.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - iot
+      - internal
+    ports:
+      - container: 8081
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Tasmota web interface"
+    dns:
+      - "tasmota.{{ domain }}"
+      
+  container:
+    image: tasmota/tasmota:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8081

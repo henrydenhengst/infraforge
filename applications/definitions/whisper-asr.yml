@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# AUDIOLDM - AI GELUIDSGENERATIE
+# =============================================================================
+# Beschrijving: AI-generatie van geluidseffecten en muziek
+# Website: https://github.com/haoheliu/AudioLDM
+# =============================================================================
+
+application:
+  name: audioldm
+  version: 1.0.0
+  description: "AudioLDM - AI-geluid en muziek generatie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ai-team
+    contact: ai@company.local
+    slack: "#ai"
+    documentation: "https://github.com/haoheliu/AudioLDM"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      gpu_required: true
+      
+    storage:
+      - name: models
+        size_gb: 20
+        performance: ssd
+        backup_required: false
+        mount_path: /app/models
+      - name: outputs
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /app/outputs
+        
+  network_requirements:
+    vlans:
+      - ai
+      - internal
+    ports:
+      - container: 8002
+        host: 8002
+        protocol: tcp
+        public: false
+        description: "AudioLDM API"
+    dns:
+      - "audioai.{{ domain }}"
+      - "audioldm.{{ domain }}"
+      
+  container:
+    image: audiolm/audiolm:latest
+    restart: unless-stopped
+    gpu_support: true
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility]
+              
+  environment_variables:
+    - name: MODEL
+      value: "audioldm-s-full"
+      secret: false
+    - name: DEVICE
+      value: "cuda"
+      secret: false
+    - name: PORT
+      value: "8002"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8002

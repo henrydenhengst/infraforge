@@ -1,0 +1,111 @@
+---
+# =============================================================================
+# MAUTIC - MARKETING AUTOMATION
+# =============================================================================
+# Beschrijving: Marketing automation voor e-mailcampagnes
+# Website: https://mautic.org
+# =============================================================================
+
+application:
+  name: mautic
+  version: 5.0.0
+  description: "Mautic - Marketing automation"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: marketing-team
+    contact: marketing@company.local
+    slack: "#marketing"
+    documentation: "https://mautic.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        
+  network_requirements:
+    vlans:
+      - marketing
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Mautic web interface"
+    dns:
+      - "mautic.{{ domain }}"
+      - "campaigns.{{ domain }}"
+      
+  container:
+    image: mautic/mautic:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: MAUTIC_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: MAUTIC_DB_NAME
+      value: "mautic"
+      secret: false
+    - name: MAUTIC_DB_USER
+      value: "mautic"
+      secret: false
+    - name: MAUTIC_DB_PASSWORD
+      value: "{{ vault_mautic_password }}"
+      secret: true
+    - name: MAUTIC_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: MAUTIC_ADMIN_PASSWORD
+      value: "{{ vault_mautic_admin_password }}"
+      secret: true
+    - name: MAUTIC_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: MAUTIC_SITE_URL
+      value: "https://mautic.{{ domain }}"
+      secret: false
+    - name: MAUTIC_MAILER_FROM_NAME
+      value: "{{ company_name }}"
+      secret: false
+    - name: MAUTIC_MAILER_FROM_EMAIL
+      value: "marketing@{{ domain }}"
+      secret: false
+    - name: MAUTIC_MAILER_TRANSPORT
+      value: "smtp"
+      secret: false
+    - name: MAUTIC_MAILER_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: MAUTIC_MAILER_PORT
+      value: "587"
+      secret: false
+    - name: MAUTIC_MAILER_USER
+      value: "marketing@{{ domain }}"
+      secret: false
+    - name: MAUTIC_MAILER_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /index.php/health_check
+      port: 80

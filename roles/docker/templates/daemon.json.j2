@@ -1,0 +1,16 @@
+{
+  "log-driver": "{{ docker_daemon_config['log-driver'] }}",
+  "log-opts": {
+    "max-size": "{{ docker_daemon_config['log-opts']['max-size'] }}",
+    "max-file": "{{ docker_daemon_config['log-opts']['max-file'] }}"
+  },
+  "storage-driver": "{{ docker_daemon_config['storage-driver'] }}",
+  "live-restore": {{ docker_daemon_config['live-restore'] | lower }},
+  "iptables": {{ docker_daemon_config['iptables'] | lower }},
+  "ip-forward": {{ docker_daemon_config['ip-forward'] | lower }},
+  "ip-masq": {{ docker_daemon_config['ip-masq'] | lower }},
+  "userland-proxy": {{ docker_daemon_config['userland-proxy'] | lower }},
+  "experimental": {{ docker_daemon_config['experimental'] | lower }},
+  "metrics-addr": "{{ docker_daemon_config['metrics-addr'] }}",
+  "registry-mirrors": {{ docker_daemon_config['registry-mirrors'] | to_json }}
+}

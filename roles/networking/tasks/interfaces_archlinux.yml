@@ -1,0 +1,30 @@
+---
+- name: Configureer systemd-networkd (Arch)
+  ansible.builtin.service:
+    name: systemd-networkd
+    state: started
+    enabled: yes
+
+- name: Configureer systemd-resolved
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: started
+    enabled: yes
+
+- name: Configureer netdev files
+  ansible.builtin.template:
+    src: netdev_arch.j2
+    dest: "/etc/systemd/network/{{ item.name }}.netdev"
+    mode: '0644'
+  loop: "{{ network_interfaces }}"
+  when: network_interfaces | length > 0
+  notify: restart systemd-networkd
+
+- name: Configureer network files
+  ansible.builtin.template:
+    src: network_arch.j2
+    dest: "/etc/systemd/network/{{ item.name }}.network"
+    mode: '0644'
+  loop: "{{ network_interfaces }}"
+  when: network_interfaces | length > 0
+  notify: restart systemd-networkd

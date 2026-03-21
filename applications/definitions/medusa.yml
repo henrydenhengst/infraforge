@@ -1,0 +1,91 @@
+---
+# =============================================================================
+# CLICKHOUSE - ANALYTISCHE DATABASE
+# =============================================================================
+# Beschrijving: Kolomgeoriënteerde database voor analytische queries
+# Website: https://clickhouse.com
+# =============================================================================
+
+application:
+  name: clickhouse
+  version: 23.12.0
+  description: "ClickHouse - Analytische database"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://clickhouse.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 200
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/clickhouse
+      - name: logs
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/clickhouse-server
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8123
+        host: 8123
+        protocol: tcp
+        public: false
+        description: "ClickHouse HTTP API"
+      - container: 9000
+        host: 9000
+        protocol: tcp
+        public: false
+        description: "ClickHouse native protocol"
+    dns:
+      - "clickhouse.{{ domain }}"
+      - "analytics.{{ domain }}"
+      
+  container:
+    image: clickhouse/clickhouse-server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: CLICKHOUSE_DB
+      value: "default"
+      secret: false
+    - name: CLICKHOUSE_USER
+      value: "default"
+      secret: false
+    - name: CLICKHOUSE_PASSWORD
+      value: "{{ vault_clickhouse_password }}"
+      secret: true
+    - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+      value: "1"
+      secret: false
+    - name: CLICKHOUSE_LOG_LEVEL
+      value: "information"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /ping
+      port: 8123

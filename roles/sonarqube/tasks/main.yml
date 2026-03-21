@@ -1,0 +1,61 @@
+---
+- name: '{{ ansible_os_family }} | Maak SonarQube directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ sonarqube_data_path }}"
+    - "{{ sonarqube_data_path }}/data"
+    - "{{ sonarqube_data_path }}/extensions"
+    - "{{ sonarqube_data_path }}/logs"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start SonarQube database'
+  ansible.builtin.docker_container:
+    name: sonarqube-db
+    image: postgres:15
+    restart_policy: unless-stopped
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: "{{ sonarqube_db_password }}"
+      POSTGRES_DB: sonar
+    volumes:
+      - "{{ sonarqube_data_path }}/db:/var/lib/postgresql/data"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Start SonarQube server'
+  ansible.builtin.docker_container:
+    name: sonarqube
+    image: sonarqube:community
+    restart_policy: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_JDBC_URL: "jdbc:postgresql://sonarqube-db:5432/sonar"
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: "{{ sonarqube_db_password }}"
+    volumes:
+      - "{{ sonarqube_data_path }}/data:/opt/sonarqube/data"
+      - "{{ sonarqube_data_path }}/extensions:/opt/sonarqube/extensions"
+      - "{{ sonarqube_data_path }}/logs:/opt/sonarqube/logs"
+    depends_on:
+      - sonarqube-db
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.sonarqube.rule: "Host(`sonarqube.{{ domain }}`)"
+      traefik.http.services.sonarqube.loadbalancer.server.port: "9000"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot SonarQube actief is'
+  ansible.builtin.wait_for:
+    port: 9000
+    timeout: 180
+  tags: [validate]
+
+- name: Toon SonarQube URL
+  ansible.builtin.debug:
+    msg:
+      - "SonarQube: https://sonarqube.{{ domain }}"
+      - "Default credentials: admin / admin"
+  tags: [validate]

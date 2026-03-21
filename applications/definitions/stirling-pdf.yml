@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# NOCODB - SMART SPREADSHEET DATABASE
+# =============================================================================
+# Beschrijving: Smart spreadsheet (Airtable alternatief) op eigen SQL
+# Website: https://nocodb.com
+# =============================================================================
+
+application:
+  name: nocodb
+  version: 0.112.0
+  description: "NocoDB - Smart spreadsheet database"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://docs.nocodb.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/app/data
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "NocoDB web UI"
+    dns:
+      - "nocodb.{{ domain }}"
+      - "sheets.{{ domain }}"
+      
+  container:
+    image: nocodb/nocodb:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: NC_DB
+      value: "pg://postgres:5432?u=nocodb&p={{ vault_nocodb_password }}&d=nocodb"
+      secret: true
+    - name: NC_PUBLIC_URL
+      value: "https://nocodb.{{ domain }}"
+      secret: false
+    - name: NC_JWT_SECRET
+      value: "{{ vault_nocodb_jwt }}"
+      secret: true
+    - name: NC_AUTH_JWT_SECRET
+      value: "{{ vault_nocodb_jwt }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/db/health
+      port: 8080

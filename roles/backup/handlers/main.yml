@@ -1,0 +1,5 @@
+---
+- name: restart backup-exporter
+  ansible.builtin.systemd:
+    name: backup-exporter
+    state: restarted

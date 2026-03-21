@@ -1,0 +1,25 @@
+input {
+  beats {
+    port => 5044
+  }
+  tcp {
+    port => 5000
+  }
+}
+
+filter {
+  grok {
+    match => { "message" => "%{COMBINEDAPACHELOG}" }
+  }
+  date {
+    match => [ "timestamp", "dd/MMM/yyyy:HH:mm:ss Z" ]
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["{{ elasticsearch_host }}"]
+    index => "logstash-%{+YYYY.MM.dd}"
+  }
+  stdout { codec => rubydebug }
+}

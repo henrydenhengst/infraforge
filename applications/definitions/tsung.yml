@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# JAEGER - DISTRIBUTED TRACING
+# =============================================================================
+# Beschrijving: Distributed tracing system voor microservices
+# Website: https://www.jaegertracing.io
+# =============================================================================
+
+application:
+  name: jaeger
+  version: 1.53.0
+  description: "Jaeger - Distributed tracing"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://www.jaegertracing.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /badger
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 16686
+        host: 16686
+        protocol: tcp
+        public: false
+        description: "Jaeger UI"
+      - container: 4317
+        host: 4317
+        protocol: tcp
+        public: false
+        description: "OTLP gRPC"
+      - container: 4318
+        host: 4318
+        protocol: tcp
+        public: false
+        description: "OTLP HTTP"
+      - container: 14250
+        host: 14250
+        protocol: tcp
+        public: false
+        description: "Jaeger gRPC"
+    dns:
+      - "jaeger.{{ domain }}"
+      
+  container:
+    image: jaegertracing/all-in-one:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: COLLECTOR_OTLP_ENABLED
+      value: "true"
+      secret: false
+    - name: SPAN_STORAGE_TYPE
+      value: "badger"
+      secret: false
+    - name: BADGER_EPHEMERAL
+      value: "false"
+      secret: false
+    - name: BADGER_DIRECTORY_KEY
+      value: "/badger"
+      secret: false
+    - name: BADGER_DIRECTORY_VALUE
+      value: "/badger"
+      secret: false
+    - name: SAMPLING_STRATEGIES_FILE
+      value: "/etc/jaeger/sampling_strategies.json"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 16686

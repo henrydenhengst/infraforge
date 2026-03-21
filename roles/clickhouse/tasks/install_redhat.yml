@@ -1,0 +1,13 @@
+---
+- name: Installeer ClickHouse repository
+  ansible.builtin.get_url:
+    url: https://packages.clickhouse.com/rpm/clickhouse.repo
+    dest: /etc/yum.repos.d/clickhouse.repo
+    mode: '0644'
+
+- name: Installeer ClickHouse
+  ansible.builtin.dnf:
+    name:
+      - clickhouse-server
+      - clickhouse-client
+    state: present

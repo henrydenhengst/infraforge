@@ -1,0 +1,494 @@
+---
+# =============================================================================
+# CMS TOOLS (CONTENT MANAGEMENT SYSTEMS)
+# =============================================================================
+# Functie: cms
+# Beschrijving: Tools voor het beheren en publiceren van content
+# =============================================================================
+
+cms_tools:
+  # ---------------------------------------------------------------------------
+  # TRADITIONELE CMS
+  # ---------------------------------------------------------------------------
+  - name: WordPress
+    profiel_tag: Marketing
+    functie_tag: cms
+    beschrijving: "Website platform voor blogs, bedrijfswebsites en e-commerce"
+    categorie: traditional_cms
+    docker_image: wordpress:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - wordpress_data:/var/www/html
+      - wordpress_plugins:/var/www/html/wp-content/plugins
+      - wordpress_themes:/var/www/html/wp-content/themes
+      - wordpress_uploads:/var/www/html/wp-content/uploads
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: "{{ vault_wordpress_password }}"
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_TABLE_PREFIX: wp_
+      WORDPRESS_DEBUG: "false"
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_MEMORY_LIMIT', '256M');
+        define('WP_MAX_MEMORY_LIMIT', '512M');
+        define('DISALLOW_FILE_EDIT', true);
+        define('AUTOMATIC_UPDATER_DISABLED', false);
+    database: mysql
+    url: "https://wordpress.org"
+    
+  - name: Joomla
+    profiel_tag: Marketing
+    functie_tag: cms
+    beschrijving: "CMS platform voor websites en online applicaties"
+    categorie: traditional_cms
+    docker_image: joomla:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - joomla_data:/var/www/html
+    environment:
+      JOOMLA_DB_HOST: mysql:3306
+      JOOMLA_DB_USER: joomla
+      JOOMLA_DB_PASSWORD: "{{ vault_joomla_password }}"
+      JOOMLA_DB_NAME: joomla
+      JOOMLA_SITE_NAME: "{{ company_name }}"
+      JOOMLA_ADMIN_USER: admin
+      JOOMLA_ADMIN_PASSWORD: "{{ vault_joomla_admin_password }}"
+    database: mysql
+    url: "https://www.joomla.org"
+    
+  - name: Grav
+    profiel_tag: Marketing
+    functie_tag: cms
+    beschrijving: "Flat-file CMS, geen database nodig"
+    categorie: flat_file_cms
+    docker_image: grav:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - grav_data:/var/www/html
+    environment:
+      GRAV_ADMIN_USER: admin
+      GRAV_ADMIN_PASSWORD: "{{ vault_grav_password }}"
+      GRAV_ADMIN_EMAIL: admin@{{ domain }}
+    url: "https://getgrav.org"
+    
+  # ---------------------------------------------------------------------------
+  # HEADLESS CMS
+  # ---------------------------------------------------------------------------
+  - name: Strapi
+    profiel_tag: Marketing
+    functie_tag: cms
+    beschrijving: "Headless CMS met API-first ontwerp"
+    categorie: headless_cms
+    docker_image: strapi/strapi:latest
+    ports:
+      - "1337:1337"
+    volumes:
+      - strapi_data:/srv/app
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: strapi
+      DATABASE_USERNAME: strapi
+      DATABASE_PASSWORD: "{{ vault_strapi_password }}"
+      DATABASE_SSL: "false"
+      JWT_SECRET: "{{ vault_strapi_jwt }}"
+      ADMIN_JWT_SECRET: "{{ vault_strapi_admin_jwt }}"
+      API_TOKEN_SALT: "{{ vault_strapi_token_salt }}"
+      APP_KEYS: "{{ vault_strapi_app_keys }}"
+    database: postgresql
+    url: "https://strapi.io"
+    
+  - name: Ghost
+    profiel_tag: Creators
+    functie_tag: cms
+    beschrijving: "Platform voor betaalde nieuwsbrieven en abonnementen"
+    categorie: headless_cms
+    docker_image: ghost:latest
+    ports:
+      - "2368:2368"
+    volumes:
+      - ghost_data:/var/lib/ghost/content
+    environment:
+      url: "https://ghost.{{ domain }}"
+      database__client: mysql
+      database__connection__host: mysql
+      database__connection__user: ghost
+      database__connection__password: "{{ vault_ghost_password }}"
+      database__connection__database: ghost
+      mail__transport: SMTP
+      mail__options__host: smtp.{{ domain }}
+      mail__options__port: 587
+      mail__options__auth__user: ghost@{{ domain }}
+      mail__options__auth__pass: "{{ vault_smtp_password }}"
+    database: mysql
+    url: "https://ghost.org"
+    
+  - name: KeystoneJS
+    profiel_tag: Marketing
+    functie_tag: cms
+    beschrijving: "Node.js CMS framework met GraphQL API"
+    categorie: headless_cms
+    docker_image: keystonejs/keystone:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - keystone_data:/app
+    environment:
+      DATABASE_URL: "postgresql://keystone:{{ vault_keystone_password }}@postgres:5432/keystone"
+      SESSION_SECRET: "{{ vault_keystone_secret }}"
+      COOKIE_SECRET: "{{ vault_keystone_cookie }}"
+    database: postgresql
+    url: "https://keystonejs.com"
+    
+  - name: Wagtail
+    profiel_tag: Marketing
+    functie_tag: cms
+    beschrijving: "Python CMS gebouwd op Django"
+    categorie: headless_cms
+    docker_image: wagtail/wagtail:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - wagtail_data:/app
+    environment:
+      DATABASE_URL: "postgresql://wagtail:{{ vault_wagtail_password }}@postgres:5432/wagtail"
+      SECRET_KEY: "{{ vault_wagtail_secret }}"
+      ALLOWED_HOSTS: "wagtail.{{ domain }}"
+    database: postgresql
+    url: "https://wagtail.org"
+    
+  # ---------------------------------------------------------------------------
+  # STATIC SITE GENERATORS
+  # ---------------------------------------------------------------------------
+  - name: Hugo
+    profiel_tag: Marketing
+    functie_tag: dev-tool
+    beschrijving: "Statische site generator (Go-based)"
+    categorie: static_site
+    docker_image: klakegg/hugo:latest
+    ports:
+      - "1313:1313"
+    volumes:
+      - hugo_site:/src
+    command: server -D --bind 0.0.0.0
+    url: "https://gohugo.io"
+    
+  # ---------------------------------------------------------------------------
+  # E-COMMERCE CMS
+  # ---------------------------------------------------------------------------
+  - name: WooCommerce
+    profiel_tag: E-commerce
+    functie_tag: webshop
+    beschrijving: "E-commerce via WordPress container"
+    categorie: ecommerce
+    docker_image: wordpress:latest
+    ports:
+      - "8083:80"
+    volumes:
+      - woocommerce_data:/var/www/html
+      - woocommerce_plugins:/var/www/html/wp-content/plugins
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_USER: woocommerce
+      WORDPRESS_DB_PASSWORD: "{{ vault_woocommerce_password }}"
+      WORDPRESS_DB_NAME: woocommerce
+      WORDPRESS_TABLE_PREFIX: wp_
+    database: mysql
+    url: "https://woocommerce.com"
+    plugins:
+      - woocommerce
+      - woocommerce-gateway-stripe
+      - woocommerce-shipping
+      - yoast-seo
+      - wordfence
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+cms_defaults:
+  # Algemene CMS instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # CMS specifieke instellingen
+  cms_settings:
+    site_title: "{{ company_name }}"
+    site_tagline: "{{ company_slogan }}"
+    site_url: "https://{{ domain }}"
+    admin_email: admin@{{ domain }}
+    timezone: Europe/Amsterdam
+    language: nl_NL
+    
+  # SEO instellingen
+  seo:
+    enable_sitemap: true
+    enable_robots: true
+    enable_analytics: true
+    analytics_id: "{{ vault_analytics_id }}"
+    
+  # Media instellingen
+  media:
+    max_upload_size: 50MB
+    allowed_types:
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - pdf
+      - doc
+      - docx
+    image_sizes:
+      - thumbnail: 150x150
+      - medium: 300x300
+      - large: 1024x1024
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+wordpress_config:
+  # WordPress plugins
+  plugins:
+    - name: yoast-seo
+      version: latest
+      activate: true
+    - name: wordfence
+      version: latest
+      activate: true
+    - name: wp-rocket
+      version: latest
+      activate: true
+    - name: contact-form-7
+      version: latest
+      activate: true
+    - name: woocommerce
+      version: latest
+      activate: false
+      
+  # WordPress themes
+  themes:
+    - name: twentytwentyfour
+      activate: true
+    - name: astra
+      activate: false
+      
+  # WordPress gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      role: administrator
+      password: "{{ vault_wordpress_admin_password }}"
+    - username: editor
+      email: editor@{{ domain }}
+      role: editor
+      password: "{{ vault_wordpress_editor_password }}"
+      
+  # WordPress instellingen
+  settings:
+    permalink_structure: /%postname%/
+    show_on_front: page
+    page_on_front: home
+    page_for_posts: blog
+    posts_per_page: 10
+    comments_per_page: 50
+    default_ping_status: closed
+    default_comment_status: open
+    timezone_string: Europe/Amsterdam
+    date_format: d-m-Y
+    time_format: H:i
+    start_of_week: 1  # maandag
+    
+  # WordPress optimalisatie
+  optimization:
+    wp_memory_limit: 256M
+    wp_max_memory_limit: 512M
+    disable_file_edit: true
+    auto_update_core: minor
+    auto_update_plugins: true
+    auto_update_themes: true
+    enable_cache: true
+    cache_ttl: 3600
+
+joomla_config:
+  # Joomla extensies
+  extensions:
+    - name: akeeba-backup
+      type: component
+      install: true
+    - name: joomla-works
+      type: component
+      install: true
+    - name: joomla-seo
+      type: plugin
+      install: true
+      
+  # Joomla templates
+  templates:
+    - name: cassiopeia
+      default: true
+      
+  # Joomla gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      group: Super Users
+      password: "{{ vault_joomla_admin_password }}"
+    - username: editor
+      email: editor@{{ domain }}
+      group: Editor
+      password: "{{ vault_joomla_editor_password }}"
+
+strapi_config:
+  # Strapi content types
+  content_types:
+    - name: article
+      attributes:
+        - name: title
+          type: string
+          required: true
+        - name: slug
+          type: uid
+          targetField: title
+        - name: content
+          type: richtext
+          required: true
+        - name: excerpt
+          type: text
+        - name: author
+          type: relation
+          relation: manyToOne
+          target: user
+        - name: category
+          type: relation
+          relation: manyToOne
+          target: category
+        - name: tags
+          type: relation
+          relation: manyToMany
+          target: tag
+        - name: image
+          type: media
+        - name: published_at
+          type: datetime
+          required: true
+          
+    - name: category
+      attributes:
+        - name: name
+          type: string
+          required: true
+        - name: slug
+          type: uid
+          targetField: name
+        - name: description
+          type: text
+          
+    - name: tag
+      attributes:
+        - name: name
+          type: string
+          required: true
+        - name: slug
+          type: uid
+          targetField: name
+          
+  # Strapi roles
+  roles:
+    - name: Authenticated
+      description: "Default role for authenticated users"
+    - name: Public
+      description: "Default role for public users"
+    - name: Editor
+      description: "Can create and edit content"
+    - name: Author
+      description: "Can create own content"
+    - name: Admin
+      description: "Full access"
+      
+  # Strapi API configuratie
+  api:
+    rest:
+      prefix: /api
+      default_limit: 25
+      max_limit: 100
+    graphql:
+      enabled: true
+      playground: true
+      depth_limit: 7
+      amount_limit: 100
+      
+  # Strapi plugins
+  plugins:
+    - name: graphql
+      enabled: true
+    - name: upload
+      enabled: true
+      config:
+        provider: local
+        size_limit: 100MB
+    - name: email
+      enabled: true
+      config:
+        provider: smtp
+        settings:
+          host: smtp.{{ domain }}
+          port: 587
+          secure: false
+          username: strapi@{{ domain }}
+          password: "{{ vault_smtp_password }}"
+    - name: seo
+      enabled: true
+
+ghost_config:
+  # Ghost thema's
+  themes:
+    - name: casper
+      active: true
+    - name: lyra
+      active: false
+      
+  # Ghost instellingen
+  settings:
+    title: "{{ company_name }}"
+    description: "{{ company_slogan }}"
+    logo: "/content/images/logo.png"
+    icon: "/content/images/favicon.ico"
+    cover_image: "/content/images/cover.jpg"
+    facebook: "{{ social_facebook }}"
+    twitter: "{{ social_twitter }}"
+    navigation:
+      - label: Home
+        url: /
+      - label: About
+        url: /about/
+      - label: Blog
+        url: /blog/
+      
+  # Ghost memberships
+  members:
+    enable: true
+    allow_signup: true
+    free_signup: true
+    paid_signup: false
+    stripe:
+      enabled: false
+      
+  # Ghost integraties
+  integrations:
+    - name: google-analytics
+      type: analytics
+      code: "{{ vault_analytics_id }}"
+    - name: disqus
+      type: comments
+      shortname: "{{ disqus_shortname }}"
+    - name: mailchimp
+      type: newsletter
+      api_key: "{{ vault_mailchimp_key }}"
+      list_id: "{{ mailchimp_list_id }}"

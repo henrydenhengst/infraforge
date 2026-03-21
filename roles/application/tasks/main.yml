@@ -1,0 +1,58 @@
+---
+# =============================================================================
+# APPLICATION ROLE - Docker applicatie deployment
+# =============================================================================
+# Deze role deployt Docker containers op basis van stack definities
+# =============================================================================
+
+- name: '{{ ansible_os_family }} | Installeer application prerequisites'
+  ansible.builtin.package:
+    name: "{{ app_prerequisites[ansible_os_family] }}"
+    state: present
+  tags: [prerequisites]
+
+- name: '{{ ansible_os_family }} | Maak application directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user | default('root') }}"
+    group: "{{ app_group | default('docker') }}"
+    mode: '0755'
+  loop:
+    - /opt/applications
+    - /opt/applications/config
+    - /opt/applications/data
+    - /opt/applications/logs
+    - /opt/applications/backups
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Maak Docker netwerken aan'
+  ansible.builtin.docker_network:
+    name: "{{ item.name }}"
+    driver: "{{ item.driver | default('bridge') }}"
+    ipam_config: "{{ item.ipam_config | default(omit) }}"
+    state: present
+  loop: "{{ docker_networks | default([]) }}"
+  when: docker_networks is defined
+  tags: [networks]
+
+- name: '{{ ansible_os_family }} | Deploy applicatie stacks'
+  ansible.builtin.include_tasks: "deploy.yml"
+  loop: "{{ apps_to_deploy | default([]) }}"
+  loop_control:
+    loop_var: app
+  tags: [deploy]
+
+- name: '{{ ansible_os_family }} | Configureer reverse proxy'
+  ansible.builtin.include_tasks: "proxy.yml"
+  when: configure_proxy | default(false)
+  tags: [proxy]
+
+- name: '{{ ansible_os_family }} | Configureer applicatie monitoring'
+  ansible.builtin.include_tasks: "monitoring.yml"
+  when: monitoring_enabled | default(true)
+  tags: [monitoring]
+
+- name: '{{ ansible_os_family }} | Valideer applicatie status'
+  ansible.builtin.include_tasks: "validate.yml"
+  tags: [validate]

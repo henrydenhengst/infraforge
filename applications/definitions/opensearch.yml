@@ -1,0 +1,67 @@
+---
+# =============================================================================
+# VEGETA - HTTP LOAD TESTING
+# =============================================================================
+# Beschrijving: HTTP load testing tool met CLI
+# Website: https://github.com/tsenart/vegeta
+# =============================================================================
+
+application:
+  name: vegeta
+  version: 12.11.1
+  description: "Vegeta - HTTP load testing tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://github.com/tsenart/vegeta"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: results
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /results
+        
+  network_requirements:
+    vlans:
+      - testing
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: peterevans/vegeta:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: VEGETA_RATE
+      value: "100"
+      secret: false
+    - name: VEGETA_DURATION
+      value: "30s"
+      secret: false
+    - name: VEGETA_TARGET
+      value: "https://{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["vegeta", "-version"]

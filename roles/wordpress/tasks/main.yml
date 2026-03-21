@@ -1,0 +1,69 @@
+---
+- name: '{{ ansible_os_family }} | Maak WordPress directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ wordpress_user | default('www-data') }}"
+    group: "{{ wordpress_group | default('www-data') }}"
+    mode: '0755'
+  loop:
+    - "{{ wordpress_install_path }}"
+    - "{{ wordpress_install_path }}/wp-content/uploads"
+    - "{{ wordpress_install_path }}/wp-content/plugins"
+    - "{{ wordpress_install_path }}/wp-content/themes"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Download WordPress'
+  ansible.builtin.get_url:
+    url: "https://wordpress.org/latest.tar.gz"
+    dest: "/tmp/wordpress.tar.gz"
+  tags: [download]
+
+- name: Extract WordPress
+  ansible.builtin.unarchive:
+    src: "/tmp/wordpress.tar.gz"
+    dest: "{{ wordpress_install_path | dirname }}"
+    remote_src: yes
+    owner: "{{ wordpress_user | default('www-data') }}"
+    group: "{{ wordpress_group | default('www-data') }}"
+  tags: [extract]
+
+- name: Configureer WordPress
+  ansible.builtin.template:
+    src: wp-config.php.j2
+    dest: "{{ wordpress_install_path }}/wp-config.php"
+    mode: '0644'
+  tags: [config]
+
+- name: Configureer Nginx virtual host voor WordPress
+  ansible.builtin.template:
+    src: wordpress.conf.j2
+    dest: /etc/nginx/conf.d/wordpress.conf
+    mode: '0644'
+  notify: reload nginx
+  when: configure_nginx | default(true)
+  tags: [nginx]
+
+- name: Set WordPress permissions
+  ansible.builtin.file:
+    path: "{{ wordpress_install_path }}"
+    owner: "{{ wordpress_user | default('www-data') }}"
+    group: "{{ wordpress_group | default('www-data') }}"
+    recurse: yes
+  tags: [permissions]
+
+- name: '{{ ansible_os_family }} | Valideer WordPress installatie'
+  ansible.builtin.uri:
+    url: "https://{{ wordpress_domain }}/wp-admin/install.php"
+    status_code: 200
+  register: wp_test
+  until: wp_test.status == 200
+  retries: 30
+  delay: 5
+  ignore_errors: yes
+  tags: [validate]
+
+- name: Toon WordPress installatie status
+  ansible.builtin.debug:
+    msg: "WordPress geïnstalleerd op https://{{ wordpress_domain }}"
+  tags: [validate]

@@ -1,0 +1,8 @@
+---
+- name: Configureer pacman automatic updates (Arch)
+  ansible.builtin.cron:
+    name: "pacman-auto-update"
+    minute: "0"
+    hour: "2"
+    job: "pacman -Syu --noconfirm"
+    user: root

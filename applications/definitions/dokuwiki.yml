@@ -1,0 +1,92 @@
+---
+# =============================================================================
+# TAIGA - AGILE PROJECT MANAGEMENT
+# =============================================================================
+# Beschrijving: Agile en Scrum platform voor softwareteams
+# Website: https://taiga.io
+# =============================================================================
+
+application:
+  name: taiga
+  version: 6.6.0
+  description: "Taiga - Agile project management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: project-team
+    contact: pm@company.local
+    slack: "#project"
+    documentation: "https://taiga.io/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: media
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /media
+        
+  network_requirements:
+    vlans:
+      - project
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Taiga web interface"
+    dns:
+      - "taiga.{{ domain }}"
+      - "agile.{{ domain }}"
+      
+  container:
+    image: taigaio/taiga:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: TAIGA_DB_NAME
+      value: "taiga"
+      secret: false
+    - name: TAIGA_DB_USER
+      value: "taiga"
+      secret: false
+    - name: TAIGA_DB_PASSWORD
+      value: "{{ vault_taiga_password }}"
+      secret: true
+    - name: TAIGA_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: TAIGA_PUBLIC_REGISTER_ENABLED
+      value: "false"
+      secret: false
+    - name: TAIGA_SITES_DOMAIN
+      value: "taiga.{{ domain }}"
+      secret: false
+    - name: TAIGA_SITES_SCHEME
+      value: "https"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/health
+      port: 80

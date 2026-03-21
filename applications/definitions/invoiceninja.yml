@@ -1,0 +1,108 @@
+---
+# =============================================================================
+# AIRBYTE - DATA INTEGRATION PLATFORM
+# =============================================================================
+# Beschrijving: Data integration platform voor ELT pipelines
+# Website: https://airbyte.com
+# =============================================================================
+
+application:
+  name: airbyte
+  version: 0.50.0
+  description: "Airbyte - Data integration platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://docs.airbyte.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /logs
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "Airbyte web interface"
+      - container: 8001
+        host: 8001
+        protocol: tcp
+        public: false
+        description: "Airbyte API"
+    dns:
+      - "airbyte.{{ domain }}"
+      - "etl.{{ domain }}"
+      
+  container:
+    image: airbyte/airbyte-server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  sidecars:
+    - name: worker
+      image: airbyte/airbyte-worker:latest
+    - name: db
+      image: airbyte/airbyte-db:latest
+    - name: temporal
+      image: temporalio/auto-setup:latest
+      
+  environment_variables:
+    - name: DATABASE_HOST
+      value: "airbyte-db"
+      secret: false
+    - name: DATABASE_PORT
+      value: "5432"
+      secret: false
+    - name: DATABASE_USER
+      value: "airbyte"
+      secret: false
+    - name: DATABASE_PASSWORD
+      value: "{{ vault_airbyte_password }}"
+      secret: true
+    - name: DATABASE_DB
+      value: "airbyte"
+      secret: false
+    - name: TEMPORAL_HOST
+      value: "temporal:7233"
+      secret: false
+    - name: WORKER_ENVIRONMENT
+      value: "docker"
+      secret: false
+    - name: CONFIG_ROOT
+      value: "/data"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/health
+      port: 8000

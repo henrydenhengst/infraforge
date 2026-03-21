@@ -1,0 +1,493 @@
+---
+# =============================================================================
+# HOME AUTOMATION TOOLS
+# =============================================================================
+# Functie: home-automation
+# Beschrijving: Tools voor domotica, IoT, smart home en automatisering
+# =============================================================================
+
+home_automation_tools:
+  # ---------------------------------------------------------------------------
+  # SMART HOME HUBS
+  # ---------------------------------------------------------------------------
+  - name: Home Assistant
+    profiel_tag: IT
+    functie_tag: home-automation
+    beschrijving: "Open-source home automation platform"
+    categorie: hub
+    docker_image: ghcr.io/home-assistant/home-assistant:stable
+    ports:
+      - "8123:8123"
+    volumes:
+      - homeassistant_config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    environment:
+      TZ: Europe/Amsterdam
+    privileged: true
+    network_mode: host
+    url: "https://www.home-assistant.io"
+    
+  - name: OpenHAB
+    profiel_tag: IT
+    functie_tag: home-automation
+    beschrijving: "Vendor-agnostic home automation platform"
+    categorie: hub
+    docker_image: openhab/openhab:latest
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+      - "8101:8101"
+      - "5007:5007"
+    volumes:
+      - openhab_addons:/openhab/addons
+      - openhab_conf:/openhab/conf
+      - openhab_userdata:/openhab/userdata
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      OPENHAB_HTTP_PORT: 8080
+      OPENHAB_HTTPS_PORT: 8443
+      EXTRA_JAVA_OPTS: "-Duser.timezone=Europe/Amsterdam"
+    url: "https://www.openhab.org"
+    
+  - name: Domoticz
+    profiel_tag: IT
+    functie_tag: home-automation
+    beschrijving: "Lichtgewicht home automation system"
+    categorie: hub
+    docker_image: domoticz/domoticz:latest
+    ports:
+      - "8084:8080"
+      - "8444:443"
+    volumes:
+      - domoticz_config:/opt/domoticz/userdata
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: Europe/Amsterdam
+      WWW_PORT: 8080
+      SSL_PORT: 443
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    url: "https://www.domoticz.com"
+    
+  # ---------------------------------------------------------------------------
+  # MQTT BROKERS
+  # ---------------------------------------------------------------------------
+  - name: Mosquitto
+    profiel_tag: IT
+    functie_tag: home-automation
+    beschrijving: "Eclipse Mosquitto MQTT broker voor IoT communicatie"
+    categorie: mqtt
+    docker_image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - mosquitto_config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    environment:
+      TZ: Europe/Amsterdam
+    url: "https://mosquitto.org"
+    
+  # ---------------------------------------------------------------------------
+  # IOT FIRMWARE & BRIDGES
+  # ---------------------------------------------------------------------------
+  - name: ESPHome
+    profiel_tag: IT
+    functie_tag: home-automation
+    beschrijving: "Firmware management voor ESP8266/ESP32 apparaten"
+    categorie: iot
+    docker_image: esphome/esphome:latest
+    ports:
+      - "6052:6052"
+    volumes:
+      - esphome_config:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: Europe/Amsterdam
+    privileged: true
+    network_mode: host
+    url: "https://esphome.io"
+    
+  - name: Zigbee2MQTT
+    profiel_tag: IT
+    functie_tag: home-automation
+    beschrijving: "Zigbee bridge die Zigbee apparaten koppelt aan MQTT"
+    categorie: zigbee
+    docker_image: koenkk/zigbee2mqtt:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - zigbee2mqtt_data:/app/data
+      - /run/dbus:/run/dbus:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: Europe/Amsterdam
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    url: "https://www.zigbee2mqtt.io"
+    
+  - name: Tasmota
+    profiel_tag: IT
+    functie_tag: home-automation
+    beschrijving: "Open-source firmware voor ESP8266/ESP32 apparaten"
+    categorie: firmware
+    docker_image: tasmota/tasmota:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - tasmota_data:/data
+    environment:
+      TZ: Europe/Amsterdam
+    url: "https://tasmota.github.io"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+home_automation_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Locatie instellingen
+  location:
+    latitude: 52.3676
+    longitude: 4.9041
+    elevation: 10
+    timezone: Europe/Amsterdam
+    
+  # MQTT instellingen
+  mqtt:
+    broker: mosquitto
+    port: 1883
+    username: "{{ vault_mqtt_username }}"
+    password: "{{ vault_mqtt_password }}"
+    discovery_prefix: homeassistant
+    
+  # Database instellingen
+  database:
+    type: postgresql
+    host: postgres
+    port: 5432
+    name: homeassistant
+    username: homeassistant
+    password: "{{ vault_homeassistant_db_password }}"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+homeassistant_config:
+  # Home Assistant components
+  components:
+    # Default
+    - default_config
+    
+    # Automation
+    - automation
+    - script
+    - scene
+    - group
+    
+    # Climate
+    - climate
+    - weather
+    
+    # Light
+    - light
+    
+    # Switch
+    - switch
+    
+    # Sensor
+    - sensor
+    - binary_sensor
+    
+    # Media
+    - media_player
+    - cast
+    
+    # Camera
+    - camera
+    
+    # Notifications
+    - mobile_app
+    - notify
+    
+  # Home Assistant integrations
+  integrations:
+    - mqtt
+    - esphome
+    - zigbee2mqtt
+    - tasmota
+    - google_assistant
+    - alexa
+    - telegram_bot
+    
+  # Zones
+  zones:
+    - name: Thuis
+      latitude: 52.3676
+      longitude: 4.9041
+      radius: 100
+      icon: mdi:home
+    
+  # Personen
+  persons:
+    - name: Bewoner 1
+      user_id: user1
+      device_trackers:
+        - device_tracker.bewoner1_phone
+        
+  # Automations
+  automations:
+    - alias: "Verlichting aan bij zonsondergang"
+      trigger:
+        platform: sun
+        event: sunset
+      action:
+        service: light.turn_on
+        target:
+          entity_id: light.woonkamer
+          
+    - alias: "Melding bij beweging"
+      trigger:
+        platform: state
+        entity_id: binary_sensor.beweging
+        to: "on"
+      action:
+        service: notify.mobile_app
+        data:
+          message: "Beweging gedetecteerd!"
+          
+  # Scenes
+  scenes:
+    - name: Filmavond
+      entities:
+        light.woonkamer: off
+        media_player.tv: on
+        switch.soundbar: on
+
+mosquitto_config:
+  # Mosquitto configuratie
+  mosquitto_conf: |
+    # Mosquitto configuratie
+    listener 1883 0.0.0.0
+    protocol mqtt
+    
+    listener 9001 0.0.0.0
+    protocol websockets
+    
+    allow_anonymous false
+    password_file /mosquitto/config/passwd
+    acl_file /mosquitto/config/acl
+    
+    persistence true
+    persistence_location /mosquitto/data
+    
+    log_dest file /mosquitto/log/mosquitto.log
+    log_type all
+    
+  # Gebruikers
+  users:
+    - username: homeassistant
+      password: "{{ vault_mqtt_homeassistant_password }}"
+    - username: zigbee2mqtt
+      password: "{{ vault_mqtt_zigbee2mqtt_password }}"
+    - username: nodered
+      password: "{{ vault_mqtt_nodered_password }}"
+      
+  # ACL rechten
+  acl:
+    - topic: "homeassistant/#"
+      user: homeassistant
+      access: readwrite
+    - topic: "zigbee2mqtt/#"
+      user: zigbee2mqtt
+      access: readwrite
+    - topic: "nodered/#"
+      user: nodered
+      access: readwrite
+    - topic: "stat/#"
+      user: homeassistant
+      access: read
+      
+  # MQTT topics
+  topics:
+    - "homeassistant/sensor/#"
+    - "homeassistant/switch/#"
+    - "homeassistant/light/#"
+    - "zigbee2mqtt/#"
+    - "nodered/#"
+
+zigbee2mqtt_config:
+  # Zigbee2MQTT configuratie
+  settings:
+    permit_join: false
+    homeassistant: true
+    homeassistant_discovery_topic: homeassistant
+    mqtt:
+      base_topic: zigbee2mqtt
+      server: mqtt://mosquitto:1883
+      user: zigbee2mqtt
+      password: "{{ vault_mqtt_zigbee2mqtt_password }}"
+    serial:
+      port: /dev/ttyUSB0
+      adapter: zstack
+    advanced:
+      network_key:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+        - 8
+        - 9
+        - 10
+        - 11
+        - 12
+        - 13
+        - 14
+        - 15
+        - 16
+      pan_id: 6754
+      channel: 11
+      log_level: info
+      log_output:
+        - console
+        - file
+    device_options:
+      legacy: false
+      
+  # Apparaten
+  devices:
+    - name: Woonkamer Lamp
+      model: IKEA LED1623G12
+      type: light
+      vendor: IKEA
+    - name: Deur Sensor
+      model: Xiaomi MCCGQ01LM
+      type: sensor
+      vendor: Xiaomi
+    - name: Bewegingssensor
+      model: Philips RWL021
+      type: sensor
+      vendor: Philips
+      
+  # Groepen
+  groups:
+    - name: Woonkamer
+      id: 1
+      devices:
+        - 0x00158d0001a2b3c4
+        - 0x00158d0001d4e5f6
+
+esphome_config:
+  # ESPHome configuratie
+  settings:
+    esphome_version: latest
+    board: esp32dev
+    platform: espressif32
+    
+  # Apparaten
+  devices:
+    - name: temperatuur_sensor
+      platform: esp8266
+      board: d1_mini
+      sensors:
+        - name: Temperatuur
+          platform: dht
+          pin: D4
+          model: DHT22
+        - name: Luchtvochtigheid
+          platform: dht
+          pin: D4
+          model: DHT22
+          
+    - name: lamp_woonkamer
+      platform: esp32
+      board: nodemcu-32s
+      light:
+        - name: Woonkamer Lamp
+          platform: neopixelbus
+          type: GRB
+          pin: GPIO15
+          num_leds: 30
+          
+    - name: relay_module
+      platform: esp8266
+      board: esp01_1m
+      switch:
+        - name: Versterker
+          platform: gpio
+          pin: GPIO0
+        - name: Tv
+          platform: gpio
+          pin: GPIO2
+
+openhab_config:
+  # OpenHAB configuratie
+  packages:
+    - openhab
+    - openhab-addons
+    
+  # Bindings
+  bindings:
+    - mqtt
+    - zwave
+    - zigbee
+    - http
+    - network
+    - astro
+    - systeminfo
+    
+  # Things
+  things:
+    - name: MQTT Broker
+      type: mqtt
+      config:
+        url: tcp://mosquitto:1883
+        username: "{{ vault_mqtt_username }}"
+        password: "{{ vault_mqtt_password }}"
+        
+    - name: Zigbee Gateway
+      type: serial
+      config:
+        port: /dev/ttyUSB0
+        baud_rate: 115200
+        
+  # Items
+  items:
+    - name: Temperatuur
+      type: Number
+      label: "Temperatuur"
+      channel: "mqtt:topic:broker:temperature"
+      
+    - name: Lamp Woonkamer
+      type: Switch
+      label: "Woonkamer Lamp"
+      channel: "mqtt:topic:broker:light_livingroom"
+      
+  # Sitemap
+  sitemap:
+    - name: home
+      label: "Home"
+      widget:
+        - type: Frame
+          label: "Klimaat"
+          widget:
+            - type: Text
+              item: Temperatuur
+        - type: Frame
+          label: "Verlichting"
+          widget:
+            - type: Switch
+              item: Lamp Woonkamer

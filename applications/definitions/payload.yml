@@ -1,0 +1,75 @@
+---
+# =============================================================================
+# HEADLAMP - KUBERNETES UI
+# =============================================================================
+# Beschrijving: Modern, web-based Kubernetes UI
+# Website: https://headlamp.sh
+# =============================================================================
+
+application:
+  name: headlamp
+  version: 0.22.0
+  description: "Headlamp - Modern Kubernetes UI"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://headlamp.sh/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Headlamp UI"
+    dns:
+      - "headlamp.{{ domain }}"
+      - "k8s-ui.{{ domain }}"
+      
+  container:
+    image: headlamp/headlamp:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: HEADLAMP_IS_CLUSTER_MODE
+      value: "true"
+      secret: false
+    - name: HEADLAMP_PORT
+      value: "8080"
+      secret: false
+    - name: HEADLAMP_IN_CLUSTER
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

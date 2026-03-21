@@ -1,0 +1,100 @@
+---
+# =============================================================================
+# STRAPI - HEADLESS CMS
+# =============================================================================
+# Beschrijving: Headless CMS met API-first ontwerp
+# Website: https://strapi.io
+# =============================================================================
+
+application:
+  name: strapi
+  version: 4.20.0
+  description: "Strapi - Headless CMS"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://docs.strapi.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /srv/app
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 1337
+        host: 1337
+        protocol: tcp
+        public: false
+        description: "Strapi API"
+    dns:
+      - "strapi.{{ domain }}"
+      - "cms.{{ domain }}"
+      - "api.{{ domain }}"
+      
+  container:
+    image: strapi/strapi:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: DATABASE_CLIENT
+      value: "postgres"
+      secret: false
+    - name: DATABASE_HOST
+      value: "postgres"
+      secret: false
+    - name: DATABASE_PORT
+      value: "5432"
+      secret: false
+    - name: DATABASE_NAME
+      value: "strapi"
+      secret: false
+    - name: DATABASE_USERNAME
+      value: "strapi"
+      secret: false
+    - name: DATABASE_PASSWORD
+      value: "{{ vault_strapi_password }}"
+      secret: true
+    - name: DATABASE_SSL
+      value: "false"
+      secret: false
+    - name: JWT_SECRET
+      value: "{{ vault_strapi_jwt }}"
+      secret: true
+    - name: ADMIN_JWT_SECRET
+      value: "{{ vault_strapi_admin_jwt }}"
+      secret: true
+    - name: API_TOKEN_SALT
+      value: "{{ vault_strapi_token_salt }}"
+      secret: true
+    - name: APP_KEYS
+      value: "{{ vault_strapi_app_keys }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /_health
+      port: 1337

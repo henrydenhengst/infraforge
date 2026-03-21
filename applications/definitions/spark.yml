@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# ARGO WORKFLOWS - KUBERNETES WORKFLOW ENGINE
+# =============================================================================
+# Beschrijving: Container-native workflow engine voor Kubernetes
+# Website: https://argoproj.github.io/workflows
+# =============================================================================
+
+application:
+  name: argo-workflows
+  version: 3.5.0
+  description: "Argo Workflows - Kubernetes workflow engine"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://argoproj.github.io/argo-workflows"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 2746
+        host: 2746
+        protocol: tcp
+        public: false
+        description: "Argo Workflows API"
+    dns:
+      - "argo.{{ domain }}"
+      - "workflows.{{ domain }}"
+      
+  container:
+    image: argoproj/workflow-controller:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  sidecars:
+    - name: server
+      image: argoproj/argocli:latest
+      ports:
+        - container: 2746
+      command: ["argo", "server"]
+      
+  environment_variables:
+    - name: ARGO_WORKFLOWS_NAMESPACE
+      value: "argo"
+      secret: false
+    - name: ARGO_WORKFLOWS_SERVICE_ACCOUNT
+      value: "argo"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /healthz
+      port: 2746

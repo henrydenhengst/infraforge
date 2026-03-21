@@ -1,0 +1,16 @@
+---
+nextcloud_version: "28.0.2"
+nextcloud_install_path: /var/www/nextcloud
+nextcloud_data_path: /var/www/nextcloud/data
+nextcloud_db_name: nextcloud
+nextcloud_db_user: nextcloud
+nextcloud_db_password: "{{ vault_nextcloud_db_password }}"
+nextcloud_db_host: localhost
+nextcloud_domain: "nextcloud.{{ domain }}"
+nextcloud_admin_user: admin
+nextcloud_admin_password: "{{ vault_nextcloud_admin_password }}"
+nextcloud_admin_email: admin@{{ domain }}
+nextcloud_user: www-data
+nextcloud_group: www-data
+configure_nginx: true
+run_install: true

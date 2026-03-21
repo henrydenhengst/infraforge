@@ -1,0 +1,86 @@
+---
+# =============================================================================
+# PYROSCOPE - CONTINUOUS PROFILING
+# =============================================================================
+# Beschrijving: Continuous profiling platform voor performance optimalisatie
+# Website: https://pyroscope.io
+# =============================================================================
+
+application:
+  name: pyroscope
+  version: 1.2.0
+  description: "Pyroscope - Continuous profiling"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://pyroscope.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/pyroscope
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 4040
+        host: 4040
+        protocol: tcp
+        public: false
+        description: "Pyroscope UI"
+      - container: 4041
+        host: 4041
+        protocol: tcp
+        public: false
+        description: "Pyroscope API"
+    dns:
+      - "profiling.{{ domain }}"
+      - "pyroscope.{{ domain }}"
+      
+  container:
+    image: pyroscope/pyroscope:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: PYROSCOPE_STORAGE_PATH
+      value: "/var/lib/pyroscope"
+      secret: false
+    - name: PYROSCOPE_RETENTION
+      value: "720h"
+      secret: false
+    - name: PYROSCOPE_ANALYTICS_ENABLED
+      value: "false"
+      secret: false
+    - name: PYROSCOPE_SERVER_HTTP_LISTEN_ADDRESS
+      value: "0.0.0.0:4040"
+      secret: false
+    - name: PYROSCOPE_SERVER_GRPC_LISTEN_ADDRESS
+      value: "0.0.0.0:4041"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 4040

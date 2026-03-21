@@ -1,0 +1,72 @@
+---
+# =============================================================================
+# KUBERNETES ROLE VARIABELEN
+# =============================================================================
+
+kubernetes_prerequisites:
+  Debian:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg
+    - lsb-release
+    - software-properties-common
+    - conntrack
+    - socat
+    - ebtables
+    - ethtool
+  RedHat:
+    - yum-utils
+    - curl
+    - ca-certificates
+    - conntrack
+    - socat
+    - ebtables
+    - ethtool
+  Suse:
+    - curl
+    - ca-certificates
+    - conntrack
+    - socat
+    - ebtables
+    - ethtool
+  Archlinux:
+    - curl
+    - ca-certificates
+    - conntrack
+    - socat
+    - ebtables
+    - ethtool
+  Alpine:
+    - curl
+    - ca-certificates
+    - conntrack-tools
+    - socat
+    - ebtables
+    - ethtool
+
+kubernetes_version: "1.29"
+kubernetes_packages:
+  Debian:
+    - kubelet={{ kubernetes_version }}.*
+    - kubeadm={{ kubernetes_version }}.*
+    - kubectl={{ kubernetes_version }}.*
+  RedHat:
+    - kubelet-{{ kubernetes_version }}.*
+    - kubeadm-{{ kubernetes_version }}.*
+    - kubectl-{{ kubernetes_version }}.*
+  Suse:
+    - kubelet
+    - kubeadm
+    - kubectl
+  Archlinux:
+    - kubelet
+    - kubeadm
+    - kubectl
+  Alpine:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+containerd_version: "1.7.11"
+cni_version: "1.4.0"

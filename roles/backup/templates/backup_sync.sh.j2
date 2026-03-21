@@ -1,0 +1,39 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Remote backup sync script
+
+BACKUP_DIR="{{ backup_base_dir }}"
+LOG_FILE="{{ backup_log_dir }}/sync.log"
+BACKUP_TYPE="${1:-weekly}"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "Starting remote backup sync for $BACKUP_TYPE"
+
+{% if backup_remote_type == 's3' %}
+log "Syncing to S3/MinIO: {{ backup_remote_bucket }}"
+aws s3 sync "$BACKUP_DIR/$BACKUP_TYPE/" "s3://{{ backup_remote_bucket }}/{{ inventory_hostname }}/$BACKUP_TYPE/" \
+    --endpoint-url="{{ backup_remote_endpoint }}" \
+    --region "us-east-1" \
+    --delete
+{% endif %}
+
+{% if backup_remote_type == 'nfs' %}
+log "Syncing to NFS: {{ backup_remote_endpoint }}"
+rsync -avz --delete "$BACKUP_DIR/$BACKUP_TYPE/" "{{ backup_remote_endpoint }}/{{ inventory_hostname }}/$BACKUP_TYPE/"
+{% endif %}
+
+{% if backup_remote_type == 'rsync' %}
+log "Syncing to remote server: {{ backup_remote_endpoint }}"
+rsync -avz --delete -e ssh "$BACKUP_DIR/$BACKUP_TYPE/" "{{ backup_remote_user }}@{{ backup_remote_endpoint }}:{{ backup_remote_path }}/{{ inventory_hostname }}/$BACKUP_TYPE/"
+{% endif %}
+
+{% if backup_remote_type == 'borg' %}
+log "Syncing with Borg backup"
+borg create --stats --compression lz4 "{{ backup_remote_endpoint }}::{hostname}-{now:%Y-%m-%d_%H:%M:%S}" "$BACKUP_DIR/$BACKUP_TYPE/"
+borg prune --keep-daily {{ backup_retention_daily }} --keep-weekly {{ backup_retention_weekly }} --keep-monthly {{ backup_retention_monthly }} "{{ backup_remote_endpoint }}"
+{% endif %}
+
+log "Remote backup sync completed"

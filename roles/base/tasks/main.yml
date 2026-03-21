@@ -1,0 +1,123 @@
+---
+# =============================================================================
+# BASE ROLE - Basis configuratie voor alle servers
+# =============================================================================
+# Deze role wordt uitgevoerd op ALLE servers.
+# Zorgt voor een consistente basisconfiguratie.
+# =============================================================================
+
+- name: '{{ ansible_os_family }} | Update package cache'
+  ansible.builtin.package:
+    update_cache: true
+    cache_valid_time: 3600
+  when: package_cache_update | default(true)
+  tags: [packages, always]
+
+- name: '{{ ansible_os_family }} | Upgrade alle packages (security updates)'
+  ansible.builtin.package:
+    name: "*"
+    state: latest
+  when: security_updates | default(true)
+  tags: [packages, security]
+
+- name: '{{ ansible_os_family }} | Installeer basis packages'
+  ansible.builtin.package:
+    name: "{{ common_packages[ansible_os_family] }}"
+    state: present
+  tags: [packages, always]
+
+- name: Configureer hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+  tags: [hostname, always]
+
+- name: Configureer /etc/hosts
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: '0644'
+  tags: [hostname, always]
+
+- name: '{{ ansible_os_family }} | Installeer en configureer NTP'
+  block:
+    - name: Installeer NTP package
+      ansible.builtin.package:
+        name: "{{ ntp_package[ansible_os_family] }}"
+        state: present
+
+    - name: Start en enable NTP service
+      ansible.builtin.service:
+        name: "{{ ntp_service[ansible_os_family] }}"
+        state: started
+        enabled: yes
+  tags: [ntp, time]
+
+- name: '{{ ansible_os_family }} | Configureer tijdzone'
+  ansible.builtin.timezone:
+    name: "{{ timezone | default('Europe/Amsterdam') }}"
+  notify: restart cron
+  tags: [timezone, always]
+
+- name: '{{ ansible_os_family }} | Configureer locale'
+  ansible.builtin.locale_gen:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - en_US.UTF-8
+    - nl_NL.UTF-8
+  when: ansible_os_family in ['Debian', 'RedHat']
+  tags: [locale]
+
+- name: '{{ ansible_os_family }} | Set default locale'
+  ansible.builtin.lineinfile:
+    path: /etc/default/locale
+    regexp: '^LANG='
+    line: 'LANG={{ default_locale | default("nl_NL.UTF-8") }}'
+    create: yes
+  when: ansible_os_family in ['Debian']
+  tags: [locale]
+
+- name: '{{ ansible_os_family }} | Maak ansible gebruiker aan'
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    state: present
+    shell: /bin/bash
+    groups: "{{ ansible_user_groups | default('sudo,wheel') }}"
+    append: yes
+    create_home: yes
+  when: create_ansible_user | default(true)
+  tags: [user]
+
+- name: '{{ ansible_os_family }} | Configureer sudo voor ansible gebruiker'
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/ansible
+    line: "{{ ansible_user }} ALL=(ALL) NOPASSWD:ALL"
+    create: yes
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  when: create_ansible_user | default(true)
+  tags: [user]
+
+- name: '{{ ansible_os_family }} | Configureer kernel parameters'
+  ansible.builtin.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop: "{{ kernel_parameters[ansible_os_family] | default([]) }}"
+  tags: [kernel]
+
+- name: '{{ ansible_os_family }} | Configureer ulimits'
+  ansible.builtin.copy:
+    dest: /etc/security/limits.d/99-ansible.conf
+    content: |
+      * soft nofile 65536
+      * hard nofile 65536
+      * soft nproc 65536
+      * hard nproc 65536
+      root soft nofile 65536
+      root hard nofile 65536
+    mode: '0644'
+  tags: [limits]

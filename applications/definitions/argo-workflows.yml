@@ -1,0 +1,117 @@
+---
+# =============================================================================
+# KONG - API GATEWAY
+# =============================================================================
+# Beschrijving: API Gateway voor microservices
+# Website: https://konghq.com
+# =============================================================================
+
+application:
+  name: kong
+  version: 3.5.0
+  description: "Kong - API Gateway"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://docs.konghq.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/local/kong
+        
+  network_requirements:
+    vlans:
+      - platform
+      - dmz
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: true
+        description: "Kong proxy"
+      - container: 8001
+        host: 8001
+        protocol: tcp
+        public: false
+        description: "Kong admin API"
+      - container: 8443
+        host: 8443
+        protocol: tcp
+        public: true
+        description: "Kong proxy HTTPS"
+      - container: 8444
+        host: 8444
+        protocol: tcp
+        public: false
+        description: "Kong admin HTTPS"
+    dns:
+      - "api.{{ domain }}"
+      - "kong.{{ domain }}"
+      
+  container:
+    image: kong:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: KONG_DATABASE
+      value: "postgres"
+      secret: false
+    - name: KONG_PG_HOST
+      value: "postgres"
+      secret: false
+    - name: KONG_PG_PORT
+      value: "5432"
+      secret: false
+    - name: KONG_PG_USER
+      value: "kong"
+      secret: false
+    - name: KONG_PG_PASSWORD
+      value: "{{ vault_kong_password }}"
+      secret: true
+    - name: KONG_PG_DATABASE
+      value: "kong"
+      secret: false
+    - name: KONG_PROXY_ACCESS_LOG
+      value: "/dev/stdout"
+      secret: false
+    - name: KONG_ADMIN_ACCESS_LOG
+      value: "/dev/stdout"
+      secret: false
+    - name: KONG_PROXY_ERROR_LOG
+      value: "/dev/stderr"
+      secret: false
+    - name: KONG_ADMIN_ERROR_LOG
+      value: "/dev/stderr"
+      secret: false
+    - name: KONG_ADMIN_LISTEN
+      value: "0.0.0.0:8001"
+      secret: false
+    - name: KONG_PLUGINS
+      value: "bundled,rate-limiting,jwt,key-auth,cors"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /status
+      port: 8001

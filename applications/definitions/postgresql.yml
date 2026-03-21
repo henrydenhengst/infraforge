@@ -1,0 +1,535 @@
+---
+# =============================================================================
+# POSTGRESQL - RELATIONELE DATABASE
+# =============================================================================
+# Beschrijving: Krachtige open-source object-relationele database
+# Website: https://www.postgresql.org
+# =============================================================================
+
+application:
+  name: postgresql
+  version: 15.5
+  description: "PostgreSQL - Relationele database voor applicaties"
+  environment: "{{ environment | default('production') }}"
+  
+  # ===========================================================================
+  # EIGENAAR & CONTACT
+  # ===========================================================================
+  owner:
+    team: dba-team
+    contact: dba@company.local
+    slack: "#database"
+    documentation: "https://www.postgresql.org/docs/"
+    
+  # ===========================================================================
+  # HARDWARE VEREISTEN
+  # ===========================================================================
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 8
+      min_ram_gb: 32
+      recommended_cpu_cores: 16
+      recommended_ram_gb: 64
+      cpu_architecture: x86_64
+      gpu_required: false
+      
+    storage:
+      - name: data
+        size_gb: 1000
+        performance: nvme
+        iops: 10000
+        redundancy: raid10
+        backup_required: true
+        mount_path: /var/lib/postgresql/data
+        description: "Database data directory"
+        
+      - name: wal
+        size_gb: 100
+        performance: nvme
+        iops: 5000
+        redundancy: raid1
+        backup_required: true
+        mount_path: /var/lib/postgresql/wal
+        description: "Write-ahead logs voor recovery"
+        
+      - name: backup
+        size_gb: 2000
+        performance: hdd
+        redundancy: raid6
+        backup_required: false
+        mount_path: /backup
+        description: "Backup locatie"
+        
+  # ===========================================================================
+  # NETWERK VEREISTEN
+  # ===========================================================================
+  network_requirements:
+    vlans:
+      - database
+      - backup
+      
+    ports:
+      - container: 5432
+        protocol: tcp
+        public: false
+        internal_only: true
+        description: "PostgreSQL standaard poort"
+        
+    dns:
+      - "postgres-primary.database.{{ domain }}"
+      - "postgres-replica.database.{{ domain }}"
+      
+  # ===========================================================================
+  # CLUSTER CONFIGURATIE
+  # ===========================================================================
+  cluster_config:
+    mode: streaming_replication
+    replication: true
+    replica_count: 2
+    synchronous_commit: true
+    synchronous_standby_names: "*"
+    failover_automation: true
+    backup_server: backup-01.storage.{{ domain }}
+    
+  # ===========================================================================
+  # CONTAINER CONFIGURATIE
+  # ===========================================================================
+  container:
+    image: postgres:15.5
+    restart: unless-stopped
+    
+    resources:
+      limits:
+        cpu: "8"
+        memory: 32Gi
+      requests:
+        cpu: "4"
+        memory: 16Gi
+        
+    security_context:
+      run_as_user: 999
+      run_as_group: 999
+      fs_group: 999
+      capabilities:
+        drop:
+          - ALL
+        add:
+          - CHOWN
+          - DAC_OVERRIDE
+          - FOWNER
+          - SETGID
+          - SETUID
+          
+  # ===========================================================================
+  # OMGEVINGSVARIABELEN
+  # ===========================================================================
+  environment_variables:
+    - name: POSTGRES_USER
+      value: postgres
+      secret: false
+      description: "Superuser gebruikersnaam"
+      
+    - name: POSTGRES_PASSWORD
+      value: "{{ vault_postgres_password }}"
+      secret: true
+      description: "Superuser wachtwoord"
+      
+    - name: POSTGRES_DB
+      value: postgres
+      secret: false
+      description: "Standaard database"
+      
+    - name: PGDATA
+      value: /var/lib/postgresql/data/pgdata
+      secret: false
+      description: "Data directory pad"
+      
+    - name: POSTGRES_MULTIPLE_DATABASES
+      value: "nextcloud,gitlab,matrix,airflow,superset"
+      secret: false
+      description: "Extra databases om aan te maken"
+      
+    - name: POSTGRES_EXTENSIONS
+      value: "pg_stat_statements,pgcrypto,uuid-ossp,postgis"
+      secret: false
+      description: "PostgreSQL extensions"
+      
+    - name: REPLICATION_USER
+      value: replicator
+      secret: false
+      description: "Replicatie gebruiker"
+      
+    - name: REPLICATION_PASSWORD
+      value: "{{ vault_replication_password }}"
+      secret: true
+      description: "Replicatie wachtwoord"
+      
+    - name: TIMESCALEDB
+      value: "true"
+      secret: false
+      description: "TimescaleDB extension inschakelen"
+      
+  # ===========================================================================
+  # CONFIGURATIEBESTANDEN
+  # ===========================================================================
+  config_files:
+    - path: /etc/postgresql/postgresql.conf
+      template: postgresql/postgresql.conf.j2
+      mode: "0644"
+      owner: "postgres:postgres"
+      
+    - path: /etc/postgresql/pg_hba.conf
+      template: postgresql/pg_hba.conf.j2
+      mode: "0600"
+      owner: "postgres:postgres"
+      
+    - path: /etc/postgresql/pg_ident.conf
+      template: postgresql/pg_ident.conf.j2
+      mode: "0644"
+      owner: "postgres:postgres"
+      
+  # ===========================================================================
+  # POSTGRESQL CONFIGURATIE
+  # ===========================================================================
+  postgresql_config:
+    version: 15
+    
+    # Connection settings
+    listen_addresses: "*"
+    port: 5432
+    max_connections: 500
+    superuser_reserved_connections: 10
+    
+    # Memory settings
+    shared_buffers: 8GB
+    effective_cache_size: 24GB
+    maintenance_work_mem: 2GB
+    work_mem: 65536kB
+    huge_pages: try
+    
+    # Checkpoint settings
+    checkpoint_completion_target: 0.9
+    wal_buffers: 16MB
+    min_wal_size: 4GB
+    max_wal_size: 16GB
+    checkpoint_timeout: 15min
+    
+    # WAL settings
+    wal_level: replica
+    wal_log_hints: on
+    wal_compression: on
+    wal_keep_size: 1GB
+    max_wal_senders: 10
+    max_replication_slots: 10
+    
+    # Replication
+    hot_standby: on
+    hot_standby_feedback: on
+    primary_conninfo: ""
+    primary_slot_name: ""
+    
+    # Autovacuum
+    autovacuum: on
+    autovacuum_naptime: 1min
+    autovacuum_max_workers: 5
+    autovacuum_vacuum_threshold: 1000
+    autovacuum_analyze_threshold: 500
+    autovacuum_vacuum_scale_factor: 0.05
+    autovacuum_analyze_scale_factor: 0.02
+    autovacuum_vacuum_cost_delay: 20ms
+    autovacuum_vacuum_cost_limit: 1000
+    
+    # Logging
+    log_destination: csvlog
+    logging_collector: on
+    log_directory: /var/log/postgresql
+    log_filename: postgresql-%Y-%m-%d.log
+    log_rotation_age: 1d
+    log_rotation_size: 100MB
+    log_min_duration_statement: 1000
+    log_checkpoints: on
+    log_connections: on
+    log_disconnections: on
+    log_lock_waits: on
+    log_temp_files: 0
+    log_autovacuum_min_duration: 0
+    
+    # Statistics
+    track_activities: on
+    track_counts: on
+    track_io_timing: on
+    track_functions: all
+    track_wal_io_timing: on
+    
+    # Query tuning
+    random_page_cost: 1.1
+    effective_io_concurrency: 200
+    max_parallel_workers: 8
+    max_parallel_workers_per_gather: 4
+    max_parallel_maintenance_workers: 4
+    parallel_leader_participation: on
+    
+    # Locale
+    lc_messages: en_US.UTF-8
+    lc_monetary: nl_NL.UTF-8
+    lc_numeric: nl_NL.UTF-8
+    lc_time: nl_NL.UTF-8
+    timezone: Europe/Amsterdam
+    
+  # ===========================================================================
+  # DATABASES
+  # ===========================================================================
+  databases:
+    - name: nextcloud
+      owner: nextcloud
+      encoding: UTF8
+      template: template0
+      extensions:
+        - pgcrypto
+        - uuid-ossp
+        
+    - name: gitlab
+      owner: gitlab
+      encoding: UTF8
+      extensions:
+        - pg_trgm
+        - btree_gist
+        
+    - name: airflow
+      owner: airflow
+      encoding: UTF8
+      extensions:
+        - pgcrypto
+        
+    - name: superset
+      owner: superset
+      encoding: UTF8
+      extensions:
+        - pgcrypto
+        
+    - name: matrix
+      owner: matrix
+      encoding: UTF8
+      extensions:
+        - pgcrypto
+        - citext
+        
+  # ===========================================================================
+  # GEBRUIKERS
+  # ===========================================================================
+  users:
+    - name: nextcloud
+      password: "{{ vault_postgres_nextcloud_password }}"
+      databases:
+        - nextcloud
+      privileges: ALL
+      connection_limit: 50
+      
+    - name: gitlab
+      password: "{{ vault_postgres_gitlab_password }}"
+      databases:
+        - gitlab
+      privileges: ALL
+      connection_limit: 100
+      
+    - name: airflow
+      password: "{{ vault_postgres_airflow_password }}"
+      databases:
+        - airflow
+      privileges: ALL
+      connection_limit: 50
+      
+    - name: superset
+      password: "{{ vault_postgres_superset_password }}"
+      databases:
+        - superset
+      privileges: SELECT,INSERT,UPDATE
+      connection_limit: 30
+      
+    - name: matrix
+      password: "{{ vault_postgres_matrix_password }}"
+      databases:
+        - matrix
+      privileges: ALL
+      connection_limit: 50
+      
+    - name: readonly_user
+      password: "{{ vault_postgres_readonly_password }}"
+      databases: "*"
+      privileges: SELECT
+      connection_limit: 20
+      
+    - name: replicator
+      password: "{{ vault_replication_password }}"
+      replication: true
+      connection_limit: 5
+      
+  # ===========================================================================
+  # EXTENSIONS
+  # ===========================================================================
+  extensions:
+    - name: pg_stat_statements
+      description: "Query statistieken"
+      shared_preload: true
+    - name: pgcrypto
+      description: "Cryptografische functies"
+    - name: uuid-ossp
+      description: "UUID generatie"
+    - name: postgis
+      description: "Geografische objecten"
+      version: 3.3
+    - name: timescaledb
+      description: "Time-series data"
+      version: 2.11
+    - name: pg_trgm
+      description: "Text search trigrams"
+    - name: btree_gist
+      description: "GiST op BTREE"
+    - name: citext
+      description: "Case-insensitive text"
+      
+  # ===========================================================================
+  # HEALTH CHECKS
+  # ===========================================================================
+  health_checks:
+    liveness:
+      type: exec
+      command: ["pg_isready", "-U", "postgres", "-h", "localhost", "-p", "5432"]
+      initial_delay: 60
+      period: 15
+      timeout: 5
+      retries: 3
+      
+    readiness:
+      type: exec
+      command: ["pg_isready", "-U", "postgres", "-d", "postgres", "-h", "localhost", "-p", "5432"]
+      initial_delay: 10
+      period: 10
+      timeout: 5
+      retries: 5
+      
+  # ===========================================================================
+  # MONITORING
+  # ===========================================================================
+  monitoring:
+    metrics:
+      enabled: true
+      exporter: postgres_exporter
+      port: 9187
+      path: /metrics
+      scrape_interval: 30s
+      
+    logs:
+      enabled: true
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+      locations:
+        - /var/log/postgresql/postgresql-*.log
+        
+    alerts:
+      - name: postgres_down
+        condition: pg_up{app="postgresql"} == 0
+        duration: 1m
+        severity: critical
+        action: pagerduty
+        description: "PostgreSQL is niet bereikbaar"
+        
+      - name: replication_lag
+        condition: pg_replication_lag > 100MB
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Replicatie achterstand > 100MB"
+        
+      - name: high_connections
+        condition: pg_connections > 400
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Aantal verbindingen > 400"
+        
+      - name: long_running_queries
+        condition: pg_long_running_queries > 5
+        duration: 5m
+        severity: warning
+        action: email
+        description: "> 5 queries draaien langer dan 1 minuut"
+        
+      - name: deadlocks
+        condition: rate(pg_deadlocks_total[5m]) > 0
+        duration: 1m
+        severity: critical
+        action: pagerduty
+        description: "Deadlocks gedetecteerd"
+        
+      - name: disk_space_low
+        condition: (pg_database_size_bytes / pg_data_directory_size_bytes) > 0.85
+        duration: 1h
+        severity: warning
+        action: slack
+        description: "Schijfruimte > 85% gebruikt"
+        
+  # ===========================================================================
+  # BACKUP
+  # ===========================================================================
+  backup:
+    enabled: true
+    type: pg_basebackup
+    schedule: "0 1 * * *"
+    retention_full: 7
+    retention_wal: 3
+    wal_archive: true
+    backup_to: s3
+    s3_bucket: postgres-backups
+    s3_endpoint: minio:9000
+    s3_access_key: minioadmin
+    s3_secret_key: "{{ vault_minio_password }}"
+    encryption: true
+    compression: gzip
+    
+    databases:
+      - nextcloud
+      - gitlab
+      - airflow
+      - superset
+      - matrix
+      
+    pre_backup:
+      - command: "psql -c 'CHECKPOINT;'"
+        when: backup_type == "full"
+    post_backup:
+      - command: "psql -c 'SELECT pg_switch_wal();'"
+        when: backup_type == "full"
+        
+  # ===========================================================================
+  # REPLICATION
+  # ===========================================================================
+  replication:
+    enabled: true
+    replicas:
+      - name: replica-01
+        host: postgres-replica-01
+        priority: 100
+      - name: replica-02
+        host: postgres-replica-02
+        priority: 50
+    synchronous: true
+    synchronous_commit: remote_write
+    synchronous_standby_names: "FIRST 1 (*)"
+    
+  # ===========================================================================
+  # POOLER CONFIGURATIE (PGPOOL OF PGBOUNCER)
+  # ===========================================================================
+  pooler:
+    enabled: true
+    type: pgbouncer
+    port: 6432
+    max_client_conn: 1000
+    default_pool_size: 100
+    reserve_pool_size: 10
+    pool_mode: transaction
+    max_db_connections: 50
+    query_timeout: 60
+    idle_timeout: 600

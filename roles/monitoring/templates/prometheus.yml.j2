@@ -1,0 +1,36 @@
+# {{ ansible_managed }}
+# Prometheus configuration
+
+global:
+  scrape_interval: {{ prometheus_scrape_interval }}
+  evaluation_interval: {{ prometheus_evaluation_interval }}
+  external_labels:
+    environment: {{ environment | default('production') }}
+    host: {{ inventory_hostname }}
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - localhost:{{ alertmanager_listen_port }}
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:{{ prometheus_listen_port }}
+
+  - job_name: node
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/node_*.yml
+        refresh_interval: 30s
+
+  - job_name: cadvisor
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/cadvisor_*.yml
+        refresh_interval: 30s

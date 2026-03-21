@@ -1,0 +1,16 @@
+[Unit]
+Description=Loki
+Documentation=https://grafana.com/docs/loki/
+After=network.target
+
+[Service]
+Type=simple
+User={{ monitoring_user }}
+Group={{ monitoring_group }}
+ExecStart=/usr/local/bin/loki -config.file=/etc/loki/loki.yml
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

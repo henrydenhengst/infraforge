@@ -1,0 +1,8 @@
+---
+- name: Configureer apk automatic updates (Alpine)
+  ansible.builtin.cron:
+    name: "apk-auto-update"
+    minute: "0"
+    hour: "2"
+    job: "apk update && apk upgrade"
+    user: root

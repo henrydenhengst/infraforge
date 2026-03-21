@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# ISTIO - SERVICE MESH
+# =============================================================================
+# Beschrijving: Service mesh voor microservices (canary, blue-green, traffic mgmt)
+# Website: https://istio.io
+# =============================================================================
+
+application:
+  name: istio
+  version: 1.20
+  description: "Istio - Service mesh"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://istio.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/istio
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 15021
+        host: 15021
+        protocol: tcp
+        public: false
+        description: "Istio health check"
+      - container: 15090
+        host: 15090
+        protocol: tcp
+        public: false
+        description: "Istio telemetry"
+      - container: 15020
+        host: 15020
+        protocol: tcp
+        public: false
+        description: "Istio metrics"
+    dns:
+      - "istio.{{ domain }}"
+      
+  container:
+    image: istio/istioctl:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  orchestratie: kubernetes
+  
+  istio_config:
+    profile: default
+    mesh_config:
+      accessLogFile: /dev/stdout
+      enableTracing: true
+    gateways:
+      - name: istio-ingressgateway
+        type: LoadBalancer
+        ports:
+          - port: 80
+            targetPort: 8080
+          - port: 443
+            targetPort: 8443
+          
+  health_checks:
+    liveness:
+      type: http
+      path: /healthz/ready
+      port: 15021

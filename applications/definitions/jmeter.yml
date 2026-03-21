@@ -1,0 +1,100 @@
+---
+# =============================================================================
+# OPENSEARCH - SEARCH AND ANALYTICS SUITE
+# =============================================================================
+# Beschrijving: Open-source zoek- en analytics suite (Elasticsearch fork)
+# Website: https://opensearch.org
+# =============================================================================
+
+application:
+  name: opensearch
+  version: 2.11.0
+  description: "OpenSearch - Search and analytics suite"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://opensearch.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 200
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/share/opensearch/data
+      - name: logs
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /usr/share/opensearch/logs
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 9200
+        host: 9200
+        protocol: tcp
+        public: false
+        description: "OpenSearch HTTP API"
+      - container: 9300
+        host: 9300
+        protocol: tcp
+        public: false
+        description: "OpenSearch transport"
+    dns:
+      - "search.{{ domain }}"
+      - "opensearch.{{ domain }}"
+      
+  container:
+    image: opensearchproject/opensearch:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: cluster.name
+      value: "opensearch-cluster"
+      secret: false
+    - name: node.name
+      value: "opensearch-node"
+      secret: false
+    - name: discovery.type
+      value: "single-node"
+      secret: false
+    - name: bootstrap.memory_lock
+      value: "true"
+      secret: false
+    - name: OPENSEARCH_JAVA_OPTS
+      value: "-Xms4g -Xmx4g"
+      secret: false
+    - name: DISABLE_SECURITY_PLUGIN
+      value: "true"
+      secret: false
+    - name: DISABLE_INSTALL_DEMO_CONFIG
+      value: "true"
+      secret: false
+    - name: compatibility.override_main_response_version
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 9200

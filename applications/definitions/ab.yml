@@ -1,0 +1,122 @@
+---
+# =============================================================================
+# APACHE AIRFLOW - WORKFLOW ORCHESTRATION
+# =============================================================================
+# Beschrijving: Workflow orchestratie voor complexe data-pipelines
+# Website: https://airflow.apache.org
+# =============================================================================
+
+application:
+  name: airflow
+  version: 2.8.0
+  description: "Apache Airflow - Workflow orchestratie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://airflow.apache.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: dags
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/airflow/dags
+      - name: logs
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /opt/airflow/logs
+      - name: plugins
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/airflow/plugins
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Airflow web UI"
+    dns:
+      - "airflow.{{ domain }}"
+      
+  container:
+    image: apache/airflow:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  sidecars:
+    - name: scheduler
+      image: apache/airflow:latest
+      command: ["airflow", "scheduler"]
+    - name: worker
+      image: apache/airflow:latest
+      command: ["airflow", "celery", "worker"]
+    - name: flower
+      image: apache/airflow:latest
+      command: ["airflow", "celery", "flower"]
+      ports:
+        - container: 5555
+          host: 5555
+          
+  environment_variables:
+    - name: AIRFLOW__CORE__EXECUTOR
+      value: "CeleryExecutor"
+      secret: false
+    - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+      value: "postgresql+psycopg2://airflow:{{ vault_airflow_password }}@postgres:5432/airflow"
+      secret: true
+    - name: AIRFLOW__CELERY__BROKER_URL
+      value: "redis://:{{ vault_redis_password }}@redis:6379/0"
+      secret: true
+    - name: AIRFLOW__CELERY__RESULT_BACKEND
+      value: "db+postgresql://airflow:{{ vault_airflow_password }}@postgres:5432/airflow"
+      secret: true
+    - name: AIRFLOW__WEBSERVER__RBAC
+      value: "True"
+      secret: false
+    - name: AIRFLOW__WEBSERVER__SECRET_KEY
+      value: "{{ vault_airflow_secret }}"
+      secret: true
+    - name: AIRFLOW__SMTP__SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: AIRFLOW__SMTP__SMTP_PORT
+      value: "587"
+      secret: false
+    - name: AIRFLOW__SMTP__SMTP_USER
+      value: "airflow@{{ domain }}"
+      secret: false
+    - name: AIRFLOW__SMTP__SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: AIRFLOW__SMTP__SMTP_MAIL_FROM
+      value: "airflow@{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

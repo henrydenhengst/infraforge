@@ -1,0 +1,116 @@
+---
+# =============================================================================
+# UPTIME KUMA - UPTIME MONITOR
+# =============================================================================
+# Beschrijving: Self-hosted uptime monitor met notificaties
+# Website: https://uptime.kuma.pet
+# =============================================================================
+
+application:
+  name: uptime-kuma
+  version: 1.23.11
+  description: "Uptime Kuma - Uptime monitor en statuspagina"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://github.com/louislam/uptime-kuma"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 3001
+        host: 3001
+        protocol: tcp
+        public: false
+        description: "Uptime Kuma web UI"
+    dns:
+      - "status.{{ domain }}"
+      - "uptime.{{ domain }}"
+      
+  container:
+    image: louislam/uptime-kuma:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  monitors:
+    - name: Website
+      type: http
+      url: "https://{{ domain }}"
+      interval: 60
+      retry: 2
+      max_retries: 3
+    - name: API
+      type: http
+      url: "https://api.{{ domain }}/health"
+      interval: 30
+    - name: DNS
+      type: dns
+      hostname: "{{ domain }}"
+      interval: 300
+    - name: Ping
+      type: ping
+      hostname: "{{ ansible_default_ipv4.address }}"
+      interval: 60
+    - name: Port 443
+      type: port
+      hostname: "{{ domain }}"
+      port: 443
+      interval: 60
+      
+  notifications:
+    - name: Slack
+      type: slack
+      webhook: "{{ vault_slack_webhook }}"
+      events:
+        - up
+        - down
+    - name: Email
+      type: email
+      smtp_host: smtp.{{ domain }}
+      smtp_port: 587
+      username: uptime@{{ domain }}
+      password: "{{ vault_smtp_password }}"
+      from: uptime@{{ domain }}
+      to: alerts@{{ domain }}
+      
+  status_pages:
+    - name: Public
+      slug: status
+      domain: "status.{{ domain }}"
+      theme: light
+      title: "{{ company_name }} Status"
+      description: "Systeem status en incidenten"
+      monitors: "*"
+      public: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 3001
+      initial_delay: 30

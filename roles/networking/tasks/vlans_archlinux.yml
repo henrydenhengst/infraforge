@@ -1,0 +1,8 @@
+---
+- name: Configureer VLAN network files
+  ansible.builtin.template:
+    src: vlan_arch.j2
+    dest: "/etc/systemd/network/{{ item.parent }}.{{ item.vlan_id }}.network"
+    mode: '0644'
+  loop: "{{ network_vlans }}"
+  notify: restart systemd-networkd

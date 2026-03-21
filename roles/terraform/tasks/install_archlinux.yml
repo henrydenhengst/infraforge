@@ -1,0 +1,6 @@
+---
+- name: Installeer Terraform van AUR
+  ansible.builtin.package:
+    name: terraform
+    state: present
+  tags: [install]

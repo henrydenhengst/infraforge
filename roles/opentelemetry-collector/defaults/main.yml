@@ -1,0 +1,4 @@
+---
+otel_collector_data_path: /opt/opentelemetry-collector
+otel_collector_jaeger_endpoint: "jaeger:14250"
+otel_collector_prometheus_endpoint: "prometheus:9090"

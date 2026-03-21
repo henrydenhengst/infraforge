@@ -1,0 +1,38 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Backup cleanup script
+
+BACKUP_DIR="{{ backup_base_dir }}"
+LOG_FILE="{{ backup_log_dir }}/cleanup.log"
+RETENTION_DAILY={{ backup_retention_daily }}
+RETENTION_WEEKLY={{ backup_retention_weekly }}
+RETENTION_MONTHLY={{ backup_retention_monthly }}
+RETENTION_YEARLY={{ backup_retention_yearly }}
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "Starting backup cleanup"
+
+# Clean up daily backups older than retention period
+find "$BACKUP_DIR/daily" -type f -name "*.tar.gz" -mtime +$RETENTION_DAILY -delete
+find "$BACKUP_DIR/daily" -type f -name "*.sql.gz" -mtime +$RETENTION_DAILY -delete
+log "Cleaned up daily backups older than $RETENTION_DAILY days"
+
+# Clean up weekly backups older than retention period
+find "$BACKUP_DIR/weekly" -type f -name "*.tar.gz" -mtime +$RETENTION_WEEKLY -delete
+find "$BACKUP_DIR/weekly" -type f -name "*.sql.gz" -mtime +$RETENTION_WEEKLY -delete
+log "Cleaned up weekly backups older than $RETENTION_WEEKLY days"
+
+# Clean up monthly backups older than retention period
+find "$BACKUP_DIR/monthly" -type f -name "*.tar.gz" -mtime +$RETENTION_MONTHLY -delete
+find "$BACKUP_DIR/monthly" -type f -name "*.sql.gz" -mtime +$RETENTION_MONTHLY -delete
+log "Cleaned up monthly backups older than $RETENTION_MONTHLY days"
+
+# Clean up yearly backups older than retention period
+find "$BACKUP_DIR/yearly" -type f -name "*.tar.gz" -mtime +$RETENTION_YEARLY -delete
+find "$BACKUP_DIR/yearly" -type f -name "*.sql.gz" -mtime +$RETENTION_YEARLY -delete
+log "Cleaned up yearly backups older than $RETENTION_YEARLY days"
+
+log "Backup cleanup completed"

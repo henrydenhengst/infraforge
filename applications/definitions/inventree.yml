@@ -1,0 +1,111 @@
+---
+# =============================================================================
+# OWNCLOUD INFINITE SCALE - CLOUD OPSLAG
+# =============================================================================
+# Beschrijving: Next-gen cloud opslag (Go-based) voor enorme volumes
+# Website: https://owncloud.com/infinite-scale
+# =============================================================================
+
+application:
+  name: owncloud-infinite
+  version: 5.0.0
+  description: "ownCloud Infinite Scale - Next-gen cloud opslag"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: collaboration-team
+    contact: collaboration@company.local
+    slack: "#collaboration"
+    documentation: "https://doc.owncloud.com/ocis"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/ocis
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/ocis
+        
+  network_requirements:
+    vlans:
+      - collaboration
+      - internal
+    ports:
+      - container: 9200
+        host: 9200
+        protocol: tcp
+        public: false
+        description: "OCIS web interface"
+      - container: 9140
+        host: 9140
+        protocol: tcp
+        public: false
+        description: "OCIS graph"
+      - container: 9160
+        host: 9160
+        protocol: tcp
+        public: false
+        description: "OCIS storage"
+    dns:
+      - "infinite.{{ domain }}"
+      - "ocis.{{ domain }}"
+      
+  container:
+    image: owncloud/ocis:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: OCIS_INSECURE
+      value: "false"
+      secret: false
+    - name: OCIS_URL
+      value: "https://ocis.{{ domain }}"
+      secret: false
+    - name: OCIS_ADMIN_USER_ID
+      value: "admin"
+      secret: false
+    - name: OCIS_ADMIN_PASSWORD
+      value: "{{ vault_ocis_password }}"
+      secret: true
+    - name: STORAGE_USERS_DRIVER
+      value: "s3"
+      secret: false
+    - name: STORAGE_USERS_S3_ENDPOINT
+      value: "minio:9000"
+      secret: false
+    - name: STORAGE_USERS_S3_BUCKET
+      value: "ocis"
+      secret: false
+    - name: STORAGE_USERS_S3_REGION
+      value: "us-east-1"
+      secret: false
+    - name: STORAGE_USERS_S3_ACCESS_KEY
+      value: "minioadmin"
+      secret: false
+    - name: STORAGE_USERS_S3_SECRET_KEY
+      value: "{{ vault_minio_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /healthz
+      port: 9200

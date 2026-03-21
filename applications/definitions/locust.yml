@@ -1,0 +1,84 @@
+---
+# =============================================================================
+# FLUENTD - LOG COLLECTOR
+# =============================================================================
+# Beschrijving: Unified logging layer voor log aggregatie
+# Website: https://www.fluentd.org
+# =============================================================================
+
+application:
+  name: fluentd
+  version: 1.16.0
+  description: "Fluentd - Unified logging layer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://docs.fluentd.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /fluentd/log
+      - name: buffer
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /fluentd/buffer
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 24224
+        host: 24224
+        protocol: tcp
+        public: false
+        description: "Fluentd forward protocol"
+      - container: 9880
+        host: 9880
+        protocol: tcp
+        public: false
+        description: "Fluentd HTTP"
+    dns:
+      - "fluentd.{{ domain }}"
+      
+  container:
+    image: fluent/fluentd:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: FLUENTD_CONF
+      value: "fluent.conf"
+      secret: false
+    - name: FLUENTD_BUFFER_PATH
+      value: "/fluentd/buffer"
+      secret: false
+    - name: FLUENTD_LOG_PATH
+      value: "/fluentd/log"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/plugins.json
+      port: 9880

@@ -1,0 +1,127 @@
+---
+# =============================================================================
+# FIREFLY III - PERSOONLIJKE FINANCIËN
+# =============================================================================
+# Beschrijving: Persoonlijk financieel beheer en budgettering
+# Website: https://firefly-iii.org
+# =============================================================================
+
+application:
+  name: firefly-iii
+  version: 6.1.0
+  description: "Firefly III - Persoonlijke financiën"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: finance-team
+    contact: finance@company.local
+    slack: "#finance"
+    documentation: "https://docs.firefly-iii.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/storage
+      - name: export
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /var/www/html/storage/export
+      - name: upload
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /var/www/html/storage/upload
+        
+  network_requirements:
+    vlans:
+      - finance
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Firefly III web interface"
+    dns:
+      - "firefly.{{ domain }}"
+      - "money.{{ domain }}"
+      
+  container:
+    image: fireflyiii/core:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: APP_KEY
+      value: "{{ vault_firefly_app_key }}"
+      secret: true
+    - name: DB_CONNECTION
+      value: "mysql"
+      secret: false
+    - name: DB_HOST
+      value: "mysql"
+      secret: false
+    - name: DB_PORT
+      value: "3306"
+      secret: false
+    - name: DB_DATABASE
+      value: "firefly"
+      secret: false
+    - name: DB_USERNAME
+      value: "firefly"
+      secret: false
+    - name: DB_PASSWORD
+      value: "{{ vault_firefly_password }}"
+      secret: true
+    - name: APP_URL
+      value: "https://firefly.{{ domain }}"
+      secret: false
+    - name: TRUSTED_PROXIES
+      value: "**"
+      secret: false
+    - name: MAIL_MAILER
+      value: "smtp"
+      secret: false
+    - name: MAIL_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: MAIL_PORT
+      value: "587"
+      secret: false
+    - name: MAIL_USERNAME
+      value: "firefly@{{ domain }}"
+      secret: false
+    - name: MAIL_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: MAIL_ENCRYPTION
+      value: "tls"
+      secret: false
+    - name: MAIL_FROM_ADDRESS
+      value: "firefly@{{ domain }}"
+      secret: false
+    - name: MAIL_FROM_NAME
+      value: "Firefly III"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

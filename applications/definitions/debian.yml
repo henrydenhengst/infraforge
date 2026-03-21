@@ -1,0 +1,63 @@
+---
+# =============================================================================
+# ORACLELINUX - ENTERPRISE LINUX VAN ORACLE
+# =============================================================================
+# Beschrijving: Enterprise Linux distributie van Oracle
+# Website: https://www.oracle.com/linux
+# =============================================================================
+
+application:
+  name: oraclelinux
+  version: 9
+  description: "OracleLinux - Enterprise Linux"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://docs.oracle.com/en/linux"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - os
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: oraclelinux:9
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  command: ["tail", "-f", "/dev/null"]
+  
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["cat", "/etc/os-release"]

@@ -1,0 +1,115 @@
+---
+# =============================================================================
+# ANYTHINGLLM - RAG SYSTEEM VOOR DOCUMENTEN
+# =============================================================================
+# Beschrijving: Enterprise-grade RAG-systeem om documenten te chatten
+# Website: https://anythingllm.com
+# =============================================================================
+
+application:
+  name: anythingllm
+  version: 1.0.0
+  description: "AnythingLLM - RAG-systeem voor documentbeheer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ai-team
+    contact: ai@company.local
+    slack: "#ai"
+    documentation: "https://docs.anythingllm.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/server/storage
+      - name: documents
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /app/server/storage/documents
+      - name: vector_cache
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /app/server/storage/vector-cache
+        
+  network_requirements:
+    vlans:
+      - ai
+      - internal
+    ports:
+      - container: 3001
+        host: 3001
+        protocol: tcp
+        public: false
+        description: "AnythingLLM web UI"
+    dns:
+      - "rag.{{ domain }}"
+      - "anythingllm.{{ domain }}"
+      
+  container:
+    image: mintplexlabs/anythingllm:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: JWT_SECRET
+      value: "{{ vault_anythingllm_jwt }}"
+      secret: true
+    - name: LLM_PROVIDER
+      value: "ollama"
+      secret: false
+    - name: OLLAMA_BASE_PATH
+      value: "http://ollama:11434"
+      secret: false
+    - name: OLLAMA_MODEL
+      value: "llama3"
+      secret: false
+    - name: EMBEDDING_ENGINE
+      value: "native"
+      secret: false
+    - name: VECTOR_DB
+      value: "chroma"
+      secret: false
+    - name: CHROMA_ENDPOINT
+      value: "http://chromadb:8000"
+      secret: false
+    - name: STORAGE_DIR
+      value: "/app/server/storage"
+      secret: false
+      
+  workspaces:
+    - name: Algemeen
+      description: "Algemene documenten"
+      vector_db: chroma
+      llm_model: llama3
+      temperature: 0.7
+    - name: Technisch
+      description: "Technische documentatie"
+      llm_model: codellama
+      temperature: 0.3
+    - name: HR
+      description: "HR documenten"
+      llm_model: llama3
+      temperature: 0.5
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 3001

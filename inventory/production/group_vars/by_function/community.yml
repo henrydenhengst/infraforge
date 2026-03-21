@@ -1,0 +1,482 @@
+---
+# =============================================================================
+# COMMUNITY TOOLS
+# =============================================================================
+# Functie: community
+# Beschrijving: Tools voor community building, forums en discussieplatforms
+# =============================================================================
+
+community_tools:
+  # ---------------------------------------------------------------------------
+  # FORUM PLATFORMS
+  # ---------------------------------------------------------------------------
+  - name: Discourse
+    profiel_tag: Algemeen
+    functie_tag: community
+    beschrijving: "Modern discussieplatform voor communities"
+    categorie: forum
+    docker_image: discourse/discourse:latest
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - discourse_data:/var/www/discourse/public/uploads
+      - discourse_backups:/var/www/discourse/backups
+    environment:
+      DISCOURSE_HOSTNAME: "discourse.{{ domain }}"
+      DISCOURSE_DEVELOPER_EMAILS: admin@{{ domain }}
+      DISCOURSE_SMTP_ADDRESS: smtp.{{ domain }}
+      DISCOURSE_SMTP_PORT: 587
+      DISCOURSE_SMTP_USER_NAME: discourse@{{ domain }}
+      DISCOURSE_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+      DISCOURSE_SMTP_ENABLE_START_TLS: true
+      DISCOURSE_SMTP_DOMAIN: "{{ domain }}"
+      LANG: nl_NL.UTF-8
+      DISCOURSE_MAXMIND_LICENSE_KEY: "{{ vault_maxmind_key }}"
+    database: postgresql
+    redis: true
+    url: "https://www.discourse.org"
+    
+  - name: Flarum
+    profiel_tag: Algemeen
+    functie_tag: community
+    beschrijving: "Modern, elegant forumplatform"
+    categorie: forum
+    docker_image: flarum/flarum:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - flarum_data:/flarum/app/storage
+      - flarum_extensions:/flarum/app/extensions
+    environment:
+      FLARUM_BASE_URL: "https://flarum.{{ domain }}"
+      FLARUM_FORUM_TITLE: "{{ company_name }} Community"
+      FLARUM_ADMIN_USER: admin
+      FLARUM_ADMIN_PASS: "{{ vault_flarum_password }}"
+      FLARUM_ADMIN_MAIL: admin@{{ domain }}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: flarum
+      DB_USER: flarum
+      DB_PASSWORD: "{{ vault_flarum_db_password }}"
+    database: mysql
+    url: "https://flarum.org"
+    
+  # ---------------------------------------------------------------------------
+  # COMMENT SYSTEM
+  # ---------------------------------------------------------------------------
+  - name: Discourse
+    profiel_tag: Algemeen
+    functie_tag: community
+    beschrijving: "Modern discussieplatform voor communities"
+    categorie: forum
+    docker_image: discourse/discourse:latest
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - discourse_data:/var/www/discourse/public/uploads
+    environment:
+      DISCOURSE_HOSTNAME: "discourse.{{ domain }}"
+      DISCOURSE_DEVELOPER_EMAILS: admin@{{ domain }}
+      DISCOURSE_SMTP_ADDRESS: smtp.{{ domain }}
+      DISCOURSE_SMTP_PORT: 587
+      DISCOURSE_SMTP_USER_NAME: discourse@{{ domain }}
+      DISCOURSE_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    database: postgresql
+    url: "https://www.discourse.org"
+    
+  - name: Flarum
+    profiel_tag: Algemeen
+    functie_tag: community
+    beschrijving: "Modern, elegant forumplatform"
+    categorie: forum
+    docker_image: flarum/flarum:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - flarum_data:/flarum/app/storage
+    environment:
+      FLARUM_BASE_URL: "https://flarum.{{ domain }}"
+      FLARUM_FORUM_TITLE: "{{ company_name }} Community"
+      FLARUM_ADMIN_USER: admin
+      FLARUM_ADMIN_PASS: "{{ vault_flarum_password }}"
+      DB_HOST: mysql
+      DB_NAME: flarum
+      DB_USER: flarum
+      DB_PASSWORD: "{{ vault_flarum_db_password }}"
+    database: mysql
+    url: "https://flarum.org"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+community_defaults:
+  # Algemene community instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Community specifieke instellingen
+  community_settings:
+    site_name: "{{ company_name }} Community"
+    site_description: "Community platform voor {{ company_name }}"
+    site_url: "https://community.{{ domain }}"
+    admin_email: admin@{{ domain }}
+    timezone: Europe/Amsterdam
+    language: nl
+    
+  # Gebruikersinstellingen
+  users:
+    allow_registration: true
+    require_activation: true
+    activation_days: 7
+    require_approval: false
+    allow_guest_posting: false
+    min_username_length: 3
+    max_username_length: 20
+    password_min_length: 8
+    password_require_mixed_case: true
+    password_require_numbers: true
+    password_require_symbols: false
+    
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: community@{{ domain }}
+    email_prefix: "[Community]"
+    digest_enabled: true
+    digest_frequency: daily
+    push_enabled: true
+    
+  # Spam preventie
+  spam_protection:
+    recaptcha_enabled: true
+    recaptcha_site_key: "{{ vault_recaptcha_site }}"
+    recaptcha_secret_key: "{{ vault_recaptcha_secret }}"
+    akismet_enabled: true
+    akismet_api_key: "{{ vault_akismet_key }}"
+    rate_limits:
+      posts_per_minute: 5
+      topics_per_hour: 10
+      registrations_per_day: 50
+      
+  # Content moderatie
+  moderation:
+    pre_moderation: false
+    report_notifications: true
+    auto_approve_trust_level: 1
+    flag_thresholds:
+      off_topic: 3
+      spam: 2
+      inappropriate: 2
+      illegal: 1
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+discourse_config:
+  # Discourse categorieën
+  categories:
+    - name: Algemeen
+      description: "Algemene discussies"
+      color: "0088CC"
+      text_color: "FFFFFF"
+      position: 1
+      
+    - name: Support
+      description: "Vragen en ondersteuning"
+      color: "FF8800"
+      text_color: "FFFFFF"
+      position: 2
+      
+    - name: Development
+      description: "Development discussies"
+      color: "009900"
+      text_color: "FFFFFF"
+      position: 3
+      
+    - name: Announcements
+      description: "Belangrijke aankondigingen"
+      color: "FF0000"
+      text_color: "FFFFFF"
+      position: 0
+      
+  # Discourse tags
+  tags:
+    - name: bug
+      description: "Probleem melding"
+      color: "FF0000"
+    - name: feature
+      description: "Functie verzoek"
+      color: "00FF00"
+    - name: question
+      description: "Vraag"
+      color: "0000FF"
+    - name: tutorial
+      description: "Handleiding"
+      color: "FF00FF"
+      
+  # Discourse badges
+  badges:
+    - name: New Member
+      description: "Welkom bij de community"
+      badge_type_id: 3  # Bronze
+    - name: Regular
+      description: "Actief lid"
+      badge_type_id: 2  # Silver
+      query: "user.created_at < CURRENT_DATE - INTERVAL '30 days' AND user.post_count > 10"
+    - name: Contributor
+      description: "Waardevolle bijdragen"
+      badge_type_id: 1  # Gold
+      query: "user.likes_received > 50"
+      
+  # Discourse trust levels
+  trust_levels:
+    level_0:
+      name: New User
+      requirements:
+        days_visited: 0
+        topics_replied: 0
+        likes_received: 0
+        flagged_posts: 0
+        
+    level_1:
+      name: Basic User
+      requirements:
+        days_visited: 5
+        topics_replied: 3
+        likes_received: 1
+        flagged_posts: 0
+        
+    level_2:
+      name: Member
+      requirements:
+        days_visited: 50
+        topics_replied: 20
+        likes_received: 10
+        flagged_posts: 0
+        
+    level_3:
+      name: Regular
+      requirements:
+        days_visited: 200
+        topics_replied: 100
+        likes_received: 50
+        flagged_posts: 0
+        
+    level_4:
+      name: Leader
+      requirements:
+        days_visited: 365
+        topics_replied: 500
+        likes_received: 200
+        flagged_posts: 0
+        
+  # Discourse thema's
+  themes:
+    - name: Default Light
+      color_scheme: Light
+      default: true
+    - name: Dark Mode
+      color_scheme: Dark
+      user_selectable: true
+      
+  # Discourse plugins
+  plugins:
+    - name: discourse-solved
+      enabled: true
+    - name: discourse-akismet
+      enabled: true
+    - name: discourse-cakeday
+      enabled: true
+    - name: discourse-data-explorer
+      enabled: true
+    - name: discourse-gamification
+      enabled: true
+      
+  # Discourse instellingen
+  settings:
+    title: "{{ company_name }} Community"
+    site_description: "Community platform voor {{ company_name }}"
+    logo_url: "/uploads/default/logo.png"
+    favicon_url: "/uploads/default/favicon.ico"
+    mobile_logo_url: "/uploads/default/logo-small.png"
+    large_icon_url: "/uploads/default/logo-large.png"
+    
+    # Inlogopties
+    enable_local_logins: true
+    enable_google_logins: true
+    enable_github_logins: true
+    enable_twitter_logins: false
+    enable_facebook_logins: false
+    
+    # OAuth credentials
+    google_oauth2_client_id: "{{ vault_google_client_id }}"
+    google_oauth2_client_secret: "{{ vault_google_client_secret }}"
+    github_client_id: "{{ vault_github_client_id }}"
+    github_client_secret: "{{ vault_github_client_secret }}"
+    
+    # E-mail instellingen
+    email_subject: "[{{ company_name }} Community]"
+    email_short_site_name: "Community"
+    email_personal_messages_enabled: true
+    email_digest_enabled: true
+    email_digest_frequency: 1440  # minutes
+    
+    # Zoeken
+    max_search_results: 100
+    search_enable_filter: true
+    search_recent_regular_posts_offset: 1000
+    search_recent_regular_posts_size: 200
+    
+    # Bijlagen
+    max_image_size_kb: 4096
+    max_attachment_size_kb: 10240
+    authorized_extensions: "jpg|jpeg|png|gif|svg|txt|pdf|zip|gz|tar|md"
+    allow_uploaded_avatars: true
+    
+    # Anonimiteit
+    allow_anonymous_posting: false
+    anonymous_posting_min_trust_level: 3
+    
+    # Statistieken
+    enable_analytics: true
+    analytics_code: "{{ vault_analytics_code }}"
+
+flarum_config:
+  # Flarum extensies
+  extensions:
+    - name: flarum/flags
+      enabled: true
+    - name: flarum/likes
+      enabled: true
+    - name: flarum/subscriptions
+      enabled: true
+    - name: flarum/mentions
+      enabled: true
+    - name: flarum/statistics
+      enabled: true
+    - name: flarum/tags
+      enabled: true
+      settings:
+        min_primary_tags: 1
+        max_primary_tags: 3
+        min_secondary_tags: 0
+        max_secondary_tags: 5
+    - name: flarum/suspend
+      enabled: true
+    - name: flarum/approval
+      enabled: true
+    - name: flarum/sticky
+      enabled: true
+    - name: flarum/lock
+      enabled: true
+    - name: flarum/mentions
+      enabled: true
+    - name: flarum/emoji
+      enabled: true
+    - name: flarum/best-answer
+      enabled: true
+    - name: flarum/pusher
+      enabled: false
+      
+  # Flarum tags
+  tags:
+    - name: General
+      slug: general
+      color: "#888888"
+      description: "General discussions"
+      position: 1
+      is_primary: true
+      
+    - name: Support
+      slug: support
+      color: "#ff8800"
+      description: "Get help with any issues"
+      position: 2
+      is_primary: true
+      
+    - name: Development
+      slug: dev
+      color: "#009900"
+      description: "Development discussions"
+      position: 3
+      is_primary: true
+      
+    - name: Announcements
+      slug: announcements
+      color: "#ff0000"
+      description: "Official announcements"
+      position: 0
+      is_primary: true
+      is_restricted: true
+      
+    - name: Feature Requests
+      slug: features
+      color: "#0000ff"
+      description: "Suggest new features"
+      position: 4
+      is_primary: false
+      
+  # Flarum groepen
+  groups:
+    - name: Admin
+      color: "#b72a2a"
+      icon: "fas fa-crown"
+      permissions:
+        - viewDiscussions
+        - viewUserList
+        - editUsers
+        - deleteUsers
+        - suspendUsers
+        - moderateDiscussions
+        - moderatePosts
+        - moderateFlags
+        - approvePosts
+        - editDiscussions
+        - editPosts
+        - deleteDiscussions
+        - deletePosts
+        - renameDiscussions
+        - lockDiscussions
+        - stickDiscussions
+        - editTags
+        
+    - name: Moderator
+      color: "#80349e"
+      icon: "fas fa-shield-alt"
+      permissions:
+        - viewDiscussions
+        - moderateDiscussions
+        - moderatePosts
+        - moderateFlags
+        - approvePosts
+        - editDiscussions
+        - editPosts
+        - deleteDiscussions
+        - deletePosts
+        - renameDiscussions
+        - lockDiscussions
+        - stickDiscussions
+        
+    - name: Member
+      color: "#007c8c"
+      icon: "fas fa-user"
+      permissions:
+        - viewDiscussions
+        - startDiscussion
+        - replyToDiscussions
+        - editOwnPosts
+        - deleteOwnPosts
+        - likePosts
+        - flagPosts
+        - subscribeDiscussions
+        
+    - name: Guest
+      color: "#aaaaaa"
+      icon: "fas fa-user"
+      permissions:
+        - viewDiscussions

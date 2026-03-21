@@ -1,0 +1,51 @@
+---
+- name: '{{ ansible_os_family }} | Download Istio'
+  ansible.builtin.get_url:
+    url: "https://github.com/istio/istio/releases/download/{{ istio_version }}/istio-{{ istio_version }}-linux-{{ arch_map[ansible_architecture] }}.tar.gz"
+    dest: "/tmp/istio.tar.gz"
+  tags: [download]
+
+- name: Extract Istio
+  ansible.builtin.unarchive:
+    src: "/tmp/istio.tar.gz"
+    dest: /tmp/
+    remote_src: yes
+  tags: [extract]
+
+- name: Install istioctl
+  ansible.builtin.copy:
+    src: "/tmp/istio-{{ istio_version }}/bin/istioctl"
+    dest: "/usr/local/bin/istioctl"
+    mode: '0755'
+    remote_src: yes
+  tags: [install]
+
+- name: Install Istio on Kubernetes cluster
+  ansible.builtin.shell: |
+    istioctl install --set profile={{ istio_profile }} -y
+  when: install_istio | default(true)
+  tags: [install]
+
+- name: Enable Istio injection for namespace
+  ansible.builtin.shell: |
+    kubectl label namespace {{ item }} istio-injection=enabled --overwrite
+  loop: "{{ istio_namespaces }}"
+  when: istio_namespaces is defined
+  tags: [injection]
+
+- name: Deploy Istio addons
+  ansible.builtin.shell: |
+    kubectl apply -f /tmp/istio-{{ istio_version }}/samples/addons/
+  when: deploy_addons | default(false)
+  tags: [addons]
+
+- name: Toon Istio status
+  ansible.builtin.shell: istioctl version
+  register: istio_version_info
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Istio informatie
+  ansible.builtin.debug:
+    var: istio_version_info.stdout_lines
+  tags: [validate]

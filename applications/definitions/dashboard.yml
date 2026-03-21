@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# TRANTOR - ASSET TRACKING
+# =============================================================================
+# Beschrijving: Asset tracking voor facilitaire diensten
+# Website: https://trantor.com
+# =============================================================================
+
+application:
+  name: trantor
+  version: 1.0.0
+  description: "Trantor - Asset tracking"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: operations-team
+    contact: operations@company.local
+    slack: "#operations"
+    documentation: "https://trantor.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - operations
+      - internal
+    ports:
+      - container: 80
+        host: 8082
+        protocol: tcp
+        public: false
+        description: "Trantor web interface"
+    dns:
+      - "trantor.{{ domain }}"
+      - "assets.{{ domain }}"
+      
+  container:
+    image: trantor/trantor:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: TRANTOR_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: TRANTOR_DB_NAME
+      value: "trantor"
+      secret: false
+    - name: TRANTOR_DB_USER
+      value: "trantor"
+      secret: false
+    - name: TRANTOR_DB_PASSWORD
+      value: "{{ vault_trantor_password }}"
+      secret: true
+    - name: TRANTOR_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: TRANTOR_ADMIN_PASSWORD
+      value: "{{ vault_trantor_admin_password }}"
+      secret: true
+    - name: TRANTOR_COMPANY_NAME
+      value: "{{ company_name }}"
+      secret: false
+    - name: TRANTOR_TIMEZONE
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

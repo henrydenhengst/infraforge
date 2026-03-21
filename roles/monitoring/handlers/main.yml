@@ -1,0 +1,40 @@
+---
+- name: restart prometheus
+  ansible.builtin.systemd:
+    name: prometheus
+    state: restarted
+    daemon_reload: yes
+
+- name: restart node_exporter
+  ansible.builtin.systemd:
+    name: node_exporter
+    state: restarted
+
+- name: restart cadvisor
+  ansible.builtin.systemd:
+    name: cadvisor
+    state: restarted
+
+- name: restart grafana
+  ansible.builtin.systemd:
+    name: grafana-server
+    state: restarted
+
+- name: restart loki
+  ansible.builtin.systemd:
+    name: loki
+    state: restarted
+
+- name: restart promtail
+  ansible.builtin.systemd:
+    name: promtail
+    state: restarted
+
+- name: restart alertmanager
+  ansible.builtin.systemd:
+    name: alertmanager
+    state: restarted
+
+- name: reload prometheus
+  ansible.builtin.shell: kill -HUP $(pidof prometheus)
+  listen: reload prometheus

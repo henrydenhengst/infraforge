@@ -1,0 +1,95 @@
+---
+# =============================================================================
+# AIRSONIC - MUZIEKSTREAMER
+# =============================================================================
+# Beschrijving: Muziekstreamer voor persoonlijke muziekcollectie
+# Website: https://airsonic.github.io
+# =============================================================================
+
+application:
+  name: airsonic
+  version: 11.0.0
+  description: "Airsonic - Muziekstreamer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://airsonic.github.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /airsonic/data
+      - name: music
+        size_gb: 500
+        performance: hdd
+        backup_required: true
+        mount_path: /airsonic/music
+      - name: playlists
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /airsonic/playlists
+      - name: podcasts
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /airsonic/podcasts
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 4040
+        host: 4040
+        protocol: tcp
+        public: false
+        description: "Airsonic web interface"
+    dns:
+      - "airsonic.{{ domain }}"
+      
+  container:
+    image: airsonic/airsonic:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: JAVA_OPTS
+      value: "-Xmx512m"
+      secret: false
+    - name: CONTEXT_PATH
+      value: "/"
+      secret: false
+    - name: AIRSONIC_PORT
+      value: "4040"
+      secret: false
+    - name: AIRSONIC_HTTPS_PORT
+      value: "4041"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 4040

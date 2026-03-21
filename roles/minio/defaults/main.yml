@@ -1,0 +1,6 @@
+---
+minio_root_user: minioadmin
+minio_root_password: "{{ vault_minio_password }}"
+minio_volume: /opt/minio/data
+minio_buckets: []
+minio_monitoring_enabled: true

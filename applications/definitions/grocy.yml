@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# VLC - MEDIAPLAYER
+# =============================================================================
+# Beschrijving: Populaire open-source mediaplayer
+# Website: https://www.videolan.org/vlc
+# =============================================================================
+
+application:
+  name: vlc
+  version: 3.0.0
+  description: "VLC - Mediaplayer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://wiki.videolan.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: media
+        size_gb: 100
+        performance: hdd
+        backup_required: false
+        mount_path: /media
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "VLC web interface"
+      - container: 8010
+        host: 8010
+        protocol: tcp
+        public: false
+        description: "VLC RTSP"
+    dns:
+      - "vlc.{{ domain }}"
+      
+  container:
+    image: bigbeartechworld/big-bear-vlc:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: VLC_HTTP_PORT
+      value: "8080"
+      secret: false
+    - name: VLC_RTSP_PORT
+      value: "8010"
+      secret: false
+    - name: VLC_PASSWORD
+      value: "{{ vault_vlc_password }}"
+      secret: true
+    - name: VLC_USERNAME
+      value: "admin"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

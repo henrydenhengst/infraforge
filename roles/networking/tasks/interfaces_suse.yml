@@ -1,0 +1,15 @@
+---
+- name: Configureer wicked (SUSE)
+  ansible.builtin.service:
+    name: wicked
+    state: started
+    enabled: yes
+
+- name: Configureer interface specific files
+  ansible.builtin.template:
+    src: interface_suse.j2
+    dest: "/etc/sysconfig/network/ifcfg-{{ item.name }}"
+    mode: '0644'
+  loop: "{{ network_interfaces }}"
+  when: network_interfaces | length > 0
+  notify: restart networking

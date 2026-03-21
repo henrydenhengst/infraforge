@@ -1,0 +1,46 @@
+---
+- name: '{{ ansible_os_family }} | Installeer MongoDB'
+  ansible.builtin.package:
+    name: "{{ mongodb_packages[ansible_os_family] }}"
+    state: present
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Configureer MongoDB'
+  ansible.builtin.template:
+    src: mongod.conf.j2
+    dest: "{{ mongodb_config_path[ansible_os_family] }}/mongod.conf"
+    mode: '0644'
+  notify: restart mongodb
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Start en enable MongoDB'
+  ansible.builtin.service:
+    name: "{{ mongodb_service[ansible_os_family] }}"
+    state: started
+    enabled: yes
+  tags: [service]
+
+- name: '{{ ansible_os_family }} | Maak admin gebruiker aan'
+  ansible.builtin.shell: |
+    mongosh admin --eval "db.createUser({user: 'admin', pwd: '{{ mongodb_admin_password }}', roles: ['root']})"
+  when: mongodb_admin_password is defined
+  ignore_errors: yes
+  tags: [users]
+
+- name: '{{ ansible_os_family }} | Maak databases en gebruikers aan'
+  ansible.builtin.shell: |
+    mongosh admin -u admin -p {{ mongodb_admin_password }} --eval "db.getSiblingDB('{{ item.database }}').createUser({user: '{{ item.user }}', pwd: '{{ item.password }}', roles: ['readWrite']})"
+  loop: "{{ mongodb_databases }}"
+  when: mongodb_databases is defined
+  tags: [databases]
+
+- name: '{{ ansible_os_family }} | Configureer MongoDB monitoring'
+  ansible.builtin.include_tasks: monitoring.yml
+  when: mongodb_monitoring_enabled | default(true)
+  tags: [monitoring]
+
+- name: '{{ ansible_os_family }} | Valideer MongoDB configuratie'
+  ansible.builtin.shell: mongosh --eval "db.adminCommand('ping')"
+  register: mongodb_test
+  changed_when: false
+  tags: [validate]

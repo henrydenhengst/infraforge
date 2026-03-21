@@ -1,0 +1,25 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Chef'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Valideer Chef installatie'
+  ansible.builtin.shell: chef-client --version
+  register: chef_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Chef versie
+  ansible.builtin.debug:
+    var: chef_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Maak Chef directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/chef
+    - /var/chef/cookbooks
+  tags: [directories]

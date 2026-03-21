@@ -1,0 +1,10 @@
+---
+jenkins_home: /opt/jenkins
+jenkins_plugins:
+  - git
+  - pipeline
+  - docker-workflow
+  - kubernetes
+  - blueocean
+  - slack
+  - sonar

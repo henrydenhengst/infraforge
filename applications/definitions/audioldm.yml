@@ -1,0 +1,111 @@
+---
+# =============================================================================
+# ASTERISK - TELEFOONCENTRALE
+# =============================================================================
+# Beschrijving: Volledige telefooncentrale in een container
+# Website: https://www.asterisk.org
+# =============================================================================
+
+application:
+  name: asterisk
+  version: 20.0.0
+  description: "Asterisk - Telefooncentrale"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: support-team
+    contact: support@company.local
+    slack: "#support"
+    documentation: "https://wiki.asterisk.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/asterisk
+      - name: recordings
+        size_gb: 50
+        performance: hdd
+        backup_required: true
+        mount_path: /var/spool/asterisk
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/asterisk
+        
+  network_requirements:
+    vlans:
+      - voip
+      - internal
+    ports:
+      - container: 5060
+        host: 5060
+        protocol: tcp
+        public: false
+        description: "SIP TCP"
+      - container: 5060
+        host: 5060
+        protocol: udp
+        public: false
+        description: "SIP UDP"
+      - container: 5061
+        host: 5061
+        protocol: tcp
+        public: false
+        description: "SIP TLS"
+      - container: 10000-10100
+        host: 10000-10100
+        protocol: udp
+        public: false
+        description: "RTP ports"
+    dns:
+      - "pbx.{{ domain }}"
+      - "asterisk.{{ domain }}"
+      
+  container:
+    image: andrius/asterisk:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: ASTERISK_SIP_PORT
+      value: "5060"
+      secret: false
+    - name: ASTERISK_RTP_START
+      value: "10000"
+      secret: false
+    - name: ASTERISK_RTP_END
+      value: "10100"
+      secret: false
+    - name: ASTERISK_MAX_CALLS
+      value: "50"
+      secret: false
+    - name: ASTERISK_LANGUAGE
+      value: "nl"
+      secret: false
+    - name: ASTERISK_CODECS
+      value: "ulaw,alaw,gsm"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["asterisk", "-rx", "core show channels"]

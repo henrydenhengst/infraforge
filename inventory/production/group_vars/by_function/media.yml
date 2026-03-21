@@ -1,0 +1,757 @@
+---
+# =============================================================================
+# MEDIA TOOLS
+# =============================================================================
+# Functie: media
+# Beschrijving: Tools voor media servers, streaming, download managers en content
+# =============================================================================
+
+media_tools:
+  # ---------------------------------------------------------------------------
+  # MEDIA SERVERS
+  # ---------------------------------------------------------------------------
+  - name: Jellyfin
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Open-source mediaserver voor films, series en muziek"
+    categorie: media_server
+    docker_image: jellyfin/jellyfin:latest
+    ports:
+      - "8096:8096"
+      - "8920:8920"
+    volumes:
+      - jellyfin_config:/config
+      - jellyfin_cache:/cache
+      - /media/movies:/media/movies:ro
+      - /media/tv:/media/tv:ro
+      - /media/music:/media/music:ro
+      - /media/photos:/media/photos:ro
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+      JELLYFIN_PublishedServerUrl: "https://jellyfin.{{ domain }}"
+    url: "https://jellyfin.org"
+    
+  - name: Plex
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Mediaserver met client-ondersteuning voor alle apparaten"
+    categorie: media_server
+    docker_image: plexinc/pms-docker:latest
+    ports:
+      - "32400:32400/tcp"
+      - "3005:3005/tcp"
+      - "8324:8324/tcp"
+      - "32469:32469/tcp"
+      - "1900:1900/udp"
+      - "32410:32410/udp"
+      - "32412:32412/udp"
+      - "32413:32413/udp"
+      - "32414:32414/udp"
+    volumes:
+      - plex_config:/config
+      - plex_transcode:/transcode
+      - /media/movies:/data/movies:ro
+      - /media/tv:/data/tv:ro
+      - /media/music:/data/music:ro
+      - /media/photos:/data/photos:ro
+    environment:
+      TZ: Europe/Amsterdam
+      PLEX_CLAIM: "{{ vault_plex_claim }}"
+      PLEX_UID: 1000
+      PLEX_GID: 1000
+      ADVERTISE_IP: "https://plex.{{ domain }}:32400"
+    url: "https://www.plex.tv"
+    
+  - name: Emby
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Mediaserver met uitgebreide client ondersteuning"
+    categorie: media_server
+    docker_image: emby/embyserver:latest
+    ports:
+      - "8096:8096"
+      - "8920:8920"
+    volumes:
+      - emby_config:/config
+      - emby_cache:/cache
+      - /media/movies:/media/movies:ro
+      - /media/tv:/media/tv:ro
+      - /media/music:/media/music:ro
+    environment:
+      UID: 1000
+      GID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://emby.media"
+    
+  - name: Navidrome
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Muziekstreamer voor persoonlijke muziekcollectie"
+    categorie: music_server
+    docker_image: deluan/navidrome:latest
+    ports:
+      - "4533:4533"
+    volumes:
+      - navidrome_data:/data
+      - /media/music:/music:ro
+    environment:
+      ND_DATAFOLDER: /data
+      ND_MUSICFOLDER: /music
+      ND_SCANSCHEDULE: 1h
+      ND_LOGLEVEL: info
+      ND_PORT: 4533
+      ND_ENABLETRANSCODING: true
+      ND_TRANSCODINGCACHESIZE: 100MB
+      ND_LASTFM_APIKEY: "{{ vault_lastfm_apikey }}"
+      ND_LASTFM_SECRET: "{{ vault_lastfm_secret }}"
+      ND_SPOTIFY_ID: "{{ vault_spotify_id }}"
+      ND_SPOTIFY_SECRET: "{{ vault_spotify_secret }}"
+    url: "https://www.navidrome.org"
+    
+  - name: Airsonic
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Muziekstreamer voor persoonlijke muziekcollectie"
+    categorie: music_server
+    docker_image: airsonic/airsonic:latest
+    ports:
+      - "4040:4040"
+    volumes:
+      - airsonic_data:/airsonic/data
+      - airsonic_music:/airsonic/music:ro
+      - airsonic_playlists:/airsonic/playlists
+      - airsonic_podcasts:/airsonic/podcasts
+    environment:
+      JAVA_OPTS: "-Xmx512m"
+      CONTEXT_PATH: /
+      AIRSONIC_PORT: 4040
+      AIRSONIC_HTTPS_PORT: 4041
+      TZ: Europe/Amsterdam
+    url: "https://airsonic.github.io"
+    
+  - name: AzuraCast
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Radio-beheersoftware voor internetradio"
+    categorie: radio
+    docker_image: azuracast/azuracast:latest
+    ports:
+      - "8080:80"
+      - "2022:2022"
+    volumes:
+      - azuracast_data:/var/azuracast
+      - azuracast_backups:/var/azuracast/backups
+    environment:
+      AZURACAST_HTTP_PORT: 80
+      AZURACAST_HTTPS_PORT: 443
+      AZURACAST_SFTP_PORT: 2022
+      AZURACAST_STATION_NAME: "{{ company_name }} Radio"
+      AZURACAST_ADMIN_NAME: Admin
+      AZURACAST_ADMIN_EMAIL: admin@{{ domain }}
+      AZURACAST_ADMIN_PASSWORD: "{{ vault_azuracast_admin_password }}"
+      LANG: nl_NL.UTF-8
+    url: "https://www.azuracast.com"
+    
+  - name: Audiobookshelf
+    profiel_tag: Creators
+    functie_tag: media
+    beschrijving: "Zelfgehoste server voor audioboeken en podcasts"
+    categorie: audiobook
+    docker_image: ghcr.io/advplyr/audiobookshelf:latest
+    ports:
+      - "13378:80"
+    volumes:
+      - audiobookshelf_config:/config
+      - audiobookshelf_metadata:/metadata
+      - /media/audiobooks:/audiobooks:ro
+      - /media/podcasts:/podcasts:ro
+    environment:
+      TZ: Europe/Amsterdam
+    url: "https://www.audiobookshelf.org"
+    
+  - name: Immich
+    profiel_tag: Algemeen
+    functie_tag: media
+    beschrijving: "High-performance foto-backup met AI-gezichtsherkenning"
+    categorie: photo
+    docker_image: ghcr.io/immich-app/immich-server:latest
+    ports:
+      - "2283:3001"
+    volumes:
+      - immich_db:/var/lib/postgresql/data
+      - immich_upload:/usr/src/app/upload
+      - immich_profile:/usr/src/app/profile
+      - immich_thumb:/usr/src/app/upload/thumbs
+      - immich_enc:/usr/src/app/upload/encoded-video
+    environment:
+      DB_HOSTNAME: postgres
+      DB_USERNAME: immich
+      DB_PASSWORD: "{{ vault_immich_password }}"
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+      PUBLIC_IMMICH_SERVER_URL: "https://immich.{{ domain }}"
+      IMMICH_MACHINE_LEARNING_ENABLED: true
+      IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning:3003
+    database: postgresql
+    queue: redis
+    url: "https://immich.app"
+    
+  - name: Lychee
+    profiel_tag: Algemeen
+    functie_tag: media
+    beschrijving: "Foto-beheer met albums en delen"
+    categorie: photo
+    docker_image: lycheeorg/lychee:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - lychee_uploads:/uploads
+      - lychee_config:/conf
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: lychee
+      DB_USERNAME: lychee
+      DB_PASSWORD: "{{ vault_lychee_password }}"
+      TZ: Europe/Amsterdam
+    database: mysql
+    url: "https://lycheeorg.github.io"
+    
+  - name: Calibre-Web
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "E-book bibliotheek voor Calibre databases"
+    categorie: ebook
+    docker_image: linuxserver/calibre-web:latest
+    ports:
+      - "8083:8083"
+    volumes:
+      - calibre_config:/config
+      - /media/books:/books:ro
+      - calibre_data:/data
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+      DOCKER_MODS: linuxserver/calibre-web:calibre
+    url: "https://github.com/janeczku/calibre-web"
+    
+  - name: Kavita
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Manga/E-book reader met web interface"
+    categorie: ebook
+    docker_image: kizaing/kavita:latest
+    ports:
+      - "8084:5000"
+    volumes:
+      - kavita_data:/kavita/config
+      - /media/manga:/manga:ro
+      - /media/books:/books:ro
+    environment:
+      TZ: Europe/Amsterdam
+    url: "https://www.kavitareader.com"
+    
+  # ---------------------------------------------------------------------------
+  # STREAMING PLATFORMS
+  # ---------------------------------------------------------------------------
+  - name: Peertube
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Gedecentraliseerd video-hostingsplatform"
+    categorie: video
+    docker_image: chocobozzz/peertube:latest
+    ports:
+      - "9000:9000"
+    volumes:
+      - peertube_config:/config
+      - peertube_data:/data
+      - peertube_videos:/videos
+    environment:
+      PEERTUBE_WEBSERVER_HOSTNAME: "peertube.{{ domain }}"
+      PEERTUBE_WEBSERVER_PORT: 443
+      PEERTUBE_WEBSERVER_HTTPS: true
+      PEERTUBE_DB_HOSTNAME: postgres
+      PEERTUBE_DB_USERNAME: peertube
+      PEERTUBE_DB_PASSWORD: "{{ vault_peertube_password }}"
+      PEERTUBE_DB_NAME: peertube
+      PEERTUBE_REDIS_HOSTNAME: redis
+      PEERTUBE_ADMIN_EMAIL: admin@{{ domain }}
+      PEERTUBE_SMTP_HOSTNAME: smtp.{{ domain }}
+      PEERTUBE_SMTP_PORT: 587
+      PEERTUBE_SMTP_USERNAME: peertube@{{ domain }}
+      PEERTUBE_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+      PEERTUBE_SMTP_TLS: true
+      PEERTUBE_SMTP_FROM: peertube@{{ domain }}
+    database: postgresql
+    queue: redis
+    url: "https://joinpeertube.org"
+    
+  - name: Invidious
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Privacy-vriendelijke YouTube front-end"
+    categorie: video
+    docker_image: quay.io/invidious/invidious:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - invidious_config:/config
+      - invidious_db:/db
+    environment:
+      INVIDIOUS_CONFIG: |
+        db:
+          user: kemal
+          password: "{{ vault_invidious_password }}"
+          host: postgres
+          port: 5432
+          dbname: invidious
+        full_refresh: false
+        https_only: true
+        domain: "invidious.{{ domain }}"
+        external_port: 443
+        registration_enabled: false
+        login_enabled: true
+        captcha_enabled: false
+    database: postgresql
+    url: "https://invidious.io"
+    
+  # ---------------------------------------------------------------------------
+  # DOWNLOAD MANAGERS
+  # ---------------------------------------------------------------------------
+  - name: Sonarr
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "TV-serie manager voor geautomatiseerde downloads"
+    categorie: download_manager
+    docker_image: linuxserver/sonarr:latest
+    ports:
+      - "8989:8989"
+    volumes:
+      - sonarr_config:/config
+      - /media/tv:/tv:rw
+      - /downloads:/downloads:rw
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://sonarr.tv"
+    
+  - name: Radarr
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Film downloadmanager voor geautomatiseerde downloads"
+    categorie: download_manager
+    docker_image: linuxserver/radarr:latest
+    ports:
+      - "7878:7878"
+    volumes:
+      - radarr_config:/config
+      - /media/movies:/movies:rw
+      - /downloads:/downloads:rw
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://radarr.video"
+    
+  - name: Lidarr
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Muziek downloadmanager voor geautomatiseerde downloads"
+    categorie: download_manager
+    docker_image: linuxserver/lidarr:latest
+    ports:
+      - "8686:8686"
+    volumes:
+      - lidarr_config:/config
+      - /media/music:/music:rw
+      - /downloads:/downloads:rw
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://lidarr.audio"
+    
+  - name: Prowlarr
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Indexer manager voor Sonarr, Radarr, Lidarr"
+    categorie: indexer
+    docker_image: linuxserver/prowlarr:latest
+    ports:
+      - "9696:9696"
+    volumes:
+      - prowlarr_config:/config
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://prowlarr.com"
+    
+  - name: Jackett
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Torrent indexer proxy voor download managers"
+    categorie: indexer
+    docker_image: linuxserver/jackett:latest
+    ports:
+      - "9117:9117"
+    volumes:
+      - jackett_config:/config
+      - jackett_downloads:/downloads
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://github.com/Jackett/Jackett"
+    
+  - name: qBittorrent
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Torrent-cliënt met web interface"
+    categorie: torrent
+    docker_image: linuxserver/qbittorrent:latest
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - qbittorrent_config:/config
+      - /downloads:/downloads:rw
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+      WEBUI_PORT: 8080
+    url: "https://www.qbittorrent.org"
+    
+  - name: Transmission
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Lichtgewicht torrent-cliënt"
+    categorie: torrent
+    docker_image: linuxserver/transmission:latest
+    ports:
+      - "9091:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+    volumes:
+      - transmission_config:/config
+      - /downloads:/downloads:rw
+      - transmission_watch:/watch
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://transmissionbt.com"
+    
+  - name: Deluge
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Torrent-cliënt met plugin ondersteuning"
+    categorie: torrent
+    docker_image: linuxserver/deluge:latest
+    ports:
+      - "8112:8112"
+      - "58846:58846"
+      - "58946:58946"
+      - "58946:58946/udp"
+    volumes:
+      - deluge_config:/config
+      - /downloads:/downloads:rw
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://deluge-torrent.org"
+    
+  - name: Sabnzbd
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Usenet downloadmanager"
+    categorie: usenet
+    docker_image: linuxserver/sabnzbd:latest
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    volumes:
+      - sabnzbd_config:/config
+      - /downloads:/downloads:rw
+      - /incomplete:/incomplete:rw
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://sabnzbd.org"
+    
+  - name: Couchpotatoserver
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Film downloadmanager"
+    categorie: download_manager
+    docker_image: linuxserver/couchpotato:latest
+    ports:
+      - "5050:5050"
+    volumes:
+      - couchpotato_config:/config
+      - /downloads:/downloads:rw
+      - /media/movies:/movies:rw
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://couchpota.to"
+    
+  - name: Pyload
+    profiel_tag: Media
+    functie_tag: media
+    beschrijving: "Downloadmanager voor one-click hosters"
+    categorie: download_manager
+    docker_image: linuxserver/pyload:latest
+    ports:
+      - "8000:8000"
+      - "7227:7227"
+    volumes:
+      - pyload_config:/config
+      - /downloads:/downloads:rw
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+    url: "https://pyload.net"
+    
+  # ---------------------------------------------------------------------------
+  # AI MEDIA TOOLS
+  # ---------------------------------------------------------------------------
+  - name: Whisper-ASR
+    profiel_tag: AI-Ops
+    functie_tag: media
+    beschrijving: "Spraak-naar-tekst transcriptie op basis van OpenAI Whisper"
+    categorie: ai_audio
+    docker_image: onerahmet/openai-whisper-asr-webservice:latest
+    ports:
+      - "9001:9001"
+    volumes:
+      - whisper_models:/root/.cache/whisper
+      - whisper_uploads:/uploads
+    environment:
+      ASR_MODEL: base
+      ASR_ENGINE: openai_whisper
+    gpu_support: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    url: "https://github.com/ahmetoner/whisper-asr-webservice"
+    
+  - name: Stable-Diffusion-WebUI
+    profiel_tag: AI-Ops
+    functie_tag: media
+    beschrijving: "AI-beeldgeneratie (Text-to-Image) op eigen hardware"
+    categorie: ai_image
+    docker_image: sd-webui/sd-webui:latest
+    ports:
+      - "7860:7860"
+    volumes:
+      - sd_models:/app/models
+      - sd_outputs:/app/outputs
+      - sd_config:/app/config
+    environment:
+      COMMANDLINE_ARGS: "--medvram --xformers"
+      MODEL: "sd_xl_base_1.0.safetensors"
+    gpu_support: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    url: "https://github.com/AUTOMATIC1111/stable-diffusion-webui"
+    
+  - name: ComfyUI
+    profiel_tag: AI-Ops
+    functie_tag: media
+    beschrijving: "Geavanceerde knooppunt-gebaseerde UI voor Stable Diffusion"
+    categorie: ai_image
+    docker_image: comfy/comfyui:latest
+    ports:
+      - "8188:8188"
+    volumes:
+      - comfy_models:/app/models
+      - comfy_input:/app/input
+      - comfy_output:/app/output
+      - comfy_config:/app/config
+    environment:
+      COMFYUI_PORT: 8188
+    gpu_support: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    url: "https://github.com/comfyanonymous/ComfyUI"
+    
+  - name: AudioLDM
+    profiel_tag: Creators
+    functie_tag: media
+    beschrijving: "AI-generatie van geluidseffecten en muziek"
+    categorie: ai_audio
+    docker_image: audiolm/audiolm:latest
+    ports:
+      - "8002:8000"
+    volumes:
+      - audioldm_models:/app/models
+      - audioldm_outputs:/app/outputs
+    environment:
+      MODEL: "audioldm-s-full"
+      DEVICE: "cuda"
+    gpu_support: true
+    url: "https://github.com/haoheliu/AudioLDM"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+media_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Media paden
+  media_paths:
+    movies: /media/movies
+    tv: /media/tv
+    music: /media/music
+    photos: /media/photos
+    books: /media/books
+    manga: /media/manga
+    audiobooks: /media/audiobooks
+    podcasts: /media/podcasts
+    downloads: /downloads
+    
+  # Download instellingen
+  downloads:
+    incomplete: /incomplete
+    completed: /completed
+    watch: /watch
+    categories:
+      - movies
+      - tv
+      - music
+      - books
+      - software
+      
+  # Indexers
+  indexers:
+    - name: TorrentLeech
+      type: torrent
+      url: "https://www.torrentleech.org"
+    - name: NZBGeek
+      type: usenet
+      url: "https://api.nzbgeek.info"
+      
+  # Kwaliteitsprofielen
+  quality_profiles:
+    - name: HD
+      preferred:
+        - resolution: 1080p
+        - source: bluray
+    - name: 4K
+      preferred:
+        - resolution: 2160p
+        - source: bluray
+    - name: SD
+      preferred:
+        - resolution: 480p
+        - source: dvd
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+jellyfin_config:
+  # Jellyfin bibliotheken
+  libraries:
+    - name: Films
+      type: movies
+      path: /media/movies
+      preferred_metadata_language: nl
+      content_type: movies
+    - name: Series
+      type: tvshows
+      path: /media/tv
+      preferred_metadata_language: nl
+    - name: Muziek
+      type: music
+      path: /media/music
+    - name: Foto's
+      type: photos
+      path: /media/photos
+      
+  # Jellyfin gebruikers
+  users:
+    - username: admin
+      password: "{{ vault_jellyfin_admin_password }}"
+      policy:
+        IsAdministrator: true
+        EnableCollectionManagement: true
+    - username: guest
+      password: "{{ vault_jellyfin_guest_password }}"
+      policy:
+        IsAdministrator: false
+        EnableCollectionManagement: false
+
+sonarr_config:
+  # Sonarr kwaliteitsprofielen
+  quality_profiles:
+    - name: HD-1080p
+      upgrades_allowed: true
+      cutoff: 1080p
+      qualities:
+        - Bluray-1080p
+        - Web-1080p
+        - HDTV-1080p
+        
+  # Sonarr indexers
+  indexers:
+    - name: Jackett
+      implementation: TorrentIndexer
+      settings:
+        base_url: http://jackett:9117
+        api_key: "{{ vault_jackett_api_key }}"
+        categories: [2000, 2010, 2020, 2030, 2040]
+        
+  # Sonarr download clients
+  download_clients:
+    - name: qBittorrent
+      implementation: QBittorrent
+      settings:
+        host: qbittorrent
+        port: 8080
+        url_base: /
+        username: admin
+        password: "{{ vault_qbittorrent_password }}"
+        category: tv-sonarr
+        
+  # Sonarr root folders
+  root_folders:
+    - path: /media/tv
+      
+  # Sonarr series
+  series:
+    - title: "Game of Thrones"
+      quality_profile_id: HD-1080p
+      season_folder: true
+      monitored: true
+      root_folder_path: /media/tv

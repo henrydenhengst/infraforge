@@ -1,0 +1,74 @@
+---
+# =============================================================================
+# MYSQL WORKBENCH - DATABASE DESIGN TOOL
+# =============================================================================
+# Beschrijving: Visual database design tool voor MySQL
+# Website: https://www.mysql.com/products/workbench
+# =============================================================================
+
+application:
+  name: mysql-workbench
+  version: 8.0.34
+  description: "MySQL Workbench - Database design tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: dba-team
+    contact: dba@company.local
+    slack: "#database"
+    documentation: "https://dev.mysql.com/doc/workbench/en"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /root/.mysql/workbench
+        
+  network_requirements:
+    vlans:
+      - database
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "MySQL Workbench web UI"
+    dns:
+      - "mysql-workbench.{{ domain }}"
+      
+  container:
+    image: linuxserver/mysql-workbench:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

@@ -1,0 +1,340 @@
+---
+# =============================================================================
+# WIKI TOOLS
+# =============================================================================
+# Functie: wiki
+# Beschrijving: Tools voor documentatie, wiki's en kennisbanken
+# =============================================================================
+
+wiki_tools:
+  # ---------------------------------------------------------------------------
+  # WIKI PLATFORMS
+  # ---------------------------------------------------------------------------
+  - name: BookStack
+    profiel_tag: HR
+    functie_tag: wiki
+    beschrijving: "Documentatie en personeelshandboek"
+    categorie: wiki
+    docker_image: linuxserver/bookstack:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - bookstack_config:/config
+      - bookstack_uploads:/uploads
+      - bookstack_storage:/storage
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+      APP_URL: "https://wiki.{{ domain }}"
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: bookstack
+      DB_USERNAME: bookstack
+      DB_PASSWORD: "{{ vault_bookstack_password }}"
+      APP_KEY: "{{ vault_bookstack_app_key }}"
+      MAIL_DRIVER: smtp
+      MAIL_HOST: smtp.{{ domain }}
+      MAIL_PORT: 587
+      MAIL_USERNAME: bookstack@{{ domain }}
+      MAIL_PASSWORD: "{{ vault_smtp_password }}"
+      MAIL_ENCRYPTION: tls
+      MAIL_FROM_NAME: "{{ company_name }} Wiki"
+      MAIL_FROM_ADDRESS: bookstack@{{ domain }}
+    database: mysql
+    url: "https://www.bookstackapp.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+wiki_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Wiki instellingen
+  wiki:
+    name: "{{ company_name }} Wiki"
+    description: "Interne documentatie en kennisbank"
+    url: "https://wiki.{{ domain }}"
+    language: nl
+    timezone: Europe/Amsterdam
+    
+  # Rechten
+  permissions:
+    allow_registration: false
+    allow_public_view: false
+    default_user_role: viewer
+    require_confirmation: true
+    
+  # Documenten
+  documents:
+    max_upload_size: 100MB
+    allowed_extensions:
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - md
+      - jpg
+      - jpeg
+      - png
+      - gif
+    storage_path: /uploads
+    
+  # Revisies
+  revisions:
+    enabled: true
+    keep_revisions: 50
+    keep_drafts: true
+    draft_retention_days: 30
+    
+  # Zoeken
+  search:
+    enabled: true
+    engine: database
+    index_content: true
+    search_limit: 100
+    
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: wiki@{{ domain }}
+    email_prefix: "[Wiki]"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+bookstack_config:
+  # BookStack boeken
+  books:
+    - name: "Personeelshandboek"
+      description: "Alle informatie voor medewerkers"
+      color: "#2196F3"
+      
+    - name: "IT Documentatie"
+      description: "Technische documentatie voor IT"
+      color: "#4CAF50"
+      
+    - name: "Procedures"
+      description: "Werkwijzen en procedures"
+      color: "#FF9800"
+      
+    - name: "Projecten"
+      description: "Project documentatie"
+      color: "#9C27B0"
+      
+    - name: "Trainingen"
+      description: "Trainingsmateriaal"
+      color: "#F44336"
+      
+  # BookStack hoofdstukken
+  chapters:
+    - name: "HR Procedures"
+      description: "Procedures voor HR"
+      book: "Personeelshandboek"
+      priority: 1
+      
+    - name: "Verlof aanvragen"
+      description: "Informatie over verlof"
+      book: "Personeelshandboek"
+      priority: 2
+      
+    - name: "Serverbeheer"
+      description: "Documentatie voor serverbeheer"
+      book: "IT Documentatie"
+      priority: 1
+      
+    - name: "Netwerk"
+      description: "Netwerk documentatie"
+      book: "IT Documentatie"
+      priority: 2
+      
+    - name: "Kwaliteitshandboek"
+      description: "ISO procedures"
+      book: "Procedures"
+      priority: 1
+      
+  # BookStack pagina's
+  pages:
+    - name: "Introductie nieuwe medewerkers"
+      content: "# Welkom bij {{ company_name }}\n\nDit document bevat alle informatie voor nieuwe medewerkers..."
+      book: "Personeelshandboek"
+      chapter: "HR Procedures"
+      tags:
+        - nieuw
+        - onboarding
+        
+    - name: "Verlof aanvragen"
+      content: "# Verlof aanvragen\n\n## Procedure\n\n1. Log in bij HR-systeem\n2. Kies data\n3. Wacht op goedkeuring"
+      book: "Personeelshandboek"
+      chapter: "Verlof aanvragen"
+      tags:
+        - verlof
+        - hr
+        
+    - name: "Server installatie"
+      content: "# Server installatie handleiding\n\n## Vereisten\n\n- Ubuntu 22.04\n- 4GB RAM\n- 50GB schijf"
+      book: "IT Documentatie"
+      chapter: "Serverbeheer"
+      tags:
+        - server
+        - installatie
+        
+    - name: "VPN configuratie"
+      content: "# VPN configuratie\n\n## Stappenplan\n\n1. Installeer WireGuard\n2. Genereer keys\n3. Configureer peers"
+      book: "IT Documentatie"
+      chapter: "Netwerk"
+      tags:
+        - vpn
+        - netwerk
+        
+    - name: "Incident procedure"
+      content: "# Incident procedure\n\n## Stappen\n\n1. Detectie\n2. Analyse\n3. Herstel\n4. Evaluatie"
+      book: "Procedures"
+      chapter: "Kwaliteitshandboek"
+      tags:
+        - incident
+        - procedure
+        
+  # BookStack gebruikers
+  users:
+    - name: "Admin User"
+      email: admin@{{ domain }}
+      password: "{{ vault_bookstack_admin_password }}"
+      role: admin
+      
+    - name: "HR Manager"
+      email: hr@{{ domain }}
+      password: "{{ vault_bookstack_hr_password }}"
+      role: editor
+      
+    - name: "IT Manager"
+      email: it@{{ domain }}
+      password: "{{ vault_bookstack_it_password }}"
+      role: editor
+      
+    - name: "Medewerker"
+      email: employee@{{ domain }}
+      password: "{{ vault_bookstack_employee_password }}"
+      role: viewer
+      
+  # BookStack rollen
+  roles:
+    - name: admin
+      description: "Volledige toegang"
+      permissions:
+        - access-system
+        - manage-users
+        - manage-roles
+        - manage-settings
+        - manage-books
+        - manage-chapters
+        - manage-pages
+        - manage-images
+        - manage-shelves
+        - receive-notifications
+        - export-content
+        
+    - name: editor
+      description: "Kan content bewerken"
+      permissions:
+        - create-books
+        - create-chapters
+        - create-pages
+        - edit-own-content
+        - edit-all-content
+        - delete-own-content
+        - manage-images
+        - receive-notifications
+        - export-content
+        
+    - name: viewer
+      description: "Kan alleen lezen"
+      permissions:
+        - view-content
+        - export-content
+        
+  # BookStack tags
+  tags:
+    - name: belangrijk
+      color: "#ff0000"
+    - name: concept
+      color: "#ff9800"
+    - name: goedgekeurd
+      color: "#4caf50"
+    - name: verouderd
+      color: "#9e9e9e"
+    - name: intern
+      color: "#2196f3"
+    - name: extern
+      color: "#f44336"
+      
+  # BookStack instellingen
+  settings:
+    app_name: "{{ company_name }} Wiki"
+    app_logo: /uploads/images/logo.png
+    app_icon: /uploads/images/icon.png
+    registration_enabled: false
+    maintenance_mode: false
+    public_access: false
+    public_draft_access: false
+    public_shelves_access: false
+    public_book_access: false
+    public_chapter_access: false
+    public_page_access: false
+    
+    # Social login
+    social_auth:
+      google:
+        enabled: true
+        client_id: "{{ vault_google_client_id }}"
+        client_secret: "{{ vault_google_client_secret }}"
+      github:
+        enabled: true
+        client_id: "{{ vault_github_client_id }}"
+        client_secret: "{{ vault_github_client_secret }}"
+        
+    # Export
+    export:
+      enabled: true
+      formats:
+        - html
+        - plaintext
+        - markdown
+        - pdf
+        - json
+        
+    # Revisies
+    revisions:
+      enabled: true
+      limit: 50
+      drafts: true
+      draft_limit: 30
+      
+    # Zoeken
+    search:
+      engine: database
+      index_content: true
+      limit: 100
+      
+    # Uploads
+    uploads:
+      max_size: 100MB
+      allowed_extensions:
+        - jpg
+        - jpeg
+        - png
+        - gif
+        - svg
+        - pdf
+        - txt
+        - md
+        - zip

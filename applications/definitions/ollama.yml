@@ -1,0 +1,151 @@
+---
+# =============================================================================
+# VAULT - SECRETS MANAGEMENT
+# =============================================================================
+# Beschrijving: Secrets management voor applicaties en infrastructuur
+# Website: https://www.vaultproject.io
+# =============================================================================
+
+application:
+  name: vault
+  version: 1.15.0
+  description: "Vault - Secrets management platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://developer.hashicorp.com/vault/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /vault/data
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /vault/config
+      - name: logs
+        size_gb: 5
+        performance: any
+        backup_required: false
+        mount_path: /vault/logs
+        
+  network_requirements:
+    vlans:
+      - management
+      - internal
+    ports:
+      - container: 8200
+        host: 8200
+        protocol: tcp
+        public: false
+        description: "Vault API"
+      - container: 8201
+        host: 8201
+        protocol: tcp
+        public: false
+        description: "Vault cluster"
+    dns:
+      - "vault.{{ domain }}"
+      - "secrets.{{ domain }}"
+      
+  container:
+    image: vault:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+    cap_add:
+      - IPC_LOCK
+        
+  environment_variables:
+    - name: VAULT_ADDR
+      value: "http://127.0.0.1:8200"
+      secret: false
+    - name: VAULT_API_ADDR
+      value: "http://vault:8200"
+      secret: false
+    - name: VAULT_CLUSTER_ADDR
+      value: "https://vault:8201"
+      secret: false
+      
+  config:
+    storage:
+      postgresql:
+        connection_url: "postgresql://vault:{{ vault_vault_password }}@postgres:5432/vault?sslmode=disable"
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        tls_disable: true
+    ui: true
+    api_addr: "http://vault:8200"
+    cluster_addr: "https://vault:8201"
+    
+  secrets_engines:
+    - name: kv
+      type: kv-v2
+      path: secret
+      description: "Key-Value secrets"
+    - name: database
+      type: database
+      path: database
+      description: "Database credentials"
+    - name: transit
+      type: transit
+      path: transit
+      description: "Encryption as a service"
+    - name: pki
+      type: pki
+      path: pki
+      description: "PKI certificates"
+      
+  auth_methods:
+    - name: token
+      type: token
+    - name: approle
+      type: approle
+    - name: kubernetes
+      type: kubernetes
+      config:
+        kubernetes_host: "https://kubernetes.default.svc"
+        kubernetes_ca_cert: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    - name: ldap
+      type: ldap
+      config:
+        url: "ldap://openldap:389"
+        userdn: "ou=users,dc={{ domain.split('.')[0] }},dc={{ domain.split('.')[1] }}"
+        groupdn: "ou=groups,dc={{ domain.split('.')[0] }},dc={{ domain.split('.')[1] }}"
+        
+  policies:
+    - name: admin
+      path: "*"
+      capabilities: ["create", "read", "update", "delete", "list", "sudo"]
+    - name: developer
+      path: "secret/data/dev/*"
+      capabilities: ["create", "read", "update", "delete"]
+    - name: readonly
+      path: "secret/data/*"
+      capabilities: ["read", "list"]
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /v1/sys/health
+      port: 8200
+      initial_delay: 30

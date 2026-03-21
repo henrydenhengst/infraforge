@@ -1,0 +1,5 @@
+---
+- name: restart cortex
+  ansible.builtin.docker_container:
+    name: cortex
+    restart: yes

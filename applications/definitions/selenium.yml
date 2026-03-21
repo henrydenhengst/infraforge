@@ -1,0 +1,91 @@
+---
+# =============================================================================
+# UNLEASH - FEATURE FLAG MANAGEMENT
+# =============================================================================
+# Beschrijving: Feature flag management voor canary releases en A/B testing
+# Website: https://www.getunleash.io
+# =============================================================================
+
+application:
+  name: unleash
+  version: 5
+  description: "Unleash - Feature flag management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://docs.getunleash.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: postgres
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/postgresql/data
+        
+  network_requirements:
+    vlans:
+      - devops
+      - internal
+    ports:
+      - container: 4242
+        host: 4242
+        protocol: tcp
+        public: false
+        description: "Unleash web interface"
+    dns:
+      - "flags.{{ domain }}"
+      - "unleash.{{ domain }}"
+      
+  container:
+    image: unleashorg/unleash-server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  sidecars:
+    - name: postgres
+      image: postgres:15
+      environment:
+        POSTGRES_USER: unleash
+        POSTGRES_PASSWORD: "{{ vault_unleash_db_password }}"
+        POSTGRES_DB: unleash
+      volumes:
+        - postgres:/var/lib/postgresql/data
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+          
+  environment_variables:
+    - name: DATABASE_URL
+      value: "postgres://unleash:{{ vault_unleash_db_password }}@unleash-postgres:5432/unleash"
+      secret: true
+    - name: DATABASE_SSL
+      value: "false"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 4242

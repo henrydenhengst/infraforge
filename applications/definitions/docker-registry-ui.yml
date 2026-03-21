@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# CLOUDBEAVER - WEB-BASED DATABASE CLIENT
+# =============================================================================
+# Beschrijving: Web-based database management tool
+# Website: https://cloudbeaver.io
+# =============================================================================
+
+application:
+  name: cloudbeaver
+  version: 23.4.0
+  description: "CloudBeaver - Web-based database client"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: dba-team
+    contact: dba@company.local
+    slack: "#database"
+    documentation: "https://cloudbeaver.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/cloudbeaver/workspace
+        
+  network_requirements:
+    vlans:
+      - database
+      - internal
+    ports:
+      - container: 8978
+        host: 8978
+        protocol: tcp
+        public: false
+        description: "CloudBeaver UI"
+    dns:
+      - "sql.{{ domain }}"
+      - "dbeaver.{{ domain }}"
+      
+  container:
+    image: dbeaver/cloudbeaver:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: CB_AUTH
+      value: "true"
+      secret: false
+    - name: CB_ADMIN_NAME
+      value: "admin"
+      secret: false
+    - name: CB_ADMIN_PASSWORD
+      value: "{{ vault_cloudbeaver_password }}"
+      secret: true
+    - name: CB_DB_URL
+      value: "postgresql://cloudbeaver:{{ vault_cloudbeaver_db_password }}@postgres:5432/cloudbeaver"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 8978

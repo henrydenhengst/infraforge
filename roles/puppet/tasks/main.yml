@@ -1,0 +1,25 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Puppet'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Valideer Puppet installatie'
+  ansible.builtin.shell: puppet --version
+  register: puppet_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Puppet versie
+  ansible.builtin.debug:
+    var: puppet_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Maak Puppet directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/puppetlabs/puppet
+    - /etc/puppetlabs/code/environments/production/modules
+  tags: [directories]

@@ -1,0 +1,103 @@
+---
+# =============================================================================
+# SEAFILE - BESTANDSSYNC
+# =============================================================================
+# Beschrijving: Bestandssync met versiebeheer en encryptie
+# Website: https://www.seafile.com
+# =============================================================================
+
+application:
+  name: seafile
+  version: 11.0.0
+  description: "Seafile - Bestandssync"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: collaboration-team
+    contact: collaboration@company.local
+    slack: "#collaboration"
+    documentation: "https://manual.seafile.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /shared
+        
+  network_requirements:
+    vlans:
+      - collaboration
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "Seafile web interface"
+      - container: 8082
+        host: 8082
+        protocol: tcp
+        public: false
+        description: "Seafile file server"
+    dns:
+      - "seafile.{{ domain }}"
+      
+  container:
+    image: seafileltd/seafile:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: SEAFILE_SERVER_HOSTNAME
+      value: "seafile.{{ domain }}"
+      secret: false
+    - name: SEAFILE_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: SEAFILE_ADMIN_PASSWORD
+      value: "{{ vault_seafile_password }}"
+      secret: true
+    - name: SEAFILE_MYSQL_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: SEAFILE_MYSQL_DB_PORT
+      value: "3306"
+      secret: false
+    - name: SEAFILE_MYSQL_DB_USER
+      value: "seafile"
+      secret: false
+    - name: SEAFILE_MYSQL_DB_PASSWORD
+      value: "{{ vault_seafile_db_password }}"
+      secret: true
+    - name: SEAFILE_MYSQL_CCNET_DB
+      value: "ccnet_db"
+      secret: false
+    - name: SEAFILE_MYSQL_SEAFILE_DB
+      value: "seafile_db"
+      secret: false
+    - name: SEAFILE_MYSQL_SEAHUB_DB
+      value: "seahub_db"
+      secret: false
+    - name: TIME_ZONE
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8000

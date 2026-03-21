@@ -1,0 +1,568 @@
+---
+# =============================================================================
+# DATABASE TOOLS
+# =============================================================================
+# Functie: database
+# Beschrijving: Relationele, NoSQL, vector en tijdreeks databases
+# =============================================================================
+
+database_tools:
+  # ---------------------------------------------------------------------------
+  # RELATIONELE DATABASES (SQL)
+  # ---------------------------------------------------------------------------
+  - name: PostgreSQL
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Relationele database met geavanceerde functies"
+    categorie: relational
+    docker_image: postgres:15
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backup:/backup
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "{{ vault_postgres_password }}"
+      POSTGRES_DB: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=nl_NL.UTF-8"
+    url: "https://www.postgresql.org"
+    
+  - name: MySQL
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Populaire relationele database"
+    categorie: relational
+    docker_image: mysql:8
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - mysql_backup:/backup
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ vault_mysql_root_password }}"
+      MYSQL_DATABASE: default
+      MYSQL_USER: user
+      MYSQL_PASSWORD: "{{ vault_mysql_user_password }}"
+    url: "https://www.mysql.com"
+    
+  - name: MariaDB
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "MySQL fork met extra features"
+    categorie: relational
+    docker_image: mariadb:10
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - mariadb_backup:/backup
+    environment:
+      MARIADB_ROOT_PASSWORD: "{{ vault_mariadb_root_password }}"
+      MARIADB_DATABASE: default
+      MARIADB_USER: user
+      MARIADB_PASSWORD: "{{ vault_mariadb_user_password }}"
+    url: "https://mariadb.org"
+    
+  - name: MicrosoftSQLServer
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Microsoft SQL database"
+    categorie: relational
+    docker_image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+      - mssql_backup:/backup
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "{{ vault_mssql_password }}"
+      MSSQL_PID: "Developer"
+    url: "https://www.microsoft.com/sql-server"
+    
+  # ---------------------------------------------------------------------------
+  # NoSQL DATABASES
+  # ---------------------------------------------------------------------------
+  - name: MongoDB
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Document database voor flexibele data"
+    categorie: nosql
+    docker_image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: "{{ vault_mongodb_password }}"
+      MONGO_INITDB_DATABASE: admin
+    url: "https://www.mongodb.com"
+    
+  - name: Cassandra
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Schaalbare NoSQL database voor grote datasets"
+    categorie: nosql
+    docker_image: cassandra:4
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: "Main Cluster"
+      CASSANDRA_NUM_TOKENS: 256
+      CASSANDRA_DC: "datacenter1"
+      CASSANDRA_RACK: "rack1"
+    url: "https://cassandra.apache.org"
+    
+  - name: CouchDB
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "NoSQL document database met JSON"
+    categorie: nosql
+    docker_image: couchdb:3
+    ports:
+      - "5984:5984"
+      - "5986:5986"
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: "{{ vault_couchdb_password }}"
+    url: "https://couchdb.apache.org"
+    
+  - name: ArangoDB
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Multi-model database (document, graph, key-value)"
+    categorie: multi_model
+    docker_image: arangodb:latest
+    ports:
+      - "8529:8529"
+    volumes:
+      - arangodb_data:/var/lib/arangodb3
+      - arangodb_apps:/var/lib/arangodb3-apps
+    environment:
+      ARANGO_ROOT_PASSWORD: "{{ vault_arangodb_password }}"
+    url: "https://www.arangodb.com"
+    
+  - name: Neo4j
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Graph database voor verbonden data"
+    categorie: graph
+    docker_image: neo4j:latest
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/import
+      - neo4j_plugins:/plugins
+    environment:
+      NEO4J_AUTH: "neo4j/{{ vault_neo4j_password }}"
+      NEO4J_dbms_memory_pagecache_size: 2G
+      NEO4J_dbms_memory_heap_initial__size: 2G
+      NEO4J_dbms_memory_heap_max__size: 4G
+    url: "https://neo4j.com"
+    
+  - name: RethinkDB
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Real-time JSON database"
+    categorie: realtime
+    docker_image: rethinkdb:latest
+    ports:
+      - "8080:8080"  # Web UI
+      - "28015:28015"  # Client
+      - "29015:29015"  # Cluster
+    volumes:
+      - rethinkdb_data:/data
+    url: "https://rethinkdb.com"
+    
+  # ---------------------------------------------------------------------------
+  # IN-MEMORY DATABASES
+  # ---------------------------------------------------------------------------
+  - name: Redis
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "In-memory database voor caching en queues"
+    categorie: in_memory
+    docker_image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass {{ vault_redis_password }}
+    url: "https://redis.io"
+    
+  - name: Memcached
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Caching systeem voor hoge snelheid"
+    categorie: in_memory
+    docker_image: memcached:alpine
+    ports:
+      - "11211:11211"
+    command: memcached -m 64
+    url: "https://memcached.org"
+    
+  - name: SQLite
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Embedded SQL database engine"
+    categorie: embedded
+    docker_image: keinos/sqlite3:latest
+    volumes:
+      - sqlite_data:/data
+    command: "tail -f /dev/null"
+    url: "https://www.sqlite.org"
+    
+  # ---------------------------------------------------------------------------
+  # VECTOR DATABASES
+  # ---------------------------------------------------------------------------
+  - name: Qdrant
+    profiel_tag: AI-Ops
+    functie_tag: database
+    beschrijving: "Vector database voor AI-zoekopdrachten en geheugen"
+    categorie: vector
+    docker_image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - qdrant_config:/qdrant/config
+    environment:
+      QDRANT__SERVICE__API_KEY: "{{ vault_qdrant_api_key }}"
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__SERVICE__HTTP_PORT: 6333
+    url: "https://qdrant.tech"
+    
+  - name: ChromaDB
+    profiel_tag: AI-Ops
+    functie_tag: database
+    beschrijving: "Lichtgewicht vector store voor AI-agenten"
+    categorie: vector
+    docker_image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      CHROMA_SERVER_HOST: 0.0.0.0
+      CHROMA_SERVER_PORT: 8000
+      CHROMA_PERSIST_DIRECTORY: /chroma/chroma
+      CHROMA_ANONYMIZED_TELEMETRY: "false"
+    url: "https://www.trychroma.com"
+    
+  # ---------------------------------------------------------------------------
+  # TIME-SERIES DATABASES
+  # ---------------------------------------------------------------------------
+  - name: InfluxDB
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Time-series database voor metrics"
+    categorie: time_series
+    docker_image: influxdb:2
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    environment:
+      INFLUXDB_DOCKER_HOST_AUTO_DETECT: "true"
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: "{{ vault_influxdb_password }}"
+      DOCKER_INFLUXDB_INIT_ORG: "{{ company_name }}"
+      DOCKER_INFLUXDB_INIT_BUCKET: monitoring
+      DOCKER_INFLUXDB_INIT_RETENTION: 30d
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "{{ vault_influxdb_token }}"
+    url: "https://www.influxdata.com"
+    
+  - name: TimescaleDB
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Time-series SQL database (PostgreSQL extension)"
+    categorie: time_series
+    docker_image: timescale/timescaledb:latest-pg15
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "{{ vault_timescaledb_password }}"
+      POSTGRES_DB: timeseries
+    url: "https://www.timescale.com"
+    
+  - name: ClickHouse
+    profiel_tag: Financiën
+    functie_tag: database
+    beschrijving: "Analytische database voor rapportages"
+    categorie: analytics
+    docker_image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    ulimits:
+      nofile: 262144
+    url: "https://clickhouse.com"
+    
+  # ---------------------------------------------------------------------------
+  # EMBEDDED DATABASES
+  # ---------------------------------------------------------------------------
+  - name: Pocketbase
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Open-source backend (Database/Auth/File storage)"
+    categorie: embedded
+    docker_image: pocketbase/pocketbase:latest
+    ports:
+      - "8090:8090"
+    volumes:
+      - pocketbase_data:/pb_data
+      - pocketbase_public:/pb_public
+      - pocketbase_migrations:/pb_migrations
+    url: "https://pocketbase.io"
+    
+  # ---------------------------------------------------------------------------
+  # DATABASE CLIENTS & TOOLS
+  # ---------------------------------------------------------------------------
+  - name: Pocketbase
+    profiel_tag: IT
+    functie_tag: database
+    beschrijving: "Open-source backend (Database/Auth/File storage)"
+    categorie: embedded
+    docker_image: pocketbase/pocketbase:latest
+    ports:
+      - "8090:8090"
+    volumes:
+      - pocketbase_data:/pb_data
+    url: "https://pocketbase.io"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+database_defaults:
+  # Algemene database instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Database configuratie
+  database_config:
+    charset: utf8mb4
+    collation: utf8mb4_unicode_ci
+    timezone: Europe/Amsterdam
+    max_connections: 100
+    connection_timeout: 30
+    
+  # Beveiliging
+  security:
+    ssl_enabled: true
+    ssl_mode: require
+    encryption_at_rest: true
+    encryption_in_transit: true
+    audit_logging: true
+    
+  # Prestaties
+  performance:
+    query_cache_size: 256M
+    innodb_buffer_pool_size: 1G
+    max_allowed_packet: 64M
+    sort_buffer_size: 2M
+    
+  # Replicatie
+  replication:
+    enabled: false
+    master_host: ""
+    slave_count: 0
+    replication_user: replicator
+    replication_password: "{{ vault_replication_password }}"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+postgres_config:
+  # PostgreSQL versie
+  version: 15
+  
+  # PostgreSQL configuratie
+  postgresql_conf:
+    listen_addresses: "*"
+    port: 5432
+    max_connections: 200
+    shared_buffers: 512MB
+    effective_cache_size: 1536MB
+    maintenance_work_mem: 128MB
+    checkpoint_completion_target: 0.9
+    wal_buffers: 16MB
+    default_statistics_target: 100
+    random_page_cost: 1.1
+    effective_io_concurrency: 200
+    work_mem: 5242kB
+    min_wal_size: 1GB
+    max_wal_size: 4GB
+    max_worker_processes: 8
+    max_parallel_workers_per_gather: 4
+    max_parallel_workers: 8
+    max_parallel_maintenance_workers: 4
+    
+  # PostgreSQL databases
+  databases:
+    - name: app
+      owner: app_user
+      encoding: UTF8
+      template: template0
+    - name: analytics
+      owner: analytics_user
+      encoding: UTF8
+    - name: backups
+      owner: backup_user
+      encoding: UTF8
+      
+  # PostgreSQL gebruikers
+  users:
+    - name: app_user
+      password: "{{ vault_postgres_app_password }}"
+      databases: [app]
+      privileges: ALL
+    - name: analytics_user
+      password: "{{ vault_postgres_analytics_password }}"
+      databases: [analytics]
+      privileges: SELECT,INSERT,UPDATE
+    - name: readonly_user
+      password: "{{ vault_postgres_readonly_password }}"
+      databases: [app,analytics]
+      privileges: SELECT
+      
+  # PostgreSQL extensions
+  extensions:
+    - name: pg_stat_statements
+      database: postgres
+    - name: pgcrypto
+      database: app
+    - name: uuid-ossp
+      database: app
+    - name: postgis
+      database: app
+      version: 3.3
+      
+  # PostgreSQL backups
+  backups:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention: 7
+    type: full
+    compression: gzip
+    destination: s3
+
+mysql_config:
+  # MySQL configuratie
+  my_cnf:
+    character-set-server: utf8mb4
+    collation-server: utf8mb4_unicode_ci
+    innodb_buffer_pool_size: 1G
+    innodb_log_file_size: 256M
+    innodb_flush_log_at_trx_commit: 2
+    innodb_flush_method: O_DIRECT
+    max_connections: 500
+    query_cache_size: 0
+    query_cache_type: 0
+    
+  # MySQL databases
+  databases:
+    - name: wordpress
+      owner: wordpress
+    - name: nextcloud
+      owner: nextcloud
+    - name: matomo
+      owner: matomo
+      
+  # MySQL gebruikers
+  users:
+    - name: wordpress
+      password: "{{ vault_mysql_wordpress_password }}"
+      databases: [wordpress]
+      host: "%"
+    - name: nextcloud
+      password: "{{ vault_mysql_nextcloud_password }}"
+      databases: [nextcloud]
+      host: "%"
+    - name: matomo
+      password: "{{ vault_mysql_matomo_password }}"
+      databases: [matomo]
+      host: "%"
+
+qdrant_config:
+  # Qdrant collecties
+  collections:
+    - name: documents
+      vectors:
+        size: 768
+        distance: Cosine
+      optimizers_config:
+        indexing_threshold: 20000
+        memmap_threshold: 50000
+      hnsw_config:
+        m: 16
+        ef_construct: 100
+        full_scan_threshold: 10000
+        
+    - name: images
+      vectors:
+        size: 512
+        distance: Dot
+      optimizers_config:
+        indexing_threshold: 10000
+        memmap_threshold: 25000
+        
+    - name: embeddings
+      vectors:
+        size: 1536
+        distance: Cosine
+      optimizers_config:
+        indexing_threshold: 50000
+        memmap_threshold: 100000
+        
+  # Qdrant aliases
+  aliases:
+    - name: production_documents
+      collection: documents
+    - name: development_documents
+      collection: documents_dev
+      
+  # Qdrant snapshots
+  snapshots:
+    enabled: true
+    schedule: "0 4 * * *"
+    retention: 7
+
+chromadb_config:
+  # ChromaDB collecties
+  collections:
+    - name: documents
+      metadata:
+        hnsw:space: cosine
+      embedding_function: all-MiniLM-L6-v2
+      
+    - name: code
+      metadata:
+        hnsw:space: l2
+      embedding_function: code-bert
+      
+  # ChromaDB persistentie
+  persistence:
+    path: /chroma/chroma
+    flush_interval_seconds: 30

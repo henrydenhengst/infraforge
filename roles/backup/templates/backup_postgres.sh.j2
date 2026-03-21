@@ -1,0 +1,25 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# PostgreSQL backup script
+
+BACKUP_TYPE="${1:-daily}"
+BACKUP_DIR="{{ backup_base_dir }}/database/postgresql/$BACKUP_TYPE"
+LOG_FILE="{{ backup_log_dir }}/postgres-backup.log"
+DATE=$(date +%Y%m%d-%H%M%S)
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+mkdir -p "$BACKUP_DIR"
+
+{% for db in postgres_databases %}
+log "Backing up PostgreSQL database: {{ db.name }}"
+{% if db.host is defined %}
+PGPASSWORD="{{ db.password }}" pg_dump -h {{ db.host }} -p {{ db.port | default(5432) }} -U {{ db.user }} {{ db.name }} | gzip > "$BACKUP_DIR/{{ db.name }}-$DATE.sql.gz"
+{% else %}
+sudo -u postgres pg_dump {{ db.name }} | gzip > "$BACKUP_DIR/{{ db.name }}-$DATE.sql.gz"
+{% endif %}
+{% endfor %}
+
+log "PostgreSQL backup completed"

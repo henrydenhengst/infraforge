@@ -1,0 +1,130 @@
+---
+# =============================================================================
+# API TOOLS
+# =============================================================================
+# Functie: api
+# Beschrijving: Tools die API-endpoints leveren voor AI-modellen en services
+# =============================================================================
+
+api_tools:
+  # ---------------------------------------------------------------------------
+  # AI API SERVERS
+  # ---------------------------------------------------------------------------
+  - name: LocalAI
+    profiel_tag: AI-Ops
+    functie_tag: api
+    beschrijving: "Open-source OpenAI-compatibele API voor lokale modellen"
+    categorie: ai_api
+    docker_image: quay.io/go-skynet/local-ai:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - localai_models:/models
+    gpu_support: true
+    url: "https://localai.io"
+    
+  - name: HuggingFace-Inference
+    profiel_tag: AI-Ops
+    functie_tag: api
+    beschrijving: "Lokale inference endpoint voor transformer modellen"
+    categorie: ai_api
+    docker_image: huggingface/text-generation-inference:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - huggingface_models:/data
+    gpu_support: true
+    url: "https://huggingface.co/docs/api-inference"
+    
+  # ---------------------------------------------------------------------------
+  # API GATEWAYS
+  # ---------------------------------------------------------------------------
+  - name: Kong
+    profiel_tag: IT
+    functie_tag: proxy
+    beschrijving: "API Gateway voor microservices"
+    categorie: api_gateway
+    docker_image: kong:latest
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8443:8443"
+    database: postgresql
+    url: "https://konghq.com"
+    
+  - name: Traefik
+    profiel_tag: IT
+    functie_tag: proxy
+    beschrijving: "Modern reverse proxy en API Gateway"
+    categorie: api_gateway
+    docker_image: traefik:latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    url: "https://traefik.io"
+    
+  # ---------------------------------------------------------------------------
+  # API DEVELOPMENT TOOLS
+  # ---------------------------------------------------------------------------
+  - name: Hoppscotch
+    profiel_tag: DevOps
+    functie_tag: api
+    beschrijving: "Open-source API development tool (Postman alternatief)"
+    categorie: api_dev
+    docker_image: hoppscotch/hoppscotch:latest
+    ports:
+      - "3000:3000"
+    url: "https://hoppscotch.io"
+    features:
+      - GraphQL support
+      - WebSocket testing
+      - Real-time collaboration
+      - Environment variables
+      - Collections and folders
+      - Request history
+      - Team workspaces
+      
+  # ---------------------------------------------------------------------------
+  # API BUILDERS
+  # ---------------------------------------------------------------------------
+  - name: Appsmith
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Low-code platform om interne tools en API's te bouwen"
+    categorie: api_builder
+    docker_image: appsmith/appsmith-ce:latest
+    ports:
+      - "8082:80"
+    url: "https://www.appsmith.com"
+    
+  - name: Budibase
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Low-code platform voor interne applicaties met eigen API"
+    categorie: api_builder
+    docker_image: budibase/budibase:latest
+    ports:
+      - "8084:80"
+    url: "https://budibase.com"
+    
+  - name: ToolJet
+    profiel_tag: IT
+    functie_tag: dev-tool
+    beschrijving: "Low-code framework voor interne zakelijke applicaties"
+    categorie: api_builder
+    docker_image: tooljet/tooljet-ce:latest
+    ports:
+      - "8085:80"
+    url: "https://tooljet.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+api_defaults:
+  rate_limit: "100 requests/minute"
+  cors_enabled: true
+  ssl_enabled: true
+  monitoring_enabled: true
+  backup_enabled: true
+  backup_schedule: "0 3 * * *"

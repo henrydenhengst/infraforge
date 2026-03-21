@@ -1,0 +1,73 @@
+---
+# =============================================================================
+# PORTAINER AGENT - DOCKER NODE MANAGEMENT
+# =============================================================================
+# Beschrijving: Portainer agent voor remote Docker nodes
+# Website: https://www.portainer.io
+# =============================================================================
+
+application:
+  name: portainer-agent
+  version: 2.19.0
+  description: "Portainer Agent - Remote Docker node management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://docs.portainer.io/agent"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 0.5
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 9001
+        host: 9001
+        protocol: tcp
+        public: false
+        description: "Portainer Agent"
+    dns: []
+    
+  container:
+    image: portainer/agent:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - /var/lib/docker/volumes:/var/lib/docker/volumes
+    
+  environment_variables:
+    - name: AGENT_CLUSTER_ADDR
+      value: "portainer-agent"
+      secret: false
+    - name: LOG_LEVEL
+      value: "info"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: tcp
+      port: 9001

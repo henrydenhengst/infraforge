@@ -1,0 +1,507 @@
+---
+# =============================================================================
+# CHAT & COMMUNICATIE TOOLS
+# =============================================================================
+# Functie: chat
+# Beschrijving: Tools voor real-time communicatie, team chat en messaging
+# =============================================================================
+
+chat_tools:
+  # ---------------------------------------------------------------------------
+  # TEAM CHAT PLATFORMS
+  # ---------------------------------------------------------------------------
+  - name: Mattermost
+    profiel_tag: Algemeen
+    functie_tag: chat
+    beschrijving: "Team-chat platform (Slack alternatief)"
+    categorie: team_chat
+    docker_image: mattermost/mattermost-enterprise-edition:latest
+    ports:
+      - "8065:8065"
+    volumes:
+      - mattermost_config:/mattermost/config
+      - mattermost_data:/mattermost/data
+      - mattermost_logs:/mattermost/logs
+      - mattermost_plugins:/mattermost/client/plugins
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: "postgres://mattermost:{{ vault_mattermost_password }}@postgres:5432/mattermost?sslmode=disable"
+      MM_SERVICESETTINGS_SITEURL: "https://mattermost.{{ domain }}"
+      MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS: "true"
+      MM_EMAILSETTINGS_SMTPUSERNAME: notifications@{{ domain }}
+      MM_EMAILSETTINGS_SMTPPASSWORD: "{{ vault_smtp_password }}"
+      MM_EMAILSETTINGS_SMTPHOST: smtp.{{ domain }}
+      MM_EMAILSETTINGS_SMTPPORT: "587"
+    database: postgresql
+    url: "https://mattermost.com"
+    
+  - name: RocketChat
+    profiel_tag: Algemeen
+    functie_tag: chat
+    beschrijving: "Team-chat platform met videogesprekken"
+    categorie: team_chat
+    docker_image: rocketchat/rocket.chat:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - rocketchat_data:/app/data
+      - rocketchat_uploads:/app/uploads
+    environment:
+      MONGO_URL: "mongodb://mongodb:27017/rocketchat"
+      MONGO_OPLOG_URL: "mongodb://mongodb:27017/local"
+      ROOT_URL: "https://chat.{{ domain }}"
+      ADMIN_USERNAME: admin
+      ADMIN_PASS: "{{ vault_rocketchat_admin_password }}"
+      ADMIN_EMAIL: admin@{{ domain }}
+    database: mongodb
+    url: "https://rocket.chat"
+    
+  - name: Zulip
+    profiel_tag: Algemeen
+    functie_tag: chat
+    beschrijving: "Threaded chat met sterke organisatie"
+    categorie: team_chat
+    docker_image: zulip/docker-zulip:latest
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - zulip_data:/data
+    environment:
+      ZULIP_DOMAIN: "zulip.{{ domain }}"
+      ZULIP_ADMIN_EMAIL: admin@{{ domain }}
+      ZULIP_ADMIN_PASSWORD: "{{ vault_zulip_admin_password }}"
+      ZULIP_AUTH_BACKENDS: "EmailAuthBackend, GoogleAuthBackend"
+      ZULIP_EMAIL_HOST: smtp.{{ domain }}
+      ZULIP_EMAIL_HOST_USER: zulip@{{ domain }}
+      ZULIP_EMAIL_HOST_PASSWORD: "{{ vault_smtp_password }}"
+      ZULIP_EMAIL_PORT: 587
+      ZULIP_EMAIL_USE_TLS: "true"
+    database: postgresql
+    url: "https://zulip.com"
+    
+  # ---------------------------------------------------------------------------
+  # VIDEO CONFERENCING
+  # ---------------------------------------------------------------------------
+  - name: Jitsi Meet
+    profiel_tag: Algemeen
+    functie_tag: chat
+    beschrijving: "Video-conferencing voor teams"
+    categorie: video_chat
+    docker_image: jitsi/web:latest
+    ports:
+      - "8000:80"
+      - "8443:443"
+    volumes:
+      - jitsi_config:/config
+      - jitsi_transcripts:/transcripts
+      - jitsi_recordings:/recordings
+    environment:
+      JITSI_DOMAIN: "meet.{{ domain }}"
+      JITSI_ENABLE_AUTH: "true"
+      JITSI_AUTH_TYPE: internal
+      JITSI_ENABLE_GUESTS: "true"
+      JITSI_ENABLE_RECORDING: "false"
+      JITSI_ENABLE_TRANSCRIPTIONS: "false"
+      JITSI_PUBLIC_URL: "https://meet.{{ domain }}"
+    url: "https://jitsi.org"
+    components:
+      - web
+      - prosody
+      - jicofo
+      - videobridge
+    
+  - name: BigBlueButton
+    profiel_tag: Education
+    functie_tag: video
+    beschrijving: "Web-conferencing specifiek voor online lesgeven"
+    categorie: education_video
+    docker_image: bigbluebutton/bbb:latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "1935:1935"
+      - "5066:5066"
+    volumes:
+      - bbb_data:/var/bigbluebutton
+      - bbb_logs:/var/log/bigbluebutton
+    environment:
+      BBB_SERVER_URL: "https://bbb.{{ domain }}"
+      BBB_SECRET: "{{ vault_bbb_secret }}"
+      SMTP_SERVER: smtp.{{ domain }}
+      SMTP_USERNAME: bbb@{{ domain }}
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+    url: "https://bigbluebutton.org"
+    
+  # ---------------------------------------------------------------------------
+  # VOICE CHAT
+  # ---------------------------------------------------------------------------
+  - name: Mumble
+    profiel_tag: Algemeen
+    functie_tag: chat
+    beschrijving: "Voice-chat voor gamers en teams"
+    categorie: voice_chat
+    docker_image: mumblevoip/mumble-server:latest
+    ports:
+      - "64738:64738/tcp"
+      - "64738:64738/udp"
+    volumes:
+      - mumble_data:/data
+    environment:
+      MUMBLE_SERVER_PASSWORD: "{{ vault_mumble_password }}"
+      MUMBLE_SUPERUSER_PASSWORD: "{{ vault_mumble_superuser_password }}"
+      MUMBLE_BANDWIDTH: 128000
+      MUMBLE_USERS: 100
+    url: "https://www.mumble.info"
+    
+  - name: Asterisk
+    profiel_tag: Support
+    functie_tag: voip
+    beschrijving: "Volledige telefooncentrale in een container"
+    categorie: voip_pbx
+    docker_image: andrius/asterisk:latest
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "10000-10100:10000-10100/udp"  # RTP
+    volumes:
+      - asterisk_config:/etc/asterisk
+      - asterisk_logs:/var/log/asterisk
+      - asterisk_recordings:/var/spool/asterisk
+    environment:
+      ASTERISK_SIP_PORT: 5060
+      ASTERISK_RTP_START: 10000
+      ASTERISK_RTP_END: 10100
+    url: "https://www.asterisk.org"
+    
+  # ---------------------------------------------------------------------------
+  # MATRIX COMMUNICATIE
+  # ---------------------------------------------------------------------------
+  - name: Element
+    profiel_tag: Algemeen
+    functie_tag: chat
+    beschrijving: "Matrix chat-cliënt voor veilige communicatie"
+    categorie: matrix_client
+    docker_image: vectorim/element-web:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - element_config:/app/config.json
+    environment:
+      ELEMENT_DEFAULT_SERVER_URL: "https://matrix.{{ domain }}"
+      ELEMENT_DEFAULT_SERVER_NAME: "{{ domain }}"
+    url: "https://element.io"
+    depends_on:
+      - synapse
+      
+  # Matrix server (indien nodig - niet in CSV maar nodig voor Element)
+  - name: Synapse
+    profiel_tag: IT
+    functie_tag: chat
+    beschrijving: "Matrix homeserver voor veilige communicatie"
+    categorie: matrix_server
+    docker_image: matrixdotorg/synapse:latest
+    ports:
+      - "8008:8008"
+      - "8448:8448"
+    volumes:
+      - synapse_data:/data
+    environment:
+      SYNAPSE_SERVER_NAME: matrix.{{ domain }}
+      SYNAPSE_REPORT_STATS: "yes"
+      SYNAPSE_ENABLE_REGISTRATION: "false"
+      SYNAPSE_REGISTRATION_SHARED_SECRET: "{{ vault_synapse_secret }}"
+    database: postgresql
+    url: "https://matrix.org"
+    
+  # ---------------------------------------------------------------------------
+  # MESSAGING & NOTIFICATIES
+  # ---------------------------------------------------------------------------
+  - name: Gotify
+    profiel_tag: IT
+    functie_tag: messaging
+    beschrijving: "Push-notificatie server voor applicaties"
+    categorie: push_notifications
+    docker_image: gotify/server:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - gotify_data:/app/data
+    environment:
+      GOTIFY_DEFAULTUSER_NAME: admin
+      GOTIFY_DEFAULTUSER_PASS: "{{ vault_gotify_password }}"
+      GOTIFY_DATABASE_DIALECT: sqlite3
+      GOTIFY_DATABASE_CONNECTION: /app/data/gotify.db
+    url: "https://gotify.net"
+    
+  - name: Gotify
+    profiel_tag: IT
+    functie_tag: messaging
+    beschrijving: "Push-notificatie server voor applicaties"
+    categorie: push_notifications
+    docker_image: gotify/server:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - gotify_data:/app/data
+    environment:
+      GOTIFY_DEFAULTUSER_NAME: admin
+      GOTIFY_DEFAULTUSER_PASS: "{{ vault_gotify_password }}"
+    url: "https://gotify.net"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+chat_defaults:
+  # Algemene chat instellingen
+  backup_enabled: true
+  backup_schedule: "0 3 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Gebruikers en authenticatie
+  authentication:
+    enabled: true
+    allow_registration: false
+    allow_guest: false
+    auth_providers:
+      - internal
+      - ldap
+      - saml
+      
+  # Notificaties
+  notifications:
+    email_enabled: true
+    push_enabled: true
+    desktop_enabled: true
+    mobile_enabled: true
+    
+  # Bestandsopslag
+  file_storage:
+    max_file_size: 100MB
+    allowed_extensions:
+      - png
+      - jpg
+      - jpeg
+      - gif
+      - pdf
+      - txt
+      - zip
+    storage_path: /data/files
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+mattermost_config:
+  # Team settings
+  teams:
+    - name: algemeen
+      display_name: "Algemeen"
+      type: open
+    - name: development
+      display_name: "Development"
+      type: private
+    - name: operations
+      display_name: "Operations"
+      type: private
+      
+  # Channels
+  channels:
+    - name: town-square
+      display_name: "Town Square"
+      team: algemeen
+      purpose: "Algemeen nieuws en aankondigingen"
+    - name: development
+      display_name: "Development"
+      team: development
+      purpose: "Development discussies"
+    - name: operations
+      display_name: "Operations"
+      team: operations
+      purpose: "Operations en beheer"
+      
+  # Integraties
+  integrations:
+    - type: webhook
+      name: jenkins
+      url: "https://jenkins.{{ domain }}/webhook"
+      events:
+        - job_started
+        - job_completed
+        - job_failed
+    - type: webhook
+      name: gitlab
+      url: "https://gitlab.{{ domain }}/webhook"
+      events:
+        - commit
+        - merge_request
+        - issue
+    - type: bot
+      name: opsbot
+      token: "{{ vault_mattermost_opsbot_token }}"
+      
+  # Service accounts
+  service_accounts:
+    - name: monitoring
+      email: monitoring@{{ domain }}
+      password: "{{ vault_mattermost_monitoring_password }}"
+    - name: backup
+      email: backup@{{ domain }}
+      password: "{{ vault_mattermost_backup_password }}"
+
+rocketchat_config:
+  # Standaard kanalen
+  default_channels:
+    - general
+    - random
+    - announcements
+    - development
+    - support
+    
+  # Rollen
+  roles:
+    - name: admin
+      permissions:
+        - view-statistics
+        - view-user-email
+        - manage-users
+        - manage-channels
+    - name: moderator
+      permissions:
+        - delete-message
+        - archive-channel
+        - mute-user
+    - name: user
+      permissions:
+        - create-channel
+        - create-group
+        - upload-file
+        
+  # Authenticatie
+  auth:
+    ldap:
+      enabled: false
+    saml:
+      enabled: false
+    oauth:
+      google:
+        enabled: true
+        client_id: "{{ vault_google_client_id }}"
+        client_secret: "{{ vault_google_client_secret }}"
+        
+  # File uploads
+  file_upload:
+    enabled: true
+    max_size: 100MB
+    allowed_types:
+      - image/jpeg
+      - image/png
+      - image/gif
+      - application/pdf
+      - text/plain
+
+zulip_config:
+  # Organisatie instellingen
+  organization:
+    name: "{{ company_name }}"
+    description: "Interne communicatie"
+    invite_required: true
+    email_visibility: admins_only
+    
+  # Streams (Zulip's kanalen)
+  streams:
+    - name: general
+      description: "Algemeen nieuws en aankondigingen"
+      public: true
+    - name: development
+      description: "Development discussies"
+      public: true
+    - name: operations
+      description: "Operations en beheer"
+      public: false
+    - name: support
+      description: "Support en helpdesk"
+      public: false
+      
+  # Gebruikersgroepen
+  user_groups:
+    - name: admins
+      description: "Systeembeheerders"
+    - name: developers
+      description: "Development team"
+    - name: operators
+      description: "Operations team"
+      
+  # Integraties
+  integrations:
+    - type: github
+      repository: "{{ company_name }}/backend"
+      events:
+        - push
+        - pull_request
+    - type: jenkins
+      url: "https://jenkins.{{ domain }}"
+      jobs:
+        - backend-build
+        - frontend-build
+
+jitsi_config:
+  # Vergaderinstellingen
+  meetings:
+    max_participants: 50
+    max_duration: 60
+    recording_enabled: false
+    live_streaming_enabled: false
+    transcription_enabled: false
+    
+  # Audio/Video instellingen
+  media:
+    video_codec: VP8
+    audio_codec: OPUS
+    resolution: 720p
+    frame_rate: 30
+    bandwidth: 2000
+    
+  # Beveiliging
+  security:
+    lobby_enabled: true
+    require_auth: false
+    enable_chat: true
+    enable_file_sharing: true
+    enable_screen_sharing: true
+    
+  # Branding
+  branding:
+    logo_url: "https://{{ domain }}/logo.png"
+    background_color: "#000000"
+    text_color: "#ffffff"
+
+gotify_config:
+  # Applicaties voor notificaties
+  applications:
+    - name: Jenkins
+      description: "Jenkins build notificaties"
+      token: "{{ vault_gotify_jenkins_token }}"
+    - name: Monitoring
+      description: "Monitoring alerts"
+      token: "{{ vault_gotify_monitoring_token }}"
+    - name: Backup
+      description: "Backup notificaties"
+      token: "{{ vault_gotify_backup_token }}"
+      
+  # Clients
+  clients:
+    - name: Desktop
+      token: "{{ vault_gotify_desktop_token }}"
+    - name: Mobile
+      token: "{{ vault_gotify_mobile_token }}"
+      
+  # Notificatie instellingen
+  notification_settings:
+    pushover_enabled: false
+    telegram_enabled: false
+    email_enabled: true
+    email_smtp: smtp.{{ domain }}
+    email_user: gotify@{{ domain }}
+    email_password: "{{ vault_smtp_password }}"

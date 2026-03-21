@@ -1,0 +1,96 @@
+---
+# =============================================================================
+# NOTARY - TRUSTED CONTENT DISTRIBUTION
+# =============================================================================
+# Beschrijving: Trusted content distribution for container images
+# Website: https://github.com/notaryproject/notary
+# =============================================================================
+
+application:
+  name: notary
+  version: 0.7.0
+  description: "Notary - Trusted content distribution"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://github.com/notaryproject/notary"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: logs
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/notary
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 4443
+        host: 4443
+        protocol: tcp
+        public: false
+        description: "Notary server"
+      - container: 7890
+        host: 7890
+        protocol: tcp
+        public: false
+        description: "Notary signer"
+    dns:
+      - "notary.{{ domain }}"
+      
+  container:
+    image: notary/server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  sidecars:
+    - name: signer
+      image: notary/signer:latest
+      ports:
+        - container: 7890
+      
+  environment_variables:
+    - name: NOTARY_SERVER_PORT
+      value: "4443"
+      secret: false
+    - name: NOTARY_SIGNER_PORT
+      value: "7890"
+      secret: false
+    - name: NOTARY_DB_URL
+      value: "postgresql://notary:{{ vault_notary_password }}@postgres:5432/notary?sslmode=disable"
+      secret: true
+    - name: NOTARY_SIGNER_DB_URL
+      value: "postgresql://notary:{{ vault_notary_password }}@postgres:5432/notary?sslmode=disable"
+      secret: true
+    - name: NOTARY_DEBUG
+      value: "false"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /v2/_catalog
+      port: 4443

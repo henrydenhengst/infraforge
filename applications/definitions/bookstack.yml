@@ -1,0 +1,109 @@
+---
+# =============================================================================
+# INVENTREE - VOORRAADBEHEER
+# =============================================================================
+# Beschrijving: Krachtig voorraadbeheer voor fysieke producten
+# Website: https://inventree.org
+# =============================================================================
+
+application:
+  name: inventree
+  version: 0.15.0
+  description: "InvenTree - Voorraadbeheer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: retail-team
+    contact: retail@company.local
+    slack: "#retail"
+    documentation: "https://docs.inventree.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /home/inventree/data
+      - name: media
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /home/inventree/media
+        
+  network_requirements:
+    vlans:
+      - retail
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "InvenTree web interface"
+    dns:
+      - "inventree.{{ domain }}"
+      
+  container:
+    image: inventree/inventree:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: INVENTREE_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: INVENTREE_DB_PORT
+      value: "5432"
+      secret: false
+    - name: INVENTREE_DB_NAME
+      value: "inventree"
+      secret: false
+    - name: INVENTREE_DB_USER
+      value: "inventree"
+      secret: false
+    - name: INVENTREE_DB_PASSWORD
+      value: "{{ vault_inventree_password }}"
+      secret: true
+    - name: INVENTREE_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: INVENTREE_ADMIN_PASSWORD
+      value: "{{ vault_inventree_admin_password }}"
+      secret: true
+    - name: INVENTREE_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: INVENTREE_SITE_URL
+      value: "https://inventree.{{ domain }}"
+      secret: false
+    - name: INVENTREE_SITE_TITLE
+      value: "Voorraadbeheer"
+      secret: false
+    - name: INVENTREE_CURRENCY
+      value: "EUR"
+      secret: false
+    - name: INVENTREE_LANGUAGE
+      value: "nl"
+      secret: false
+    - name: INVENTREE_TIMEZONE
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health/
+      port: 8000

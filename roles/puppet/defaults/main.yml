@@ -1,0 +1,6 @@
+---
+puppet_version: "8.0.0"
+puppet_version_major: "8"
+puppet_config_dir: /etc/puppetlabs/puppet
+puppet_modules_dir: /etc/puppetlabs/code/environments/production/modules
+puppet_manifests_dir: /etc/puppetlabs/code/environments/production/manifests

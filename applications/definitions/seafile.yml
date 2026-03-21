@@ -1,0 +1,119 @@
+---
+# =============================================================================
+# OWNCLOUD - BESTANDSOPSLAG
+# =============================================================================
+# Beschrijving: Bestandsopslag en synchronisatie
+# Website: https://owncloud.com
+# =============================================================================
+
+application:
+  name: owncloud
+  version: 10.14.0
+  description: "ownCloud - Bestandsopslag"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: collaboration-team
+    contact: collaboration@company.local
+    slack: "#collaboration"
+    documentation: "https://doc.owncloud.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /mnt/data
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /mnt/config
+        
+  network_requirements:
+    vlans:
+      - collaboration
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "ownCloud web interface"
+    dns:
+      - "owncloud.{{ domain }}"
+      - "cloud.{{ domain }}"
+      
+  container:
+    image: owncloud/server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: OWNCLOUD_DOMAIN
+      value: "owncloud.{{ domain }}"
+      secret: false
+    - name: OWNCLOUD_DB_TYPE
+      value: "mysql"
+      secret: false
+    - name: OWNCLOUD_DB_NAME
+      value: "owncloud"
+      secret: false
+    - name: OWNCLOUD_DB_USERNAME
+      value: "owncloud"
+      secret: false
+    - name: OWNCLOUD_DB_PASSWORD
+      value: "{{ vault_owncloud_password }}"
+      secret: true
+    - name: OWNCLOUD_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: OWNCLOUD_ADMIN_USERNAME
+      value: "admin"
+      secret: false
+    - name: OWNCLOUD_ADMIN_PASSWORD
+      value: "{{ vault_owncloud_admin_password }}"
+      secret: true
+    - name: OWNCLOUD_REDIS_ENABLED
+      value: "true"
+      secret: false
+    - name: OWNCLOUD_REDIS_HOST
+      value: "redis"
+      secret: false
+    - name: OWNCLOUD_MAIL_SMTP_MODE
+      value: "smtp"
+      secret: false
+    - name: OWNCLOUD_MAIL_SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: OWNCLOUD_MAIL_SMTP_PORT
+      value: "587"
+      secret: false
+    - name: OWNCLOUD_MAIL_SMTP_AUTH_TYPE
+      value: "LOGIN"
+      secret: false
+    - name: OWNCLOUD_MAIL_SMTP_NAME
+      value: "owncloud@{{ domain }}"
+      secret: false
+    - name: OWNCLOUD_MAIL_SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /status.php
+      port: 8080

@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# TOOLJET - LOW-CODE FRAMEWORK
+# =============================================================================
+# Beschrijving: Low-code framework voor interne zakelijke applicaties
+# Website: https://tooljet.com
+# =============================================================================
+
+application:
+  name: tooljet
+  version: 2.0.0
+  description: "ToolJet - Low-code framework"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://docs.tooljet.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/tooljet
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 80
+        host: 8082
+        protocol: tcp
+        public: true
+        description: "ToolJet web UI"
+    dns:
+      - "tooljet.{{ domain }}"
+      - "lowcode.{{ domain }}"
+      
+  container:
+    image: tooljet/tooljet-ce:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: TOOLJET_SECRET
+      value: "{{ vault_tooljet_secret }}"
+      secret: true
+    - name: TOOLJET_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: TOOLJET_DB_USER
+      value: "tooljet"
+      secret: false
+    - name: TOOLJET_DB_PASSWORD
+      value: "{{ vault_tooljet_db_password }}"
+      secret: true
+    - name: TOOLJET_DB_NAME
+      value: "tooljet"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 80

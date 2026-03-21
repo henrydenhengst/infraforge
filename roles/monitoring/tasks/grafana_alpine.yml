@@ -1,0 +1,5 @@
+---
+- name: Install Grafana from community repository
+  ansible.builtin.package:
+    name: grafana
+    state: present

@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# OPENCVE - CVE MONITORING
+# =============================================================================
+# Beschrijving: CVE monitoring en vulnerability management
+# Website: https://www.opencve.io
+# =============================================================================
+
+application:
+  name: opencve
+  version: 1.1.0
+  description: "OpenCVE - CVE monitoring platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://docs.opencve.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "OpenCVE web interface"
+    dns:
+      - "cve.{{ domain }}"
+      - "opencve.{{ domain }}"
+      
+  container:
+    image: opencve/opencve:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: OPENCVE_DATABASE_URL
+      value: "postgresql://opencve:{{ vault_opencve_password }}@postgres:5432/opencve"
+      secret: true
+    - name: OPENCVE_SECRET_KEY
+      value: "{{ vault_opencve_secret }}"
+      secret: true
+    - name: OPENCVE_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: OPENCVE_ADMIN_PASSWORD
+      value: "{{ vault_opencve_admin_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

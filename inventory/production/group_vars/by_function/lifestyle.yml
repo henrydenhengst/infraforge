@@ -1,0 +1,261 @@
+---
+# =============================================================================
+# LIFESTYLE TOOLS
+# =============================================================================
+# Functie: lifestyle
+# Beschrijving: Tools voor persoonlijk gebruik, huishoudbeheer en dagelijks leven
+# =============================================================================
+
+lifestyle_tools:
+  # ---------------------------------------------------------------------------
+  # HUISHOUD BEHEER
+  # ---------------------------------------------------------------------------
+  - name: Grocy
+    profiel_tag: Algemeen
+    functie_tag: lifestyle
+    beschrijving: "Huishoudbeheer voor voorraad, maaltijden en taken"
+    categorie: household
+    docker_image: linuxserver/grocy:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - grocy_config:/config
+      - grocy_data:/data
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+      GROCY_CULTURE: nl
+      GROCY_CURRENCY: EUR
+    url: "https://grocy.info"
+    
+  # ---------------------------------------------------------------------------
+  # BABY TRACKING
+  # ---------------------------------------------------------------------------
+  - name: BabyBuddy
+    profiel_tag: Algemeen
+    functie_tag: lifestyle
+    beschrijving: "Baby-tracking software voor voeding, slaap en luiers"
+    categorie: baby
+    docker_image: linuxserver/babybuddy:latest
+    ports:
+      - "8081:8000"
+    volumes:
+      - babybuddy_config:/config
+      - babybuddy_data:/data
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+      BABYBUDDY_DB_TYPE: sqlite
+      BABYBUDDY_DB_NAME: babybuddy
+      BABYBUDDY_SECRET_KEY: "{{ vault_babybuddy_secret }}"
+      BABYBUDDY_ALLOWED_HOSTS: "babybuddy.{{ domain }}"
+    url: "https://babybuddy.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+lifestyle_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Taal en regio
+  locale:
+    language: nl
+    timezone: Europe/Amsterdam
+    currency: EUR
+    date_format: d-m-Y
+    time_format: H:i
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+grocy_config:
+  # Grocy gebruikers
+  users:
+    - username: admin
+      password: "{{ vault_grocy_admin_password }}"
+      role: admin
+    - username: partner
+      password: "{{ vault_grocy_partner_password }}"
+      role: user
+      
+  # Grocy locaties
+  locations:
+    - name: Koelkast
+      description: "Koelkast in keuken"
+    - name: Voorraadkast
+      description: "Droge voorraad"
+    - name: Vriezer
+      description: "Diepvries"
+    - name: Badkamer
+      description: "Badkamer voorraad"
+      
+  # Grocy producten
+  products:
+    - name: Melk
+      description: "Verse melk"
+      location: Koelkast
+      min_stock_amount: 1
+      default_quantity: 1
+      unit: liter
+      barcode: "8711234567890"
+    - name: Brood
+      description: "Volkorenbrood"
+      location: Voorraadkast
+      min_stock_amount: 1
+      default_quantity: 1
+      unit: stuk
+    - name: Eieren
+      description: "Eieren (6 stuks)"
+      location: Koelkast
+      min_stock_amount: 1
+      default_quantity: 1
+      unit: doos
+    - name: Pasta
+      description: "Pasta 500g"
+      location: Voorraadkast
+      min_stock_amount: 2
+      default_quantity: 1
+      unit: pak
+      
+  # Grocy recepten
+  recipes:
+    - name: Pasta met tomatensaus
+      description: "Snelle pasta"
+      preparation_time: 20
+      cooking_time: 15
+      servings: 4
+      ingredients:
+        - product: Pasta
+          quantity: 500
+          unit: gram
+        - product: Tomatensaus
+          quantity: 400
+          unit: ml
+        - product: Uien
+          quantity: 1
+          unit: stuk
+      instructions: |
+        1. Kook pasta volgens verpakking
+        2. Bak ui in pan
+        3. Voeg tomatensaus toe
+        4. Serveer
+        
+    - name: Omelet
+      description: "Simpele omelet"
+      preparation_time: 5
+      cooking_time: 10
+      servings: 2
+      ingredients:
+        - product: Eieren
+          quantity: 4
+          unit: stuk
+        - product: Melk
+          quantity: 50
+          unit: ml
+        - product: Kaas
+          quantity: 50
+          unit: gram
+      instructions: |
+        1. Klop eieren met melk
+        2. Bak in pan
+        3. Voeg kaas toe
+        
+  # Grocy taken
+  chores:
+    - name: Afval buiten zetten
+      description: "GFT en restafval"
+      period_type: weekly
+      period_days: 7
+      next_execution: "{{ next_sunday }}"
+      assigned_to: admin
+    - name: Koelkast schoonmaken
+      description: "Maandelijkse schoonmaak"
+      period_type: monthly
+      period_days: 30
+      next_execution: "{{ next_month }}"
+      
+  # Grocy batterijen
+  batteries:
+    - name: Rookmelder
+      description: "Rookmelder keuken"
+      capacity: 365
+      charge_cycles: 1
+      last_charge_time: "{{ last_year }}"
+      
+  # Grocy maaltijdplanning
+  meal_plan:
+    monday:
+      lunch: Boterhammen
+      dinner: Pasta met tomatensaus
+    tuesday:
+      lunch: Boterhammen
+      dinner: Omelet
+    wednesday:
+      lunch: Soep
+      dinner: Aardappels met groente
+      
+  # Grocy boodschappenlijst
+  shopping_list:
+    - product: Melk
+      amount: 2
+    - product: Brood
+      amount: 1
+    - product: Eieren
+      amount: 1
+
+babybuddy_config:
+  # BabyBuddy kinderen
+  children:
+    - first_name: Baby
+      last_name: "{{ family_name }}"
+      birth_date: "{{ baby_birth_date }}"
+      birth_weight: 3500
+      birth_height: 50
+      birth_head_circumference: 35
+      
+  # BabyBuddy gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_babybuddy_admin_password }}"
+      is_staff: true
+      is_superuser: true
+      
+  # BabyBuddy timers
+  timers:
+    - name: Voeding
+      description: "Timer voor borstvoeding"
+    - name: Slapen
+      description: "Timer voor dutjes"
+      
+  # BabyBuddy tags
+  tags:
+    - name: Links
+      color: "#ff0000"
+    - name: Rechts
+      color: "#0000ff"
+    - name: Fles
+      color: "#00ff00"
+    - name: Boertje
+      color: "#ffff00"
+      
+  # BabyBuddy instellingen
+  settings:
+    show_stats: true
+    show_dashboard: true
+    show_timer: true
+    date_format: "%d-%m-%Y"
+    time_format: "%H:%M"
+    
+  # BabyBuddy notificaties
+  notifications:
+    enabled: true
+    email_enabled: false
+    push_enabled: true

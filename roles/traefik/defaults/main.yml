@@ -1,0 +1,16 @@
+---
+traefik_log_level: INFO
+traefik_acme_email: admin@{{ domain }}
+traefik_acme_storage: /var/lib/traefik/acme.json
+traefik_entrypoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+  traefik:
+    address: ":8080"

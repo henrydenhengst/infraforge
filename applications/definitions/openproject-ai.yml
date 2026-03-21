@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# OPENPROJECT-AI - PROJECTPLANNING MET AI
+# =============================================================================
+# Beschrijving: Project-planning en risicoanalyse via AI
+# Website: https://www.openproject.org
+# =============================================================================
+
+application:
+  name: openproject-ai
+  version: 13.0.0
+  description: "OpenProject-AI - Projectplanning met AI"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: project-team
+    contact: pm@company.local
+    slack: "#project"
+    documentation: "https://www.openproject.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/openproject/assets
+      - name: db
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/postgresql
+        
+  network_requirements:
+    vlans:
+      - project
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "OpenProject web interface"
+    dns:
+      - "openproject-ai.{{ domain }}"
+      - "ai-pm.{{ domain }}"
+      
+  container:
+    image: openproject/community:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: OPENPROJECT_AI_ENABLED
+      value: "true"
+      secret: false
+    - name: OPENPROJECT_AI_API_KEY
+      value: "{{ vault_openai_key }}"
+      secret: true
+    - name: OPENPROJECT_AI_MODEL
+      value: "gpt-4"
+      secret: false
+    - name: OPENPROJECT_AI_TEMPERATURE
+      value: "0.7"
+      secret: false
+    - name: OPENPROJECT_HOST__NAME
+      value: "openproject-ai.{{ domain }}"
+      secret: false
+    - name: OPENPROJECT_HTTPS
+      value: "true"
+      secret: false
+    - name: OPENPROJECT_DEFAULT__LANGUAGE
+      value: "nl"
+      secret: false
+    - name: OPENPROJECT_SEED__ADMIN__PASSWORD
+      value: "{{ vault_openproject_admin_password }}"
+      secret: true
+    - name: OPENPROJECT_DATABASE_URL
+      value: "postgresql://openproject:{{ vault_openproject_password }}@postgres:5432/openproject"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health_check
+      port: 80

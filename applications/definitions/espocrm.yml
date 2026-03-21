@@ -1,0 +1,84 @@
+---
+# =============================================================================
+# MEILISEARCH - RAZENDSNELLE ZOEKMACHINE
+# =============================================================================
+# Beschrijving: Razendsnelle zoekmachine voor websites en applicaties
+# Website: https://www.meilisearch.com
+# =============================================================================
+
+application:
+  name: meilisearch
+  version: 1.6.0
+  description: "Meilisearch - Snelle zoekmachine"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://docs.meilisearch.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /meili_data
+        
+  network_requirements:
+    vlans:
+      - search
+      - internal
+    ports:
+      - container: 7700
+        host: 7700
+        protocol: tcp
+        public: false
+        description: "Meilisearch API"
+    dns:
+      - "search.{{ domain }}"
+      - "meili.{{ domain }}"
+      
+  container:
+    image: getmeili/meilisearch:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: MEILI_MASTER_KEY
+      value: "{{ vault_meilisearch_master_key }}"
+      secret: true
+    - name: MEILI_ENV
+      value: "production"
+      secret: false
+    - name: MEILI_NO_ANALYTICS
+      value: "true"
+      secret: false
+    - name: MEILI_HTTP_ADDR
+      value: "0.0.0.0:7700"
+      secret: false
+    - name: MEILI_DB_PATH
+      value: "/meili_data/data.ms"
+      secret: false
+    - name: MEILI_SNAPSHOT_INTERVAL_SEC
+      value: "86400"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 7700

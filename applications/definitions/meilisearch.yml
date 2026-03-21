@@ -1,0 +1,77 @@
+---
+# =============================================================================
+# FERRETDB - OPEN-SOURCE MONGODB ALTERNATIEF
+# =============================================================================
+# Beschrijving: Open-source MongoDB alternative with PostgreSQL backend
+# Website: https://ferretdb.com
+# =============================================================================
+
+application:
+  name: ferretdb
+  version: 1.0.0
+  description: "FerretDB - Open-source MongoDB alternative"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://docs.ferretdb.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 27017
+        host: 27017
+        protocol: tcp
+        public: false
+        description: "FerretDB MongoDB wire protocol"
+    dns:
+      - "ferretdb.{{ domain }}"
+      - "mongodb-alt.{{ domain }}"
+      
+  container:
+    image: ghcr.io/ferretdb/ferretdb:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: FERRETDB_POSTGRESQL_URL
+      value: "postgres://ferretdb:{{ vault_ferretdb_password }}@postgres:5432/ferretdb"
+      secret: true
+    - name: FERRETDB_LISTEN_ADDR
+      value: "0.0.0.0:27017"
+      secret: false
+    - name: FERRETDB_TELEMETRY
+      value: "false"
+      secret: false
+    - name: FERRETDB_DEBUG
+      value: "false"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: tcp
+      port: 27017

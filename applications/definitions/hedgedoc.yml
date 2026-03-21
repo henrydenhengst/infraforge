@@ -1,0 +1,94 @@
+---
+# =============================================================================
+# ONLYOFFICE - DOCUMENTEN SAMENWERKING
+# =============================================================================
+# Beschrijving: Online office suite voor document samenwerking
+# Website: https://www.onlyoffice.com
+# =============================================================================
+
+application:
+  name: onlyoffice
+  version: 7.4.0
+  description: "OnlyOffice - Documenten samenwerking"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: office-team
+    contact: office@company.local
+    slack: "#office"
+    documentation: "https://helpcenter.onlyoffice.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/onlyoffice/Data
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/onlyoffice
+        
+  network_requirements:
+    vlans:
+      - office
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "OnlyOffice web interface"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: false
+        description: "OnlyOffice HTTPS"
+    dns:
+      - "office.{{ domain }}"
+      - "onlyoffice.{{ domain }}"
+      
+  container:
+    image: onlyoffice/documentserver:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: JWT_ENABLED
+      value: "true"
+      secret: false
+    - name: JWT_SECRET
+      value: "{{ vault_onlyoffice_secret }}"
+      secret: true
+    - name: JWT_HEADER
+      value: "Authorization"
+      secret: false
+    - name: ONLYOFFICE_HTTPS_HSTS_ENABLED
+      value: "true"
+      secret: false
+    - name: ONLYOFFICE_SERVER_PORT
+      value: "443"
+      secret: false
+    - name: ONLYOFFICE_SERVER_NAME
+      value: "onlyoffice.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /healthcheck
+      port: 80

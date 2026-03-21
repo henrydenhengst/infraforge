@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+[NetDev]
+Name={{ name }}
+Kind={{ kind | default('vlan') }}
+{% if kind == 'vlan' %}
+[VLAN]
+Id={{ vlan_id }}
+{% endif %}

@@ -1,0 +1,16 @@
+---
+- name: '{{ ansible_os_family }} | Configureer Nginx virtual host'
+  ansible.builtin.template:
+    src: nginx_vhost.conf.j2
+    dest: "/etc/nginx/sites-available/{{ app.name }}.conf"
+    mode: '0644'
+  notify: reload nginx
+  tags: [proxy]
+
+- name: '{{ ansible_os_family }} | Enable Nginx virtual host'
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ app.name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ app.name }}.conf"
+    state: link
+  notify: reload nginx
+  tags: [proxy]

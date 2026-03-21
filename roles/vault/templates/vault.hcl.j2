@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+storage "file" {
+  path = "{{ vault_storage_path }}"
+}
+
+listener "tcp" {
+  address     = "{{ vault_listen_address }}"
+  tls_disable = true
+}
+
+ui = true
+
+api_addr = "http://127.0.0.1:8200"
+cluster_addr = "http://127.0.0.1:8201"
+
+disable_mlock = true

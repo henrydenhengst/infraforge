@@ -1,0 +1,6 @@
+---
+drone_data_path: /opt/drone
+drone_db_password: "{{ vault_drone_db_password }}"
+drone_github_client_id: "{{ vault_drone_github_client_id }}"
+drone_github_client_secret: "{{ vault_drone_github_client_secret }}"
+drone_rpc_secret: "{{ vault_drone_rpc_secret }}"

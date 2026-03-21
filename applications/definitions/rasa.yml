@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# KODI - MEDIABEDIENING
+# =============================================================================
+# Beschrijving: Mediabediening en home theater software
+# Website: https://kodi.tv
+# =============================================================================
+
+application:
+  name: kodi
+  version: 20.0.0
+  description: "Kodi - Mediabediening"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://kodi.wiki"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: media
+        size_gb: 100
+        performance: hdd
+        backup_required: false
+        mount_path: /media
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Kodi web interface"
+      - container: 9090
+        host: 9090
+        protocol: tcp
+        public: false
+        description: "Kodi JSON-RPC"
+    dns:
+      - "kodi.{{ domain }}"
+      
+  container:
+    image: linuxserver/kodi:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: KODI_PORT
+      value: "8080"
+      secret: false
+    - name: KODI_WS_PORT
+      value: "9090"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

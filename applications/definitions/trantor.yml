@@ -1,0 +1,96 @@
+---
+# =============================================================================
+# LINKDING - BOOKMARK MANAGER
+# =============================================================================
+# Beschrijving: Bookmark manager voor het opslaan en organiseren van links
+# Website: https://github.com/sissbruecker/linkding
+# =============================================================================
+
+application:
+  name: linkding
+  version: 1.29.0
+  description: "Linkding - Bookmark manager"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: tools-team
+    contact: tools@company.local
+    slack: "#tools"
+    documentation: "https://github.com/sissbruecker/linkding"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/linkding/data
+        
+  network_requirements:
+    vlans:
+      - tools
+      - internal
+    ports:
+      - container: 9090
+        host: 9090
+        protocol: tcp
+        public: false
+        description: "Linkding web interface"
+    dns:
+      - "bookmarks.{{ domain }}"
+      - "linkding.{{ domain }}"
+      
+  container:
+    image: sissbruecker/linkding:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: LD_SUPERUSER_NAME
+      value: "admin"
+      secret: false
+    - name: LD_SUPERUSER_PASSWORD
+      value: "{{ vault_linkding_password }}"
+      secret: true
+    - name: LD_DB_ENGINE
+      value: "postgres"
+      secret: false
+    - name: LD_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: LD_DB_PORT
+      value: "5432"
+      secret: false
+    - name: LD_DB_NAME
+      value: "linkding"
+      secret: false
+    - name: LD_DB_USER
+      value: "linkding"
+      secret: false
+    - name: LD_DB_PASSWORD
+      value: "{{ vault_linkding_db_password }}"
+      secret: true
+    - name: LD_ENABLE_HTTPS
+      value: "true"
+      secret: false
+    - name: LD_DISABLE_BACKGROUND_TASKS
+      value: "false"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 9090

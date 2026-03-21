@@ -1,0 +1,103 @@
+---
+# =============================================================================
+# PAPERLESS-NGX - DIGITAAL ARCHIEF MET OCR
+# =============================================================================
+# Beschrijving: Digitaal archief met OCR voor documentbeheer
+# Website: https://docs.paperless-ngx.com
+# =============================================================================
+
+application:
+  name: paperless-ngx
+  version: 2.5.0
+  description: "Paperless-ngx - Digitaal archief met OCR"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: office-team
+    contact: office@company.local
+    slack: "#office"
+    documentation: "https://docs.paperless-ngx.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/src/paperless/data
+      - name: media
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/src/paperless/media
+      - name: consume
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /usr/src/paperless/consume
+        
+  network_requirements:
+    vlans:
+      - office
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "Paperless web UI"
+    dns:
+      - "paperless.{{ domain }}"
+      - "docs.{{ domain }}"
+      
+  container:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: PAPERLESS_REDIS
+      value: "redis://redis:6379"
+      secret: false
+    - name: PAPERLESS_DBHOST
+      value: "postgres"
+      secret: false
+    - name: PAPERLESS_DBNAME
+      value: "paperless"
+      secret: false
+    - name: PAPERLESS_DBUSER
+      value: "paperless"
+      secret: false
+    - name: PAPERLESS_DBPASS
+      value: "{{ vault_paperless_password }}"
+      secret: true
+    - name: PAPERLESS_TIME_ZONE
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: PAPERLESS_OCR_LANGUAGE
+      value: "nld+eng"
+      secret: false
+    - name: PAPERLESS_SECRET_KEY
+      value: "{{ vault_paperless_secret }}"
+      secret: true
+    - name: PAPERLESS_URL
+      value: "https://paperless.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8000

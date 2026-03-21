@@ -1,0 +1,7 @@
+---
+ollama_models:
+  - llama3
+  - mistral
+  - phi
+ollama_port: 11434
+ollama_host: 0.0.0.0

@@ -1,0 +1,4 @@
+---
+- name: Docker is in extra repository (Arch)
+  ansible.builtin.debug:
+    msg: "Docker is beschikbaar in de extra repository van Arch Linux"

@@ -1,0 +1,103 @@
+---
+# =============================================================================
+# NOMAD - WORKLOAD ORCHESTRATOR
+# =============================================================================
+# Beschrijving: Workload manager voor containers en applicaties
+# Website: https://www.nomadproject.io
+# =============================================================================
+
+application:
+  name: nomad
+  version: 1.7.0
+  description: "Nomad - Workload orchestrator"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://developer.hashicorp.com/nomad/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /nomad/data
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/nomad
+        
+  network_requirements:
+    vlans:
+      - platform
+      - internal
+    ports:
+      - container: 4646
+        host: 4646
+        protocol: tcp
+        public: false
+        description: "Nomad API"
+      - container: 4647
+        host: 4647
+        protocol: tcp
+        public: false
+        description: "Nomad RPC"
+      - container: 4648
+        host: 4648
+        protocol: tcp
+        public: false
+        description: "Nomad serf"
+    dns:
+      - "nomad.{{ domain }}"
+      
+  container:
+    image: hashicorp/nomad:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: NOMAD_ADDR
+      value: "http://localhost:4646"
+      secret: false
+    - name: NOMAD_CLIENT_ADDR
+      value: "0.0.0.0"
+      secret: false
+    - name: NOMAD_SERVER_ADDR
+      value: "0.0.0.0"
+      secret: false
+      
+  config:
+    server:
+      enabled: true
+      bootstrap_expect: 1
+    client:
+      enabled: true
+      options:
+        driver.raw_exec.enable: "1"
+        docker.privileged.enabled: "true"
+    plugin:
+      docker:
+        config:
+          allow_privileged: true
+          
+  health_checks:
+    liveness:
+      type: http
+      path: /v1/status/leader
+      port: 4646

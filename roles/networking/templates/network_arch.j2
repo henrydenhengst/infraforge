@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+[Match]
+Name={{ name }}
+
+[Network]
+{% if family == 'static' %}
+Address={{ address }}/{{ cidr | default(24) }}
+{% if gateway is defined %}
+Gateway={{ gateway }}
+{% endif %}
+{% endif %}
+{% if dns_servers is defined %}
+DNS={{ dns_servers | join('\nDNS=') }}
+{% endif %}
+{% if mtu is defined %}
+MTUBytes={{ mtu }}
+{% endif %}

@@ -1,0 +1,72 @@
+---
+# =============================================================================
+# ESPHOME - FIRMWARE MANAGEMENT VOOR ESP DEVICES
+# =============================================================================
+# Beschrijving: Firmware management voor ESP8266/ESP32 apparaten
+# Website: https://esphome.io
+# =============================================================================
+
+application:
+  name: esphome
+  version: 2024.3.0
+  description: "ESPHome - Firmware management voor ESP devices"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: iot-team
+    contact: iot@company.local
+    slack: "#iot"
+    documentation: "https://esphome.io/guides"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+        
+  network_requirements:
+    vlans:
+      - iot
+      - internal
+    ports:
+      - container: 6052
+        host: 6052
+        protocol: tcp
+        public: false
+        description: "ESPHome dashboard"
+    dns:
+      - "esphome.{{ domain }}"
+      
+  container:
+    image: esphome/esphome:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+    privileged: true
+        
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: ESPHOME_DASHBOARD_USE_PING
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 6052

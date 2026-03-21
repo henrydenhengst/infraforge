@@ -1,0 +1,94 @@
+---
+# =============================================================================
+# PAPERLESS-GPT - AI-CLASSIFICATIE VOOR DOCUMENTEN
+# =============================================================================
+# Beschrijving: Automatische classificatie van documenten via LLM
+# Website: https://github.com/icereed/paperless-gpt
+# =============================================================================
+
+application:
+  name: paperless-gpt
+  version: 1.0.0
+  description: "Paperless-GPT - AI-classificatie voor documenten"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: hr-team
+    contact: hr@company.local
+    slack: "#hr"
+    documentation: "https://github.com/icereed/paperless-gpt"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /app/config
+        
+  network_requirements:
+    vlans:
+      - hr
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Paperless-GPT API"
+    dns:
+      - "paperless-gpt.{{ domain }}"
+      
+  container:
+    image: icereed/paperless-gpt:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PAPERLESS_GPT_API_KEY
+      value: "{{ vault_openai_key }}"
+      secret: true
+    - name: PAPERLESS_GPT_MODEL
+      value: "gpt-3.5-turbo"
+      secret: false
+    - name: PAPERLESS_GPT_PAPERLESS_URL
+      value: "http://paperless:8000"
+      secret: false
+    - name: PAPERLESS_GPT_PAPERLESS_TOKEN
+      value: "{{ vault_paperless_token }}"
+      secret: true
+    - name: PAPERLESS_GPT_AUTO_TAGGING
+      value: "true"
+      secret: false
+    - name: PAPERLESS_GPT_AUTO_CORRESPONDENT
+      value: "true"
+      secret: false
+    - name: PAPERLESS_GPT_AUTO_DOCUMENT_TYPE
+      value: "true"
+      secret: false
+    - name: PAPERLESS_GPT_SUMMARY
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

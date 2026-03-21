@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# DOCKER ROLE - Docker installatie en configuratie
+# =============================================================================
+# Deze role installeert Docker Engine, Docker Compose en configureert de
+# Docker daemon voor productiegebruik.
+# =============================================================================
+
+- name: '{{ ansible_os_family }} | Installeer Docker prerequisites'
+  ansible.builtin.package:
+    name: "{{ docker_prerequisites[ansible_os_family] }}"
+    state: present
+  tags: [prerequisites, always]
+
+- name: '{{ ansible_os_family }} | Voeg Docker repository toe'
+  ansible.builtin.include_tasks: "repo_{{ ansible_os_family | lower }}.yml"
+  tags: [repository]
+
+- name: '{{ ansible_os_family }} | Installeer Docker packages'
+  ansible.builtin.package:
+    name: "{{ docker_packages[ansible_os_family] }}"
+    state: present
+    update_cache: "{{ package_cache_update | default(true) }}"
+  tags: [install]
+
+- name: Start en enable Docker service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
+  tags: [service]
+
+- name: Wacht tot Docker service draait
+  ansible.builtin.wait_for:
+    port: 2375
+    timeout: 30
+    state: started
+  ignore_errors: yes
+  tags: [service]
+
+- name: '{{ ansible_os_family }} | Installeer Docker Compose plugin'
+  ansible.builtin.include_tasks: "compose_{{ ansible_os_family | lower }}.yml"
+  tags: [compose]
+
+- name: Voeg ansible gebruiker toe aan docker groep
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+  when: add_user_to_docker_group | default(true)
+  tags: [user]
+
+- name: '{{ ansible_os_family }} | Configureer Docker daemon'
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart docker
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Installeer Docker Python module'
+  ansible.builtin.package:
+    name: "{{ python_docker_package[ansible_os_family] }}"
+    state: present
+  tags: [python]
+
+- name: '{{ ansible_os_family }} | Configureer logrotate voor Docker logs'
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/docker
+    content: |
+      /var/lib/docker/containers/*/*.log {
+          rotate 7
+          daily
+          compress
+          missingok
+          delaycompress
+          copytruncate
+          maxsize 100M
+      }
+    mode: '0644'
+  tags: [logging]
+
+- name: '{{ ansible_os_family }} | Docker security hardening'
+  ansible.builtin.include_tasks: "security_{{ ansible_os_family | lower }}.yml"
+  tags: [security]

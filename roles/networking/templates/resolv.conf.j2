@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# DNS configuration
+
+{% for server in dns_servers %}
+nameserver {{ server }}
+{% endfor %}
+search {{ dns_search }}
+options rotate
+options timeout:1

@@ -1,0 +1,108 @@
+---
+# =============================================================================
+# SHLINK - URL SHORTENER
+# =============================================================================
+# Beschrijving: URL shortener voor marketing en analytics
+# Website: https://shlink.io
+# =============================================================================
+
+application:
+  name: shlink
+  version: 3.6.0
+  description: "Shlink - URL shortener"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: marketing-team
+    contact: marketing@company.local
+    slack: "#marketing"
+    documentation: "https://shlink.io/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /shlink/data
+      - name: logs
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /shlink/logs
+        
+  network_requirements:
+    vlans:
+      - marketing
+      - dmz
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "Shlink web interface"
+    dns:
+      - "short.{{ domain }}"
+      - "shlink.{{ domain }}"
+      - "go.{{ domain }}"
+      
+  container:
+    image: shlinkio/shlink:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DB_DRIVER
+      value: "postgres"
+      secret: false
+    - name: DB_HOST
+      value: "postgres"
+      secret: false
+    - name: DB_PORT
+      value: "5432"
+      secret: false
+    - name: DB_NAME
+      value: "shlink"
+      secret: false
+    - name: DB_USER
+      value: "shlink"
+      secret: false
+    - name: DB_PASSWORD
+      value: "{{ vault_shlink_password }}"
+      secret: true
+    - name: SHORT_DOMAIN_HOST
+      value: "go.{{ domain }}"
+      secret: false
+    - name: SHORT_DOMAIN_SCHEMA
+      value: "https"
+      secret: false
+    - name: IS_HTTPS_ENABLED
+      value: "true"
+      secret: false
+    - name: GEOLITE_LICENSE_KEY
+      value: "{{ vault_geolite_key }}"
+      secret: true
+    - name: DISABLE_TRACKING
+      value: "false"
+      secret: false
+    - name: DEFAULT_DOMAIN
+      value: "{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

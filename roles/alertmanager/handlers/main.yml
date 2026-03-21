@@ -1,0 +1,5 @@
+---
+- name: restart alertmanager
+  ansible.builtin.docker_container:
+    name: alertmanager
+    restart: yes

@@ -1,0 +1,74 @@
+---
+# =============================================================================
+# OCTANT - KUBERNETES DASHBOARD
+# =============================================================================
+# Beschrijving: Web-based Kubernetes dashboard
+# Website: https://octant.dev
+# =============================================================================
+
+application:
+  name: octant
+  version: 0.25.0
+  description: "Octant - Kubernetes dashboard"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://octant.dev/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /root/.config/octant
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 7777
+        host: 7777
+        protocol: tcp
+        public: false
+        description: "Octant UI"
+    dns:
+      - "octant.{{ domain }}"
+      
+  container:
+    image: octant/octant:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: OCTANT_DISABLE_OPEN_BROWSER
+      value: "true"
+      secret: false
+    - name: OCTANT_LISTENER_ADDR
+      value: "0.0.0.0:7777"
+      secret: false
+      
+  volumes:
+    - ~/.kube:/root/.kube:ro
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 7777

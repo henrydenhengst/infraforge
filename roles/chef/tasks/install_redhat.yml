@@ -1,0 +1,11 @@
+---
+- name: Download Chef installer
+  ansible.builtin.get_url:
+    url: "https://packages.chef.io/files/stable/chef/18.0.0/el/8/chef-18.0.0-1.el8.x86_64.rpm"
+    dest: "/tmp/chef.rpm"
+  ignore_errors: yes
+
+- name: Installeer Chef
+  ansible.builtin.dnf:
+    name: "/tmp/chef.rpm"
+    state: present

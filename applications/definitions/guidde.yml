@@ -1,0 +1,104 @@
+---
+# =============================================================================
+# BABYBUDDY - BABY-TRACKING SOFTWARE
+# =============================================================================
+# Beschrijving: Baby-tracking software voor voeding, slaap en luiers
+# Website: https://babybuddy.com
+# =============================================================================
+
+application:
+  name: babybuddy
+  version: 1.0.0
+  description: "BabyBuddy - Baby-tracking software"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: lifestyle-team
+    contact: lifestyle@company.local
+    slack: "#lifestyle"
+    documentation: "https://babybuddy.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - lifestyle
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "BabyBuddy web interface"
+    dns:
+      - "baby.{{ domain }}"
+      - "babybuddy.{{ domain }}"
+      
+  container:
+    image: linuxserver/babybuddy:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: BABYBUDDY_DB_TYPE
+      value: "postgres"
+      secret: false
+    - name: BABYBUDDY_DB_NAME
+      value: "babybuddy"
+      secret: false
+    - name: BABYBUDDY_DB_USER
+      value: "babybuddy"
+      secret: false
+    - name: BABYBUDDY_DB_PASSWORD
+      value: "{{ vault_babybuddy_password }}"
+      secret: true
+    - name: BABYBUDDY_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: BABYBUDDY_DB_PORT
+      value: "5432"
+      secret: false
+    - name: BABYBUDDY_SECRET_KEY
+      value: "{{ vault_babybuddy_secret }}"
+      secret: true
+    - name: BABYBUDDY_ALLOWED_HOSTS
+      value: "babybuddy.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8000

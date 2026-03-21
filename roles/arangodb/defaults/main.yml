@@ -1,0 +1,3 @@
+---
+arangodb_data_path: /opt/arangodb
+arangodb_root_password: "{{ vault_arangodb_password }}"

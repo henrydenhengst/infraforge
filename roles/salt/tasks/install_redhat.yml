@@ -1,0 +1,13 @@
+---
+- name: Voeg Salt repository toe
+  ansible.builtin.yum_repository:
+    name: salt-latest
+    description: SaltStack Latest
+    baseurl: https://packages.broadcom.com/artifactory/saltproject-rpm/8/x86_64/latest/
+    enabled: yes
+    gpgcheck: no
+
+- name: Installeer Salt Minion
+  ansible.builtin.dnf:
+    name: salt-minion
+    state: present

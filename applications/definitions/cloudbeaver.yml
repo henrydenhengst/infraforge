@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# PHPMYADMIN - MYSQL ADMINISTRATION
+# =============================================================================
+# Beschrijving: Web-based MySQL administration tool
+# Website: https://www.phpmyadmin.net
+# =============================================================================
+
+application:
+  name: phpmyadmin
+  version: 5.2.0
+  description: "phpMyAdmin - MySQL administration"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: dba-team
+    contact: dba@company.local
+    slack: "#database"
+    documentation: "https://docs.phpmyadmin.net"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        
+  network_requirements:
+    vlans:
+      - database
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "phpMyAdmin web UI"
+    dns:
+      - "mysql-admin.{{ domain }}"
+      - "phpmyadmin.{{ domain }}"
+      
+  container:
+    image: phpmyadmin/phpmyadmin:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2Gi
+      requests:
+        cpu: "0.5"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PMA_HOST
+      value: "mysql"
+      secret: false
+    - name: PMA_PORT
+      value: "3306"
+      secret: false
+    - name: PMA_ARBITRARY
+      value: "1"
+      secret: false
+    - name: PMA_USER
+      value: "root"
+      secret: false
+    - name: PMA_PASSWORD
+      value: "{{ vault_mysql_root_password }}"
+      secret: true
+    - name: UPLOAD_LIMIT
+      value: "100M"
+      secret: false
+    - name: MEMORY_LIMIT
+      value: "256M"
+      secret: false
+    - name: MAX_EXECUTION_TIME
+      value: "300"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

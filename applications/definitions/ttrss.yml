@@ -1,0 +1,94 @@
+---
+# =============================================================================
+# GUIDDE - AI-GESTUURDE VIDEO-TUTORIALS
+# =============================================================================
+# Beschrijving: AI-gestuurde handleidingen en video-tutorials maken
+# Website: https://www.guidde.com
+# =============================================================================
+
+application:
+  name: guidde
+  version: 1.0.0
+  description: "Guidde - AI-gestuurde video-tutorials"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: education-team
+    contact: education@company.local
+    slack: "#education"
+    documentation: "https://www.guidde.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+      - name: videos
+        size_gb: 100
+        performance: hdd
+        backup_required: true
+        mount_path: /app/videos
+      - name: screenshots
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /app/screenshots
+        
+  network_requirements:
+    vlans:
+      - education
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Guidde web interface"
+    dns:
+      - "tutorials.{{ domain }}"
+      - "guidde.{{ domain }}"
+      
+  container:
+    image: guidde/guidde:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: GUIDDE_API_KEY
+      value: "{{ vault_guidde_api_key }}"
+      secret: true
+    - name: GUIDDE_AI_MODEL
+      value: "gpt-4"
+      secret: false
+    - name: GUIDDE_MAX_DURATION
+      value: "300"
+      secret: false
+    - name: GUIDDE_RESOLUTION
+      value: "1920x1080"
+      secret: false
+    - name: GUIDDE_FPS
+      value: "30"
+      secret: false
+    - name: GUIDDE_STORAGE_PATH
+      value: "/app/videos"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

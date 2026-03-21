@@ -1,0 +1,31 @@
+---
+- name: '{{ ansible_os_family }} | Maak Hoppscotch directories'
+  ansible.builtin.file:
+    path: "{{ hoppscotch_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Hoppscotch container'
+  ansible.builtin.docker_container:
+    name: hoppscotch
+    image: hoppscotch/hoppscotch:latest
+    restart_policy: unless-stopped
+    ports:
+      - "3000:3000"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hoppscotch.rule: "Host(`api.{{ domain }}`)"
+      traefik.http.services.hoppscotch.loadbalancer.server.port: "3000"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Hoppscotch actief is'
+  ansible.builtin.wait_for:
+    port: 3000
+    timeout: 60
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Toon Hoppscotch URL'
+  ansible.builtin.debug:
+    msg: "Hoppscotch: https://api.{{ domain }}"
+  tags: [validate]

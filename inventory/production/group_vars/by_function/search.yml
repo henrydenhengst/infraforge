@@ -1,0 +1,445 @@
+---
+# =============================================================================
+# SEARCH TOOLS
+# =============================================================================
+# Functie: search
+# Beschrijving: Tools voor zoekmachines, enterprise search en analyse
+# =============================================================================
+
+search_tools:
+  # ---------------------------------------------------------------------------
+  # ENTERPRISE SEARCH
+  # ---------------------------------------------------------------------------
+  - name: Elasticsearch
+    profiel_tag: IT
+    functie_tag: search
+    beschrijving: "Gedistribueerde zoek- en analytics engine"
+    categorie: enterprise_search
+    docker_image: elasticsearch:8.11.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+      - elasticsearch_config:/usr/share/elasticsearch/config
+      - elasticsearch_logs:/usr/share/elasticsearch/logs
+    environment:
+      node.name: elasticsearch-01
+      cluster.name: elastic-cluster
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+      xpack.security.enabled: "true"
+      xpack.security.authc.api_key.enabled: "true"
+      ELASTIC_PASSWORD: "{{ vault_elastic_password }}"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    url: "https://www.elastic.co/elasticsearch"
+    
+  - name: Solr
+    profiel_tag: IT
+    functie_tag: search
+    beschrijving: "Zoekplatform gebaseerd op Lucene"
+    categorie: enterprise_search
+    docker_image: solr:latest
+    ports:
+      - "8983:8983"
+    volumes:
+      - solr_data:/var/solr
+      - solr_config:/opt/solr/server/solr/configsets
+    environment:
+      SOLR_HEAP: "1g"
+      SOLR_JAVA_MEM: "-Xms1g -Xmx1g"
+    url: "https://solr.apache.org"
+    
+  # ---------------------------------------------------------------------------
+  # WEB SEARCH ENGINES
+  # ---------------------------------------------------------------------------
+  - name: MeiliSearch
+    profiel_tag: Affiliate
+    functie_tag: search
+    beschrijving: "Razendsnelle zoekmachine voor websites"
+    categorie: web_search
+    docker_image: getmeili/meilisearch:latest
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    environment:
+      MEILI_MASTER_KEY: "{{ vault_meilisearch_master_key }}"
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_HTTP_ADDR: 0.0.0.0:7700
+      MEILI_DB_PATH: /meili_data/data.ms
+      MEILI_IMPORT_DUMP: /meili_data/dumps
+      MEILI_SNAPSHOT_INTERVAL_SEC: 86400
+    url: "https://www.meilisearch.com"
+    
+  - name: Typesense
+    profiel_tag: IT
+    functie_tag: search
+    beschrijving: "Snelle, typo-tolerante zoekmachine"
+    categorie: web_search
+    docker_image: typesense/typesense:latest
+    ports:
+      - "8108:8108"
+    volumes:
+      - typesense_data:/data
+    environment:
+      TYPESENSE_DATA_DIR: /data
+      TYPESENSE_API_KEY: "{{ vault_typesense_api_key }}"
+      TYPESENSE_SEARCH_ONLY_API_KEY: "{{ vault_typesense_search_key }}"
+      TYPESENSE_ENABLE_CORS: "true"
+      TYPESENSE_SSL_ENABLED: "false"
+      TYPESENSE_LOG_DIR: /data/logs
+    url: "https://typesense.org"
+    
+  # ---------------------------------------------------------------------------
+  # AI-POWERED SEARCH
+  # ---------------------------------------------------------------------------
+  - name: Danswer
+    profiel_tag: AI-Ops
+    functie_tag: search
+    beschrijving: "Enterprise AI-zoekmachine voor bedrijfsbronnen"
+    categorie: ai_search
+    docker_image: danswer/danswer:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - danswer_data:/var/lib/danswer
+      - danswer_index:/var/lib/danswer/index
+    environment:
+      SECRET_KEY: "{{ vault_danswer_secret }}"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: danswer
+      POSTGRES_PASSWORD: "{{ vault_danswer_db_password }}"
+      POSTGRES_DB: danswer
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OLLAMA_API_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3
+      EMBEDDING_MODEL: all-MiniLM-L6-v2
+      WEB_DOMAIN: "https://danswer.{{ domain }}"
+    database: postgresql
+    queue: redis
+    url: "https://danswer.ai"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+search_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Index instellingen
+  indexing:
+    batch_size: 1000
+    thread_count: 4
+    refresh_interval: 1s
+    max_result_window: 10000
+    
+  # Zoek instellingen
+  search:
+    default_operator: or
+    fuzziness: auto
+    max_query_length: 2048
+    timeout: 30s
+    
+  # Analyse
+  analysis:
+    language: dutch
+    stemmer: hunspell
+    stopwords: true
+    synonyms: true
+    
+  # Beveiliging
+  security:
+    authentication: true
+    ssl_enabled: true
+    rate_limit: 100/minute
+    audit_logging: true
+    
+  # Caching
+  cache:
+    enabled: true
+    size: 100MB
+    ttl: 3600
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+elasticsearch_config:
+  # Elasticsearch indices
+  indices:
+    - name: logs
+      shards: 5
+      replicas: 1
+      mappings:
+        properties:
+          timestamp:
+            type: date
+          level:
+            type: keyword
+          message:
+            type: text
+          service:
+            type: keyword
+            
+    - name: products
+      shards: 3
+      replicas: 1
+      mappings:
+        properties:
+          name:
+            type: text
+            analyzer: dutch
+          description:
+            type: text
+            analyzer: dutch
+          price:
+            type: float
+          category:
+            type: keyword
+          tags:
+            type: keyword
+            
+    - name: users
+      shards: 2
+      replicas: 1
+      mappings:
+        properties:
+          email:
+            type: keyword
+          name:
+            type: text
+          role:
+            type: keyword
+            
+  # Elasticsearch templates
+  templates:
+    - name: base_template
+      index_patterns: ["*"]
+      settings:
+        number_of_shards: 1
+        number_of_replicas: 1
+        analysis:
+          analyzer:
+            dutch_analyzer:
+              type: custom
+              tokenizer: standard
+              filter:
+                - lowercase
+                - stemmer
+                
+  # Elasticsearch pipelines
+  pipelines:
+    - name: log_pipeline
+      description: "Log verwerkingspipeline"
+      processors:
+        - grok:
+            field: message
+            patterns:
+              - "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:level} %{GREEDYDATA:message}"
+        - date:
+            field: timestamp
+            formats: ["ISO8601"]
+            
+  # Elasticsearch rollups
+  rollups:
+    - name: daily_logs
+      index_pattern: logs-*
+      rollup_index: logs-rollup
+      cron: "0 1 * * *"
+      groups:
+        - date_histogram:
+            field: timestamp
+            fixed_interval: 1h
+        - terms:
+            field: level.keyword
+      metrics:
+        - field: response_time
+          metrics: ["avg", "min", "max", "sum"]
+          
+  # Elasticsearch users
+  users:
+    - username: admin
+      password: "{{ vault_elastic_admin_password }}"
+      roles: ["superuser"]
+    - username: reader
+      password: "{{ vault_elastic_reader_password }}"
+      roles: ["read_only"]
+      
+  # Elasticsearch roles
+  roles:
+    - name: read_only
+      cluster: ["monitor"]
+      indices:
+        - names: ["*"]
+          privileges: ["read", "view_index_metadata"]
+
+meilisearch_config:
+  # MeiliSearch indices
+  indices:
+    - name: products
+      primary_key: id
+      settings:
+        searchableAttributes:
+          - name
+          - description
+          - category
+        filterableAttributes:
+          - category
+          - price
+          - in_stock
+        sortableAttributes:
+          - price
+          - created_at
+          
+    - name: articles
+      primary_key: id
+      settings:
+        searchableAttributes:
+          - title
+          - content
+          - author
+        filterableAttributes:
+          - author
+          - published_at
+          - tags
+        sortableAttributes:
+          - published_at
+          
+    - name: users
+      primary_key: id
+      settings:
+        searchableAttributes:
+          - name
+          - email
+        filterableAttributes:
+          - role
+          - active
+          
+  # MeiliSearch keys
+  keys:
+    - name: Admin Key
+      description: "Full access key"
+      actions: ["*"]
+      indexes: ["*"]
+      expires_at: null
+      
+    - name: Search Key
+      description: "Public search key"
+      actions: ["search"]
+      indexes: ["*"]
+      expires_at: null
+      
+    - name: Products Key
+      description: "Products index only"
+      actions: ["search", "add", "delete"]
+      indexes: ["products"]
+      expires_at: "2025-01-01"
+      
+  # MeiliSearch dumps
+  dumps:
+    enabled: true
+    schedule: "0 2 * * *"
+    destination: /meili_data/dumps
+    
+  # MeiliSearch snapshots
+  snapshots:
+    enabled: true
+    interval_sec: 86400
+    destination: /meili_data/snapshots
+
+typesense_config:
+  # Typesense collecties
+  collections:
+    - name: products
+      fields:
+        - name: id
+          type: string
+          facet: false
+        - name: name
+          type: string
+          facet: false
+        - name: description
+          type: string
+          facet: false
+        - name: category
+          type: string
+          facet: true
+        - name: price
+          type: float
+          facet: true
+        - name: in_stock
+          type: bool
+          facet: true
+        - name: tags
+          type: string[]
+          facet: true
+      default_sorting_field: price
+      
+    - name: articles
+      fields:
+        - name: id
+          type: string
+        - name: title
+          type: string
+        - name: content
+          type: string
+        - name: author
+          type: string
+          facet: true
+        - name: published_at
+          type: int64
+          facet: false
+        - name: tags
+          type: string[]
+          facet: true
+      default_sorting_field: published_at
+      
+  # Typesense API keys
+  api_keys:
+    - description: Admin key
+      actions: ["*"]
+      collections: ["*"]
+      expires_at: null
+      
+    - description: Search key
+      actions: ["documents:search"]
+      collections: ["*"]
+      expires_at: null
+      
+    - description: Products write key
+      actions: ["documents:create", "documents:upsert", "documents:delete"]
+      collections: ["products"]
+      expires_at: "2025-01-01"
+      
+  # Typesense synonyms
+  synonyms:
+    - name: product_synonyms
+      collection: products
+      synonyms:
+        - root: laptop
+          synonyms: ["notebook", "macbook", "thinkpad"]
+        - root: smartphone
+          synonyms: ["telefoon", "mobiel", "gsm", "iphone", "android"]
+        - root: tv
+          synonyms: ["televisie", "led-tv", "oled-tv", "smart-tv"]
+          
+  # Typesense stemming
+  stemming:
+    enabled: true
+    locale: nl
+    exceptions:
+      - word: "beter"
+        root: "goed"
+      - word: "beste"
+        root: "goed"

@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# INVOICEPLANE - OFFERTES EN FACTURATIE
+# =============================================================================
+# Beschrijving: Zelfgehost systeem voor offertes en facturatie
+# Website: https://invoiceplane.com
+# =============================================================================
+
+application:
+  name: invoiceplane
+  version: 1.6.0
+  description: "InvoicePlane - Offertes en facturatie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: finance-team
+    contact: finance@company.local
+    slack: "#finance"
+    documentation: "https://invoiceplane.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/uploads
+        
+  network_requirements:
+    vlans:
+      - finance
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "InvoicePlane web interface"
+    dns:
+      - "invoice.{{ domain }}"
+      - "facturen.{{ domain }}"
+      
+  container:
+    image: invoiceplane/invoiceplane:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: INVOICEPLANE_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: INVOICEPLANE_DB_NAME
+      value: "invoiceplane"
+      secret: false
+    - name: INVOICEPLANE_DB_USER
+      value: "invoiceplane"
+      secret: false
+    - name: INVOICEPLANE_DB_PASSWORD
+      value: "{{ vault_invoiceplane_password }}"
+      secret: true
+    - name: INVOICEPLANE_URL
+      value: "https://invoice.{{ domain }}"
+      secret: false
+    - name: INVOICEPLANE_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: INVOICEPLANE_ADMIN_PASSWORD
+      value: "{{ vault_invoiceplane_admin_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

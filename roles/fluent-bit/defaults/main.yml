@@ -1,0 +1,3 @@
+---
+fluent_bit_data_path: /opt/fluent-bit
+fluent_bit_loki_url: "http://loki:3100"

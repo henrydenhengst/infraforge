@@ -1,0 +1,80 @@
+---
+# =============================================================================
+# PREFECT - WORKFLOW ORCHESTRATION
+# =============================================================================
+# Beschrijving: Moderne workflow orchestratie voor data pipelines
+# Website: https://www.prefect.io
+# =============================================================================
+
+application:
+  name: prefect
+  version: 2.14.0
+  description: "Prefect - Workflow orchestratie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://docs.prefect.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /root/.prefect
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 4200
+        host: 4200
+        protocol: tcp
+        public: false
+        description: "Prefect UI"
+    dns:
+      - "prefect.{{ domain }}"
+      
+  container:
+    image: prefecthq/prefect:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: PREFECT_API_URL
+      value: "http://localhost:4200/api"
+      secret: false
+    - name: PREFECT_UI_URL
+      value: "https://prefect.{{ domain }}"
+      secret: false
+    - name: PREFECT_SERVER_API_HOST
+      value: "0.0.0.0"
+      secret: false
+    - name: PREFECT_SERVER_API_PORT
+      value: "4200"
+      secret: false
+    - name: PREFECT_DATABASE_CONNECTION_URL
+      value: "postgresql://prefect:{{ vault_prefect_password }}@postgres:5432/prefect"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 4200

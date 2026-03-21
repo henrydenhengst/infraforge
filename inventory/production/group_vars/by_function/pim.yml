@@ -1,0 +1,400 @@
+---
+# =============================================================================
+# PIM TOOLS (PRODUCT INFORMATION MANAGEMENT)
+# =============================================================================
+# Functie: pim
+# Beschrijving: Tools voor het beheren van productinformatie en catalogi
+# =============================================================================
+
+pim_tools:
+  # ---------------------------------------------------------------------------
+  # ENTERPRISE PIM
+  # ---------------------------------------------------------------------------
+  - name: Akeneo
+    profiel_tag: Creative-Ops
+    functie_tag: pim
+    beschrijving: "Product Informatie Management voor e-commerce catalogi"
+    categorie: enterprise_pim
+    docker_image: akeneo/pim-community:latest
+    ports:
+      - "8080:80"
+      - "8081:443"
+    volumes:
+      - akeneo_data:/srv/akeneo
+      - akeneo_media:/srv/akeneo/media
+      - akeneo_cache:/srv/akeneo/var/cache
+      - akeneo_logs:/srv/akeneo/var/logs
+    environment:
+      APP_DATABASE_HOST: mysql
+      APP_DATABASE_PORT: 3306
+      APP_DATABASE_NAME: akeneo
+      APP_DATABASE_USER: akeneo
+      APP_DATABASE_PASSWORD: "{{ vault_akeneo_password }}"
+      APP_ELASTICSEARCH_HOST: elasticsearch
+      APP_ELASTICSEARCH_PORT: 9200
+      APP_INDEX_NAME: akeneo
+      APP_SECRET: "{{ vault_akeneo_secret }}"
+      APP_LOCALE: nl_NL
+      APP_CURRENCY: EUR
+      MAILER_URL: "smtp://smtp.{{ domain }}:587?username=akeneo@{{ domain }}&password={{ vault_smtp_password }}"
+      MAILER_FROM: akeneo@{{ domain }}
+    database: mysql
+    search: elasticsearch
+    url: "https://www.akeneo.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+pim_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Product instellingen
+  products:
+    default_currency: EUR
+    default_locale: nl_NL
+    categories:
+      - Electronics
+      - Clothing
+      - Home & Garden
+      - Sports
+      - Books
+      - Toys
+      
+  # Attributen
+  attributes:
+    - name: sku
+      type: text
+      required: true
+      unique: true
+    - name: name
+      type: text
+      required: true
+      localized: true
+    - name: description
+      type: textarea
+      localized: true
+    - name: price
+      type: number
+      required: true
+    - name: currency
+      type: select
+      options:
+        - EUR
+        - USD
+        - GBP
+    - name: weight
+      type: number
+      unit: kg
+    - name: dimensions
+      type: text
+    - name: color
+      type: select
+      options:
+        - Red
+        - Blue
+        - Green
+        - Black
+        - White
+    - name: size
+      type: select
+      options:
+        - XS
+        - S
+        - M
+        - L
+        - XL
+        - XXL
+        
+  # Assortimenten
+  families:
+    - name: Clothing
+      description: "Kleding producten"
+      attributes:
+        - sku
+        - name
+        - description
+        - price
+        - currency
+        - color
+        - size
+        - material
+    - name: Electronics
+      description: "Elektronica producten"
+      attributes:
+        - sku
+        - name
+        - description
+        - price
+        - currency
+        - weight
+        - dimensions
+        - power
+        - warranty
+        
+  # Channels
+  channels:
+    - name: WebShop
+      locales:
+        - nl_NL
+        - en_US
+      currencies:
+        - EUR
+        - USD
+    - name: Marketplace
+      locales:
+        - en_US
+      currencies:
+        - USD
+        - EUR
+        
+  # Import/Export
+  import_export:
+    formats:
+      - csv
+      - xlsx
+      - json
+      - xml
+    max_file_size: 100MB
+    encoding: UTF-8
+    delimiter: ","
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+akeneo_config:
+  # Akeneo categorieën
+  categories:
+    - name: Electronics
+      code: electronics
+      parent: null
+      position: 1
+    - name: Computers
+      code: computers
+      parent: electronics
+      position: 1
+    - name: Smartphones
+      code: smartphones
+      parent: electronics
+      position: 2
+    - name: Clothing
+      code: clothing
+      parent: null
+      position: 2
+    - name: Men
+      code: men
+      parent: clothing
+      position: 1
+    - name: Women
+      code: women
+      parent: clothing
+      position: 2
+      
+  # Akeneo families
+  families:
+    - code: computers
+      attribute_as_label: name
+      attribute_as_image: main_image
+      requirements:
+        - channel: ecommerce
+          locale: nl_NL
+          attributes:
+            - sku
+            - name
+            - description
+            - price
+            - processor
+            - memory
+            - storage
+            
+    - code: smartphones
+      attribute_as_label: name
+      attribute_as_image: main_image
+      requirements:
+        - channel: ecommerce
+          locale: nl_NL
+          attributes:
+            - sku
+            - name
+            - description
+            - price
+            - brand
+            - screen_size
+            - camera
+            - battery
+            
+  # Akeneo producten
+  products:
+    - identifier: LAP-001
+      family: computers
+      categories:
+        - electronics
+        - computers
+      values:
+        name:
+          - data: "Dell XPS 15"
+            locale: nl_NL
+            scope: ecommerce
+        description:
+          - data: "Krachtige laptop voor professionals"
+            locale: nl_NL
+            scope: ecommerce
+        price:
+          - data: 1499.99
+            locale: nl_NL
+            scope: ecommerce
+        processor:
+          - data: "Intel Core i7-13700H"
+            locale: nl_NL
+            scope: ecommerce
+        memory:
+          - data: "16GB"
+            locale: nl_NL
+            scope: ecommerce
+        storage:
+          - data: "512GB SSD"
+            locale: nl_NL
+            scope: ecommerce
+            
+    - identifier: PHN-001
+      family: smartphones
+      categories:
+        - electronics
+        - smartphones
+      values:
+        name:
+          - data: "iPhone 15 Pro"
+            locale: nl_NL
+            scope: ecommerce
+        description:
+          - data: "Premium smartphone met titanium behuizing"
+            locale: nl_NL
+            scope: ecommerce
+        price:
+          - data: 1199.00
+            locale: nl_NL
+            scope: ecommerce
+        brand:
+          - data: "Apple"
+            locale: nl_NL
+            scope: ecommerce
+        screen_size:
+          - data: "6.1 inch"
+            locale: nl_NL
+            scope: ecommerce
+        camera:
+          - data: "48MP + 12MP + 12MP"
+            locale: nl_NL
+            scope: ecommerce
+            
+  # Akeneo referentie-entiteiten
+  reference_entities:
+    - name: Merken
+      code: brands
+      attributes:
+        - code: name
+          type: text
+          localized: true
+        - code: logo
+          type: image
+        - code: website
+          type: text
+          validation_rule: url
+      records:
+        - code: apple
+          values:
+            name: Apple
+            website: https://www.apple.com
+        - code: dell
+          values:
+            name: Dell
+            website: https://www.dell.com
+        - code: samsung
+          values:
+            name: Samsung
+            website: https://www.samsung.com
+            
+  # Akeneo regels
+  rules:
+    - name: Prijsberekening
+      type: calculation
+      conditions:
+        - field: family
+          operator: IN
+          value: [computers, smartphones]
+      actions:
+        - type: calculate
+          target: price_with_tax
+          formula: price * 1.21
+          
+  # Akeneo workflows
+  workflows:
+    - name: Product goedkeuring
+      stages:
+        - name: Concept
+          statuses:
+            - working
+        - name: Ter goedkeuring
+          statuses:
+            - waiting_for_approval
+        - name: Goedgekeurd
+          statuses:
+            - approved
+        - name: Gepubliceerd
+          statuses:
+            - published
+            
+  # Akeneo gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_akeneo_admin_password }}"
+      roles:
+        - ROLE_ADMINISTRATOR
+    - username: product_manager
+      email: product@{{ domain }}
+      password: "{{ vault_akeneo_product_password }}"
+      roles:
+        - ROLE_CATALOG_MANAGER
+    - username: editor
+      email: editor@{{ domain }}
+      password: "{{ vault_akeneo_editor_password }}"
+      roles:
+        - ROLE_EDITOR
+        
+  # Akeneo rollen
+  roles:
+    - name: ROLE_ADMINISTRATOR
+      permissions:
+        - action: view
+          entities: all
+        - action: create
+          entities: all
+        - action: edit
+          entities: all
+        - action: delete
+          entities: all
+    - name: ROLE_CATALOG_MANAGER
+      permissions:
+        - action: view
+          entities: all
+        - action: create
+          entities: [product, category, family]
+        - action: edit
+          entities: [product, category, family]
+        - action: delete
+          entities: []
+    - name: ROLE_EDITOR
+      permissions:
+        - action: view
+          entities: all
+        - action: edit
+          entities: [product]
+        - action: create
+          entities: []
+        - action: delete
+          entities: []

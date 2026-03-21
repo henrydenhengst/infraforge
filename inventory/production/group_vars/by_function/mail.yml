@@ -1,0 +1,303 @@
+---
+# =============================================================================
+# MAIL TOOLS
+# =============================================================================
+# Functie: mail
+# Beschrijving: Tools voor e-mailservers, webmail en mailmanagement
+# =============================================================================
+
+mail_tools:
+  # ---------------------------------------------------------------------------
+  # VOLLEDIGE MAILSERVERS
+  # ---------------------------------------------------------------------------
+  - name: Mailcow
+    profiel_tag: IT
+    functie_tag: mail
+    beschrijving: "Complete mailserver suite met webinterface"
+    categorie: mail_server
+    docker_image: mailcow/mailcow-dockerized:latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "25:25"
+      - "587:587"
+      - "993:993"
+      - "995:995"
+    volumes:
+      - mailcow_data:/var/lib/mailcow
+      - mailcow_mysql:/var/lib/mysql
+      - mailcow_redis:/var/lib/redis
+      - mailcow_vmail:/var/lib/vmail
+      - mailcow_certs:/etc/ssl/mail
+    environment:
+      MAILCOW_HOSTNAME: mail.{{ domain }}
+      MAILCOW_ADMIN_USER: admin
+      MAILCOW_ADMIN_PASSWORD: "{{ vault_mailcow_admin_password }}"
+      MAILCOW_DB_USER: mailcow
+      MAILCOW_DB_PASSWORD: "{{ vault_mailcow_db_password }}"
+      MAILCOW_REDIS_PASSWORD: "{{ vault_mailcow_redis_password }}"
+      TZ: Europe/Amsterdam
+      SKIP_SOLR: "y"
+      SKIP_CLAMD: "n"
+      SKIP_SOGO: "y"
+    url: "https://mailcow.email"
+    
+  # ---------------------------------------------------------------------------
+  # WEBMAIL CLIENTS
+  # ---------------------------------------------------------------------------
+  - name: Roundcube
+    profiel_tag: IT
+    functie_tag: mail
+    beschrijving: "Webmail client voor IMAP servers"
+    categorie: webmail
+    docker_image: roundcube/roundcubemail:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - roundcube_data:/var/www/html
+      - roundcube_config:/var/www/html/config
+      - roundcube_plugins:/var/www/html/plugins
+    environment:
+      ROUNDCUBEMAIL_DB_HOST: mysql
+      ROUNDCUBEMAIL_DB_PORT: 3306
+      ROUNDCUBEMAIL_DB_NAME: roundcube
+      ROUNDCUBEMAIL_DB_USER: roundcube
+      ROUNDCUBEMAIL_DB_PASSWORD: "{{ vault_roundcube_password }}"
+      ROUNDCUBEMAIL_IMAP_HOST: mail.{{ domain }}
+      ROUNDCUBEMAIL_IMAP_PORT: 143
+      ROUNDCUBEMAIL_SMTP_HOST: mail.{{ domain }}
+      ROUNDCUBEMAIL_SMTP_PORT: 587
+      ROUNDCUBEMAIL_DEFAULT_HOST: mail.{{ domain }}
+      ROUNDCUBEMAIL_DEFAULT_PORT: 143
+      ROUNDCUBEMAIL_SMTP_SERVER: mail.{{ domain }}
+      ROUNDCUBEMAIL_SMTP_PORT: 587
+      ROUNDCUBEMAIL_DESKEY: "{{ vault_roundcube_deskey }}"
+    database: mysql
+    url: "https://roundcube.net"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+mail_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Domein instellingen
+  domain:
+    primary: "{{ domain }}"
+    aliases:
+      - "mail.{{ domain }}"
+      - "webmail.{{ domain }}"
+      
+  # Mail server instellingen
+  mail_server:
+    hostname: mail.{{ domain }}
+    protocol: imap
+    imap_port: 143
+    imaps_port: 993
+    pop3_port: 110
+    pop3s_port: 995
+    smtp_port: 25
+    smtps_port: 465
+    submission_port: 587
+    
+  # Beveiliging
+  security:
+    tls_enabled: true
+    tls_certificate: /etc/ssl/mail/mail.crt
+    tls_key: /etc/ssl/mail/mail.key
+    spam_protection: true
+    virus_protection: true
+    dkim_enabled: true
+    spf_enabled: true
+    dmarc_enabled: true
+    
+  # Quota
+  quota:
+    default_mailbox_size: 10G
+    default_max_messages: 10000
+    max_attachment_size: 50M
+    
+  # Antispam
+  antispam:
+    rbl_enabled: true
+    greylist_enabled: true
+    spam_score_threshold: 5.0
+    spam_action: move_to_spam
+    virus_action: discard
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+mailcow_config:
+  # Mailcow domeinen
+  domains:
+    - domain: "{{ domain }}"
+      description: "Hoofd domein"
+      active: true
+      aliases:
+        - "mail.{{ domain }}"
+        - "webmail.{{ domain }}"
+        
+  # Mailcow gebruikers
+  users:
+    - username: admin@{{ domain }}
+      password: "{{ vault_mailcow_admin_password }}"
+      name: "Admin User"
+      quota: 10240  # 10GB
+      active: true
+      
+    - username: info@{{ domain }}
+      password: "{{ vault_mailcow_info_password }}"
+      name: "Informatie"
+      quota: 5120  # 5GB
+      active: true
+      aliases:
+        - contact@{{ domain }}
+        - vragen@{{ domain }}
+        
+    - username: support@{{ domain }}
+      password: "{{ vault_mailcow_support_password }}"
+      name: "Support"
+      quota: 5120
+      active: true
+      
+  # Mailcow aliassen
+  aliases:
+    - address: sales@{{ domain }}
+      goto: info@{{ domain }}
+      active: true
+    - address: verkoop@{{ domain }}
+      goto: info@{{ domain }}
+      active: true
+    - address: help@{{ domain }}
+      goto: support@{{ domain }}
+      active: true
+      
+  # Mailcow mailing lists
+  mailing_lists:
+    - address: team@{{ domain }}
+      description: "Team mailing list"
+      members:
+        - admin@{{ domain }}
+        - info@{{ domain }}
+        - support@{{ domain }}
+      active: true
+      
+  # Mailcow DKIM
+  dkim:
+    enabled: true
+    selector: mail
+    key_size: 2048
+    domains:
+      - "{{ domain }}"
+      
+  # Mailcow SPF
+  spf:
+    enabled: true
+    record: "v=spf1 mx ~all"
+    
+  # Mailcow DMARC
+  dmarc:
+    enabled: true
+    policy: quarantine
+    rua: "mailto:dmarc@{{ domain }}"
+    ruf: "mailto:dmarc@{{ domain }}"
+    pct: 100
+    
+  # Mailcow filters
+  filters:
+    - name: Spam filter
+      priority: 1
+      conditions:
+        - header: X-Spam-Flag
+          value: YES
+      action: move_to_spam
+      
+    - name: Grote bijlagen
+      priority: 2
+      conditions:
+        - size: "> 50M"
+      action: reject
+      message: "Bijlage te groot (max 50MB)"
+      
+  # Mailcow fail2ban
+  fail2ban:
+    enabled: true
+    max_retries: 5
+    ban_time: 3600
+    find_time: 600
+    
+  # Mailcow ratelimit
+  ratelimit:
+    enabled: true
+    messages_per_minute: 10
+    messages_per_hour: 100
+    messages_per_day: 500
+
+roundcube_config:
+  # Roundcube instellingen
+  settings:
+    product_name: "Webmail {{ company_name }}"
+    skin: elastic
+    language: nl
+    timezone: Europe/Amsterdam
+    date_format: d-m-Y
+    time_format: H:i
+    draft_autosave: 300
+    preview_pane: true
+    max_pagesize: 50
+    message_sort_col: date
+    message_sort_order: DESC
+    
+  # Roundcube plugins
+  plugins:
+    - archive
+    - zipdownload
+    - managesieve
+    - markasjunk
+    - password
+    - newmail_notifier
+    - acl
+    - additional_message_headers
+    
+  # Roundcube identiteiten
+  identities:
+    - name: "{{ company_name }}"
+      email: info@{{ domain }}
+      organization: "{{ company_name }}"
+      reply-to: info@{{ domain }}
+      bcc: archive@{{ domain }}
+      signature: |
+        Met vriendelijke groet,
+        
+        {{ company_name }}
+        {{ company_phone }}
+        {{ company_website }}
+        
+  # Roundcube filters (Sieve)
+  sieve_rules:
+    - name: Spam verplaatsen
+      condition: "header :contains 'X-Spam-Flag' 'YES'"
+      action: "fileinto 'Spam'; stop;"
+      
+    - name: Nieuwsbrief
+      condition: "header :contains 'List-Id' 'newsletter'"
+      action: "fileinto 'Nieuwsbrieven'; stop;"
+      
+    - name: Automatisch beantwoorden
+      condition: "header :contains 'Subject' 'Afwezig'"
+      action: "fileinto 'Afwezig'; stop;"
+      
+  # Roundcube thema
+  theme:
+    name: elastic
+    colors:
+      primary: "#2196F3"
+      secondary: "#4CAF50"
+      background: "#F5F5F5"
+      text: "#212121"

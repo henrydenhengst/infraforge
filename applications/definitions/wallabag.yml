@@ -1,0 +1,85 @@
+---
+# =============================================================================
+# MUMBLE - VOICE-CHAT
+# =============================================================================
+# Beschrijving: Voice-chat voor gamers en teams
+# Website: https://www.mumble.info
+# =============================================================================
+
+application:
+  name: mumble
+  version: 1.5.0
+  description: "Mumble - Voice-chat"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: communication-team
+    contact: comms@company.local
+    slack: "#comms"
+    documentation: "https://wiki.mumble.info"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - communication
+      - internal
+    ports:
+      - container: 64738
+        host: 64738
+        protocol: tcp
+        public: false
+        description: "Mumble TCP"
+      - container: 64738
+        host: 64738
+        protocol: udp
+        public: false
+        description: "Mumble UDP"
+    dns:
+      - "voice.{{ domain }}"
+      - "mumble.{{ domain }}"
+      
+  container:
+    image: mumblevoip/mumble-server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: MUMBLE_SERVER_PASSWORD
+      value: "{{ vault_mumble_password }}"
+      secret: true
+    - name: MUMBLE_SUPERUSER_PASSWORD
+      value: "{{ vault_mumble_superuser_password }}"
+      secret: true
+    - name: MUMBLE_BANDWIDTH
+      value: "128000"
+      secret: false
+    - name: MUMBLE_USERS
+      value: "100"
+      secret: false
+    - name: MUMBLE_WELCOME_TEXT
+      value: "Welkom bij {{ company_name }} Voice Chat"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: tcp
+      port: 64738

@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# DOCUMIND - AI-ANALYSE VAN JURIDISCHE CONTRACTEN
+# =============================================================================
+# Beschrijving: AI-analyse van juridische contracten
+# Website: https://documind.com
+# =============================================================================
+
+application:
+  name: documind
+  version: 1.0.0
+  description: "DocuMind - AI-analyse van juridische contracten"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: legal-team
+    contact: legal@company.local
+    slack: "#legal"
+    documentation: "https://documind.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+        
+  network_requirements:
+    vlans:
+      - legal
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "DocuMind web interface"
+    dns:
+      - "legal-ai.{{ domain }}"
+      - "documind.{{ domain }}"
+      
+  container:
+    image: documind/documind:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: DATABASE_URL
+      value: "postgresql://documind:{{ vault_documind_password }}@postgres:5432/documind"
+      secret: true
+    - name: OPENAI_API_KEY
+      value: "{{ vault_openai_key }}"
+      secret: true
+    - name: OPENAI_MODEL
+      value: "gpt-4"
+      secret: false
+    - name: SECRET_KEY
+      value: "{{ vault_documind_secret }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

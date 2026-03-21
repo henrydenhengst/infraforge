@@ -1,0 +1,69 @@
+---
+# =============================================================================
+# MQTT EXPLORER - MQTT CLIENT
+# =============================================================================
+# Beschrijving: MQTT client and broker explorer
+# Website: https://mqtt-explorer.com
+# =============================================================================
+
+application:
+  name: mqtt-explorer
+  version: 0.4.0
+  description: "MQTT Explorer - MQTT client tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: iot-team
+    contact: iot@company.local
+    slack: "#iot"
+    documentation: "https://mqtt-explorer.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 2
+      
+    storage: []
+    
+  network_requirements:
+    vlans:
+      - iot
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "MQTT Explorer web UI"
+    dns:
+      - "mqtt-explorer.{{ domain }}"
+      
+  container:
+    image: mqtt-explorer/mqtt-explorer:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2Gi
+      requests:
+        cpu: "0.5"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: MQTT_EXPLORER_PORT
+      value: "8080"
+      secret: false
+    - name: MQTT_EXPLORER_HOST
+      value: "0.0.0.0"
+      secret: false
+    - name: MQTT_EXPLORER_BROKER_URL
+      value: "mqtt://mqtt:1883"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

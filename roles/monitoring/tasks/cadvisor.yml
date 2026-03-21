@@ -1,0 +1,23 @@
+---
+- name: Download cAdvisor binary
+  ansible.builtin.get_url:
+    url: "https://github.com/google/cadvisor/releases/download/v{{ cadvisor_version }}/cadvisor-v{{ cadvisor_version }}-linux-{{ arch_map[ansible_architecture] }}"
+    dest: "/usr/local/bin/cadvisor"
+    mode: '0755'
+  tags: [download]
+
+- name: Create cAdvisor systemd service
+  ansible.builtin.template:
+    src: cadvisor.service.j2
+    dest: /etc/systemd/system/cadvisor.service
+    mode: '0644'
+  notify: restart cadvisor
+  tags: [service]
+
+- name: Start and enable cAdvisor
+  ansible.builtin.systemd:
+    name: cadvisor
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [service]

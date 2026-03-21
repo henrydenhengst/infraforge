@@ -1,0 +1,4 @@
+---
+gitlab_runner_config_path: /opt/gitlab-runner
+gitlab_runner_token: "{{ vault_gitlab_runner_token }}"
+gitlab_runner_name: "docker-runner"

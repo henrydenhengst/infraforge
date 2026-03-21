@@ -1,0 +1,6 @@
+---
+- name: Installeer OpenTofu van AUR
+  ansible.builtin.package:
+    name: opentofu-bin
+    state: present
+  tags: [install]

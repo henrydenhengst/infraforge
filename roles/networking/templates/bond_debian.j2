@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+auto bond0
+iface bond0 inet {{ bond_family | default('static') }}
+    bond-mode {{ network_bonding_mode }}
+    bond-miimon {{ network_bonding_miimon }}
+    bond-slaves {{ network_bonding_slaves | join(' ') }}
+{% if bond_family == 'static' %}
+    address {{ bond_address }}
+    netmask {{ bond_netmask | default('255.255.255.0') }}
+    gateway {{ bond_gateway | default('') }}
+{% endif %}
+{% if bond_mtu is defined %}
+    mtu {{ bond_mtu }}
+{% endif %}

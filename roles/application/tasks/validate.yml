@@ -1,0 +1,29 @@
+---
+- name: '{{ ansible_os_family }} | Controleer draaiende containers'
+  ansible.builtin.shell: |
+    docker ps --filter "name={{ app.name }}" --format "table {{.Names}}\t{{.Status}}"
+  register: docker_ps
+  changed_when: false
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Toon container status'
+  ansible.builtin.debug:
+    var: docker_ps.stdout_lines
+  when: docker_ps.stdout is defined
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Controleer endpoints'
+  ansible.builtin.uri:
+    url: "{{ item.url }}"
+    status_code: "{{ item.status_code | default(200) }}"
+  loop: "{{ health_check_endpoints | default([]) }}"
+  ignore_errors: yes
+  register: endpoint_checks
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Toon endpoint status'
+  ansible.builtin.debug:
+    msg: "{{ item.item.name }}: {{ '✅ OK' if item.status == 200 else '❌ FAILED' }}"
+  loop: "{{ endpoint_checks.results }}"
+  when: endpoint_checks.results is defined
+  tags: [validate]

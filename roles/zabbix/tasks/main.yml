@@ -1,0 +1,73 @@
+---
+- name: '{{ ansible_os_family }} | Maak Zabbix directories'
+  ansible.builtin.file:
+    path: "{{ zabbix_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Zabbix database'
+  ansible.builtin.docker_container:
+    name: zabbix-db
+    image: postgres:15
+    restart_policy: unless-stopped
+    environment:
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: "{{ zabbix_db_password }}"
+      POSTGRES_DB: zabbix
+    volumes:
+      - "{{ zabbix_data_path }}/db:/var/lib/postgresql/data"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Start Zabbix server'
+  ansible.builtin.docker_container:
+    name: zabbix-server
+    image: zabbix/zabbix-server-pgsql:latest
+    restart_policy: unless-stopped
+    ports:
+      - "10051:10051"
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: "{{ zabbix_db_password }}"
+      POSTGRES_DB: zabbix
+    depends_on:
+      - zabbix-db
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Start Zabbix web interface'
+  ansible.builtin.docker_container:
+    name: zabbix-web
+    image: zabbix/zabbix-web-nginx-pgsql:latest
+    restart_policy: unless-stopped
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: "{{ zabbix_db_password }}"
+      POSTGRES_DB: zabbix
+      ZBX_SERVER_HOST: zabbix-server
+      PHP_TZ: "Europe/Amsterdam"
+    depends_on:
+      - zabbix-db
+      - zabbix-server
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.zabbix.rule: "Host(`zabbix.{{ domain }}`)"
+      traefik.http.services.zabbix.loadbalancer.server.port: "8080"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Zabbix actief is'
+  ansible.builtin.wait_for:
+    port: 8080
+    timeout: 120
+  tags: [validate]
+
+- name: Toon Zabbix informatie
+  ansible.builtin.debug:
+    msg:
+      - "Zabbix: https://zabbix.{{ domain }}"
+      - "Default credentials: Admin / zabbix"
+  tags: [validate]

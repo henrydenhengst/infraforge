@@ -1,0 +1,4 @@
+---
+- name: Kubernetes packages zijn beschikbaar in SUSE repositories
+  ansible.builtin.debug:
+    msg: "Kubernetes packages are available in default SUSE repositories"

@@ -1,0 +1,358 @@
+---
+# =============================================================================
+# LMS TOOLS (LEARNING MANAGEMENT SYSTEMS)
+# =============================================================================
+# Functie: lms
+# Beschrijving: Platforms voor online leren, cursusbeheer en educatie
+# =============================================================================
+
+lms_tools:
+  # ---------------------------------------------------------------------------
+  # ENTERPRISE LMS
+  # ---------------------------------------------------------------------------
+  - name: Moodle
+    profiel_tag: Education
+    functie_tag: lms
+    beschrijving: "Het meest gebruikte open-source leerplatform voor cursussen"
+    categorie: enterprise_lms
+    docker_image: moodle/moodle:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - moodle_data:/var/www/moodledata
+      - moodle_html:/var/www/html
+      - moodle_cache:/var/cache/moodle
+    environment:
+      MOODLE_DB_HOST: mysql
+      MOODLE_DB_PORT: 3306
+      MOODLE_DB_NAME: moodle
+      MOODLE_DB_USER: moodle
+      MOODLE_DB_PASSWORD: "{{ vault_moodle_password }}"
+      MOODLE_URL: "https://moodle.{{ domain }}"
+      MOODLE_ADMIN_USER: admin
+      MOODLE_ADMIN_PASSWORD: "{{ vault_moodle_admin_password }}"
+      MOODLE_ADMIN_EMAIL: admin@{{ domain }}
+      MOODLE_SITE_NAME: "{{ company_name }} Learning Platform"
+      MOODLE_LANG: nl
+      MOODLE_SMTP_HOST: smtp.{{ domain }}
+      MOODLE_SMTP_PORT: 587
+      MOODLE_SMTP_USER: moodle@{{ domain }}
+      MOODLE_SMTP_PASSWORD: "{{ vault_smtp_password }}"
+      MOODLE_SMTP_SECURITY: tls
+    database: mysql
+    url: "https://moodle.org"
+    
+  - name: Canvas
+    profiel_tag: Education
+    functie_tag: lms
+    beschrijving: "Modern leerbeheersysteem voor scholen en trainingen"
+    categorie: enterprise_lms
+    docker_image: canvaslms/canvas:latest
+    ports:
+      - "8081:80"
+      - "8082:443"
+    volumes:
+      - canvas_data:/usr/src/app
+      - canvas_assets:/usr/src/app/public/assets
+      - canvas_logs:/usr/src/app/log
+    environment:
+      CANVAS_DB_HOST: postgres
+      CANVAS_DB_PORT: 5432
+      CANVAS_DB_NAME: canvas
+      CANVAS_DB_USER: canvas
+      CANVAS_DB_PASSWORD: "{{ vault_canvas_password }}"
+      CANVAS_REDIS_HOST: redis
+      CANVAS_REDIS_PORT: 6379
+      CANVAS_URL: "https://canvas.{{ domain }}"
+      CANVAS_ADMIN_EMAIL: admin@{{ domain }}
+      CANVAS_ADMIN_PASSWORD: "{{ vault_canvas_admin_password }}"
+      CANVAS_SITE_NAME: "{{ company_name }} Learning"
+      CANVAS_LANG: nl
+      CANVAS_TIMEZONE: Europe/Amsterdam
+    database: postgresql
+    queue: redis
+    url: "https://www.instructure.com/canvas"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+lms_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Organisatie gegevens
+  organization:
+    name: "{{ company_name }}"
+    department: "Learning & Development"
+    website: "https://{{ domain }}"
+    email: learning@{{ domain }}
+    
+  # Taal en regio
+  locale:
+    language: nl
+    timezone: Europe/Amsterdam
+    date_format: d-m-Y
+    time_format: H:i
+    
+  # Cursus instellingen
+  course_settings:
+    default_enrollment_period: 180
+    max_course_size: 500
+    allow_self_enrollment: false
+    require_approval: true
+    completion_certificate: true
+    
+  # Gebruikers
+  users:
+    allow_registration: false
+    default_role: student
+    admin_creators: true
+    
+  # Rollen
+  roles:
+    - name: Administrator
+      permissions: "*"
+    - name: Teacher
+      permissions:
+        - create_course
+        - edit_course
+        - grade_students
+        - view_reports
+    - name: Student
+      permissions:
+        - view_course
+        - submit_assignment
+        - take_quiz
+        
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: learning@{{ domain }}
+    email_prefix: "[Learning]"
+    push_enabled: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+moodle_config:
+  # Moodle thema's
+  themes:
+    - name: Boost
+      default: true
+    - name: Classic
+      default: false
+      
+  # Moodle plugins
+  plugins:
+    - name: mod_assign
+      enabled: true
+    - name: mod_quiz
+      enabled: true
+    - name: mod_forum
+      enabled: true
+    - name: mod_workshop
+      enabled: true
+    - name: enrol_manual
+      enabled: true
+    - name: enrol_self
+      enabled: true
+    - name: block_timeline
+      enabled: true
+    - name: block_calendar_month
+      enabled: true
+    - name: report_log
+      enabled: true
+    - name: report_outline
+      enabled: true
+      
+  # Moodle cursussen
+  courses:
+    - name: "Nederlands voor Beginners"
+      category: Talen
+      description: "Leer de basis van Nederlands"
+      format: topics
+      numsections: 10
+      startdate: "{{ next_month }}"
+      enddate: "{{ next_month + 90 }}"
+      enrollment_period: 180
+      
+    - name: "Python Programmeren"
+      category: Programmeren
+      description: "Leer Python van basis tot gevorderd"
+      format: weekly
+      numsections: 12
+      startdate: "{{ next_month }}"
+      enddate: "{{ next_month + 120 }}"
+      
+    - name: "Digitale Vaardigheden"
+      category: IT
+      description: "Basis digitale vaardigheden"
+      format: topics
+      numsections: 8
+      startdate: "{{ next_week }}"
+      enddate: "{{ next_week + 60 }}"
+      
+  # Moodle categorieën
+  categories:
+    - name: Talen
+      description: "Taalcursussen"
+    - name: Programmeren
+      description: "Programmeercursussen"
+    - name: IT
+      description: "IT en technologie"
+    - name: Management
+      description: "Management trainingen"
+    - name: Persoonlijke Ontwikkeling
+      description: "Soft skills en persoonlijke groei"
+      
+  # Moodle gebruikers
+  users:
+    - username: admin
+      firstname: Admin
+      lastname: User
+      email: admin@{{ domain }}
+      password: "{{ vault_moodle_admin_password }}"
+      role: administrator
+      
+    - username: teacher1
+      firstname: Jan
+      lastname: Jansen
+      email: teacher1@{{ domain }}
+      password: "{{ vault_moodle_teacher1_password }}"
+      role: teacher
+      
+    - username: student1
+      firstname: Piet
+      lastname: Pietersen
+      email: student1@{{ domain }}
+      password: "{{ vault_moodle_student1_password }}"
+      role: student
+      
+  # Moodle badges
+  badges:
+    - name: Cursus Voltooid
+      description: "Uitgereikt bij voltooien van een cursus"
+      image: "/badges/course_completion.png"
+    - name: Uitmuntende Prestatie
+      description: "Voor studenten met >90% score"
+      image: "/badges/excellent.png"
+      
+  # Moodle schalen
+  scales:
+    - name: Cijfer
+      scale: "1,2,3,4,5,6,7,8,9,10"
+    - name: Beoordeling
+      scale: "Onvoldoende, Voldoende, Goed, Uitstekend"
+      
+  # Moodle quizzes
+  quizzes:
+    - name: "Python Basis Test"
+      course: "Python Programmeren"
+      questions:
+        - name: "Wat is een variabele?"
+          type: multichoice
+          options:
+            - "Een container voor data"
+            - "Een functie"
+            - "Een loop"
+          correct: 0
+        - name: "Wat is de output van print(2+2)?"
+          type: shortanswer
+          correct: "4"
+
+canvas_config:
+  # Canvas accounts
+  accounts:
+    - name: "{{ company_name }}"
+      parent_account_id: 1
+      default_time_zone: Europe/Amsterdam
+      
+  # Canvas cursussen
+  courses:
+    - name: "Nederlands voor Beginners"
+      course_code: NL101
+      account_id: 1
+      term: Semester 1
+      enrollment_term: 2024-1
+      start_at: "{{ next_month }}"
+      end_at: "{{ next_month + 90 }}"
+      syllabus_body: "Leer de basis van Nederlands"
+      
+    - name: "Python Programmeren"
+      course_code: PY101
+      account_id: 1
+      term: Semester 1
+      enrollment_term: 2024-1
+      start_at: "{{ next_month }}"
+      end_at: "{{ next_month + 120 }}"
+      
+  # Canvas gebruikers
+  users:
+    - name: Admin User
+      email: admin@{{ domain }}
+      password: "{{ vault_canvas_admin_password }}"
+      role: admin
+      
+    - name: Teacher User
+      email: teacher@{{ domain }}
+      password: "{{ vault_canvas_teacher_password }}"
+      role: teacher
+      
+    - name: Student User
+      email: student@{{ domain }}
+      password: "{{ vault_canvas_student_password }}"
+      role: student
+      
+  # Canvas rollen
+  roles:
+    - name: Teacher
+      permissions:
+        - manage_courses
+        - manage_assignments
+        - manage_grades
+        - manage_files
+    - name: Student
+      permissions:
+        - view_course
+        - submit_assignments
+        - view_grades
+        
+  # Canvas modules
+  modules:
+    - course: "Python Programmeren"
+      name: "Week 1: Introductie"
+      items:
+        - title: "Welkom bij Python"
+          type: Page
+          content: "Welkom bij de cursus Python Programmeren..."
+        - title: "Installatie"
+          type: Page
+          content: "Installeer Python op je computer..."
+        - title: "Quiz Week 1"
+          type: Quiz
+          
+    - course: "Python Programmeren"
+      name: "Week 2: Variabelen"
+      items:
+        - title: "Wat zijn variabelen?"
+          type: Page
+        - title: "Oefeningen variabelen"
+          type: Assignment
+          
+  # Canvas assignments
+  assignments:
+    - course: "Python Programmeren"
+      name: "Eerste Python script"
+      description: "Schrijf een script dat 'Hallo Wereld' print"
+      points: 10
+      due_at: "{{ next_week + 7 }}"
+      submission_types:
+        - online_text_entry
+        - online_upload
+      allowed_extensions:
+        - py
+        - txt

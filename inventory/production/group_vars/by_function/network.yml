@@ -1,0 +1,538 @@
+---
+# =============================================================================
+# NETWORK TOOLS
+# =============================================================================
+# Functie: network
+# Beschrijving: Tools voor netwerkbeheer, VPN, DNS en service discovery
+# =============================================================================
+
+network_tools:
+  # ---------------------------------------------------------------------------
+  # SERVICE DISCOVERY
+  # ---------------------------------------------------------------------------
+  - name: Consul
+    profiel_tag: IT
+    functie_tag: network
+    beschrijving: "Service discovery tool voor dynamische infrastructuren"
+    categorie: service_discovery
+    docker_image: hashicorp/consul:latest
+    ports:
+      - "8500:8500"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
+      - "8300:8300"
+      - "8301:8301/tcp"
+      - "8301:8301/udp"
+      - "8302:8302/tcp"
+      - "8302:8302/udp"
+    volumes:
+      - consul_data:/consul/data
+      - consul_config:/consul/config
+    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -bind=0.0.0.0
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+      CONSUL_LOCAL_CONFIG: |
+        {
+          "datacenter": "ams01",
+          "data_dir": "/consul/data",
+          "log_level": "INFO",
+          "node_name": "consul-server",
+          "server": true,
+          "ui": true,
+          "bootstrap_expect": 1
+        }
+    url: "https://www.consul.io"
+    
+  - name: Kuma
+    profiel_tag: IT
+    functie_tag: network
+    beschrijving: "Service mesh voor connectiviteit en observability"
+    categorie: service_mesh
+    docker_image: kong/kuma-cp:latest
+    ports:
+      - "5681:5681"
+      - "5682:5682"
+      - "5683:5683"
+    volumes:
+      - kuma_data:/data
+    environment:
+      KUMA_MODE: standalone
+      KUMA_STORE_TYPE: memory
+      KUMA_API_SERVER_INTERFACE: 0.0.0.0
+      KUMA_API_SERVER_PORT: 5681
+      KUMA_DIAGNOSTICS_SERVER_PORT: 5680
+    url: "https://kuma.io"
+    
+  # ---------------------------------------------------------------------------
+  # VPN SERVERS
+  # ---------------------------------------------------------------------------
+  - name: OpenVPN
+    profiel_tag: IT
+    functie_tag: network
+    beschrijving: "VPN-server voor veilige externe toegang"
+    categorie: vpn
+    docker_image: kylemanna/openvpn:latest
+    ports:
+      - "1194:1194/udp"
+    volumes:
+      - openvpn_data:/etc/openvpn
+    cap_add:
+      - NET_ADMIN
+    environment:
+      DEBUG: "false"
+    url: "https://openvpn.net"
+    
+  - name: WireGuard
+    profiel_tag: IT
+    functie_tag: network
+    beschrijving: "Moderne, snelle VPN-tunnel"
+    categorie: vpn
+    docker_image: linuxserver/wireguard:latest
+    ports:
+      - "51820:51820/udp"
+    volumes:
+      - wireguard_config:/config
+      - /lib/modules:/lib/modules:ro
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Amsterdam
+      SERVERURL: "wireguard.{{ domain }}"
+      SERVERPORT: 51820
+      PEERS: 5
+      PEERDNS: auto
+      INTERNAL_SUBNET: 10.13.13.0
+    url: "https://www.wireguard.com"
+    
+  # ---------------------------------------------------------------------------
+  # REMOTE DESKTOP
+  # ---------------------------------------------------------------------------
+  - name: Guacamole
+    profiel_tag: IT
+    functie_tag: network
+    beschrijving: "Remote desktop gateway voor RDP, SSH en VNC"
+    categorie: remote_access
+    docker_image: guacamole/guacamole:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - guacamole_config:/config
+    environment:
+      GUACD_HOSTNAME: guacd
+      POSTGRES_HOSTNAME: postgres
+      POSTGRES_DATABASE: guacamole
+      POSTGRES_USER: guacamole
+      POSTGRES_PASSWORD: "{{ vault_guacamole_password }}"
+    depends_on:
+      - guacd
+      - postgres
+    url: "https://guacamole.apache.org"
+    
+  - name: Guacd
+    profiel_tag: IT
+    functie_tag: network
+    beschrijving: "Guacamole proxy daemon voor remote desktop"
+    categorie: remote_access
+    docker_image: guacamole/guacd:latest
+    ports:
+      - "4822:4822"
+    volumes:
+      - guacd_data:/data
+    url: "https://guacamole.apache.org"
+    
+  # ---------------------------------------------------------------------------
+  # DNS MANAGERS
+  # ---------------------------------------------------------------------------
+  - name: Zonas
+    profiel_tag: IT
+    functie_tag: network
+    beschrijving: "DNS manager voor zonebeheer"
+    categorie: dns
+    docker_image: zonas/zonas:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - zonas_data:/data
+      - zonas_config:/config
+    environment:
+      ZONAS_DB_HOST: postgres
+      ZONAS_DB_NAME: zonas
+      ZONAS_DB_USER: zonas
+      ZONAS_DB_PASSWORD: "{{ vault_zonas_password }}"
+      ZONAS_ADMIN_USER: admin
+      ZONAS_ADMIN_PASSWORD: "{{ vault_zonas_admin_password }}"
+    database: postgresql
+    url: "https://zonas.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+network_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Netwerk instellingen
+  network:
+    domain: "{{ domain }}"
+    internal_domain: "internal.{{ domain }}"
+    dns_servers:
+      - 1.1.1.1
+      - 8.8.8.8
+      - 9.9.9.9
+    ntp_servers:
+      - 0.nl.pool.ntp.org
+      - 1.nl.pool.ntp.org
+      - 2.nl.pool.ntp.org
+      
+  # VPN instellingen
+  vpn:
+    network: 10.8.0.0/24
+    client_network: 10.8.1.0/24
+    dns: 10.8.0.1
+    keepalive: 10 60
+    
+  # Service discovery
+  service_discovery:
+    datacenter: ams01
+    domain: consul
+    gossip_key: "{{ vault_consul_gossip_key }}"
+    
+  # Remote desktop
+  remote_desktop:
+    default_protocol: rdp
+    default_port: 3389
+    recording_path: /recordings
+    recording_retention: 30
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+consul_config:
+  # Consul services
+  services:
+    - name: web
+      port: 80
+      tags:
+        - production
+        - external
+      checks:
+        - name: HTTP check
+          http: http://localhost:80/health
+          interval: 10s
+          timeout: 2s
+          
+    - name: api
+      port: 8080
+      tags:
+        - production
+        - internal
+      checks:
+        - name: TCP check
+          tcp: localhost:8080
+          interval: 10s
+          timeout: 2s
+          
+  # Consul intentions
+  intentions:
+    - source: web
+      destination: api
+      action: allow
+    - source: "*"
+      destination: "web"
+      action: deny
+      
+  # Consul KV store
+  kv:
+    - key: config/database/url
+      value: "postgresql://user:pass@postgres:5432/db"
+    - key: config/redis/host
+      value: "redis"
+    - key: config/redis/port
+      value: "6379"
+      
+  # Consul ACLs
+  acls:
+    enabled: true
+    master_token: "{{ vault_consul_master_token }}"
+    default_policy: deny
+    down_policy: extend
+    policies:
+      - name: read-only
+        rules: |
+          service "" {
+            policy = "read"
+          }
+          key "" {
+            policy = "read"
+          }
+          
+      - name: write-all
+        rules: |
+          service "" {
+            policy = "write"
+          }
+          key "" {
+            policy = "write"
+          }
+
+wireguard_config:
+  # WireGuard peers
+  peers:
+    - name: laptop
+      allowed_ips: 10.13.13.2/32
+      persistent_keepalive: 25
+    - name: phone
+      allowed_ips: 10.13.13.3/32
+      persistent_keepalive: 25
+    - name: tablet
+      allowed_ips: 10.13.13.4/32
+      persistent_keepalive: 25
+    - name: colleague1
+      allowed_ips: 10.13.13.10/32
+      persistent_keepalive: 25
+    - name: colleague2
+      allowed_ips: 10.13.13.11/32
+      persistent_keepalive: 25
+      
+  # WireGuard server config
+  server:
+    interface: wg0
+    address: 10.13.13.1/24
+    listen_port: 51820
+    private_key: "{{ vault_wireguard_private_key }}"
+    post_up: |
+      iptables -A FORWARD -i wg0 -j ACCEPT
+      iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+    post_down: |
+      iptables -D FORWARD -i wg0 -j ACCEPT
+      iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+      
+  # WireGuard DNS
+  dns:
+    enabled: true
+    servers:
+      - 10.13.13.1
+      - 1.1.1.1
+    domain: vpn.{{ domain }}
+    
+  # WireGuard routing
+  routing:
+    allowed_ips:
+      - 10.13.13.0/24
+      - 10.0.0.0/8
+    block_ips:
+      - 0.0.0.0/5
+      - 8.0.0.0/7
+
+openvpn_config:
+  # OpenVPN server config
+  server:
+    proto: udp
+    port: 1194
+    dev: tun
+    ca: ca.crt
+    cert: server.crt
+    key: server.key
+    dh: dh.pem
+    server: 10.8.0.0 255.255.255.0
+    ifconfig_pool_persist: ipp.txt
+    push: 
+      - "redirect-gateway def1 bypass-dhcp"
+      - "dhcp-option DNS 8.8.8.8"
+      - "dhcp-option DNS 8.8.4.4"
+    keepalive: 10 120
+    comp-lzo: yes
+    user: nobody
+    group: nogroup
+    persist_key: yes
+    persist_tun: yes
+    status: openvpn-status.log
+    log: openvpn.log
+    verb: 3
+    
+  # OpenVPN clients
+  clients:
+    - name: laptop
+      certificate: laptop.crt
+      key: laptop.key
+    - name: phone
+      certificate: phone.crt
+      key: phone.key
+    - name: tablet
+      certificate: tablet.crt
+      key: tablet.key
+      
+  # OpenVPN routes
+  routes:
+    - network: 10.0.0.0
+      netmask: 255.0.0.0
+      gateway: 10.8.0.1
+      
+  # OpenVPN client config template
+  client_template: |
+    client
+    dev tun
+    proto udp
+    remote {{ server }} 1194
+    resolv-retry infinite
+    nobind
+    persist-key
+    persist-tun
+    remote-cert-tls server
+    comp-lzo yes
+    verb 3
+    <ca>
+    {{ ca_cert }}
+    </ca>
+    <cert>
+    {{ client_cert }}
+    </cert>
+    <key>
+    {{ client_key }}
+    </key>
+
+guacamole_config:
+  # Guacamole connections
+  connections:
+    - name: Web Server
+      protocol: ssh
+      parameters:
+        hostname: web01.{{ domain }}
+        port: 22
+        username: admin
+        private_key: "{{ vault_guacamole_web_key }}"
+        
+    - name: Database Server
+      protocol: rdp
+      parameters:
+        hostname: db01.{{ domain }}
+        port: 3389
+        username: administrator
+        password: "{{ vault_guacamole_db_password }}"
+        security: any
+        ignore-cert: true
+        
+    - name: Application Server
+      protocol: vnc
+      parameters:
+        hostname: app01.{{ domain }}
+        port: 5900
+        password: "{{ vault_guacamole_app_password }}"
+        
+    - name: Router
+      protocol: ssh
+      parameters:
+        hostname: router.{{ domain }}
+        port: 22
+        username: admin
+        password: "{{ vault_guacamole_router_password }}"
+        
+  # Guacamole users
+  users:
+    - username: admin
+      password: "{{ vault_guacamole_admin_password }}"
+      permissions:
+        - "*:*"
+    - username: operator
+      password: "{{ vault_guacamole_operator_password }}"
+      permissions:
+        - "connection:read"
+        - "connection:connect"
+        
+  # Guacamole groups
+  groups:
+    - name: Administrators
+      members:
+        - admin
+      permissions:
+        - "*:*"
+    - name: Operators
+      members:
+        - operator
+      permissions:
+        - "connection:read"
+        - "connection:connect"
+        
+  # Guacamole settings
+  settings:
+    recording_path: /recordings
+    recording_retention: 30
+    clipboard_max_size: 65535
+    enable_statistics: true
+    session_timeout: 3600
+    max_connections: 100
+    max_connections_per_user: 5
+
+zonas_config:
+  # Zonas DNS zones
+  zones:
+    - name: "{{ domain }}"
+      type: master
+      ttl: 3600
+      records:
+        - name: "@"
+          type: A
+          value: "{{ public_ip }}"
+          ttl: 3600
+        - name: www
+          type: A
+          value: "{{ public_ip }}"
+          ttl: 3600
+        - name: mail
+          type: A
+          value: "{{ mail_server_ip }}"
+          ttl: 3600
+        - name: "{{ domain }}"
+          type: MX
+          value: "10 mail.{{ domain }}"
+          ttl: 3600
+        - name: "{{ domain }}"
+          type: TXT
+          value: "v=spf1 mx ~all"
+          ttl: 3600
+          
+    - name: "internal.{{ domain }}"
+      type: master
+      ttl: 300
+      records:
+        - name: postgres
+          type: A
+          value: 10.0.0.10
+        - name: redis
+          type: A
+          value: 10.0.0.11
+        - name: minio
+          type: A
+          value: 10.0.0.12
+        - name: elasticsearch
+          type: A
+          value: 10.0.0.13
+          
+  # Zonas forwarders
+  forwarders:
+    - 1.1.1.1
+    - 8.8.8.8
+    
+  # Zonas ACLs
+  acls:
+    - name: internal
+      networks:
+        - 10.0.0.0/8
+        - 192.168.0.0/16
+      allow_query: true
+      allow_transfer: false
+    - name: external
+      networks:
+        - 0.0.0.0/0
+      allow_query: true
+      allow_transfer: false

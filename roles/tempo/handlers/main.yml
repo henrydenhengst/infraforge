@@ -1,0 +1,5 @@
+---
+- name: restart tempo
+  ansible.builtin.docker_container:
+    name: tempo
+    restart: yes

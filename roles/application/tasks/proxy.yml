@@ -1,0 +1,11 @@
+---
+- name: '{{ ansible_os_family }} | Configureer reverse proxy'
+  ansible.builtin.include_tasks: "proxy_{{ proxy_type }}.yml"
+  tags: [proxy]
+
+- name: '{{ ansible_os_family }} | Reload reverse proxy'
+  ansible.builtin.systemd:
+    name: "{{ proxy_type }}"
+    state: reloaded
+  when: proxy_type in ['nginx', 'apache2']
+  tags: [proxy]

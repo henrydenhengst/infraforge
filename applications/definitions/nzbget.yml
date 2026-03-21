@@ -1,0 +1,86 @@
+---
+# =============================================================================
+# NZBGET - USENET DOWNLOADER
+# =============================================================================
+# Beschrijving: Efficiënte Usenet downloader
+# Website: https://nzbget.net
+# =============================================================================
+
+application:
+  name: nzbget
+  version: 21.1
+  description: "NZBGet - Efficiënte Usenet downloader"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://nzbget.net/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: downloads
+        size_gb: 500
+        performance: hdd
+        backup_required: false
+        mount_path: /downloads
+      - name: intermediair
+        size_gb: 100
+        performance: hdd
+        backup_required: false
+        mount_path: /intermediair
+        description: "Intermediaire bestanden"
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 6789
+        host: 6789
+        protocol: tcp
+        public: false
+        description: "NZBGet web interface"
+    dns:
+      - "nzbget.{{ domain }}"
+      - "usenet.{{ domain }}"
+      
+  container:
+    image: linuxserver/nzbget:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 6789

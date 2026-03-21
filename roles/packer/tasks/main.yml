@@ -1,0 +1,29 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Packer'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Valideer Packer installatie'
+  ansible.builtin.shell: packer version
+  register: packer_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Packer versie
+  ansible.builtin.debug:
+    var: packer_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Maak Packer workspace'
+  ansible.builtin.file:
+    path: "{{ packer_workspace }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Configureer Packer plugins'
+  ansible.builtin.shell: |
+    packer plugins install github.com/hashicorp/{{ item }}
+  loop: "{{ packer_plugins }}"
+  when: packer_plugins is defined
+  tags: [plugins]

@@ -1,0 +1,120 @@
+---
+# =============================================================================
+# AKENEO - PRODUCT INFORMATION MANAGEMENT
+# =============================================================================
+# Beschrijving: Product Informatie Management voor e-commerce catalogi
+# Website: https://www.akeneo.com
+# =============================================================================
+
+application:
+  name: akeneo
+  version: 7.0.0
+  description: "Akeneo - Product Information Management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ecommerce-team
+    contact: ecommerce@company.local
+    slack: "#ecommerce"
+    documentation: "https://help.akeneo.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /srv/akeneo
+      - name: media
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /srv/akeneo/media
+      - name: cache
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /srv/akeneo/var/cache
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /srv/akeneo/var/logs
+        
+  network_requirements:
+    vlans:
+      - ecommerce
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Akeneo web interface"
+    dns:
+      - "pim.{{ domain }}"
+      - "akeneo.{{ domain }}"
+      
+  container:
+    image: akeneo/pim-community:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: APP_DATABASE_HOST
+      value: "mysql"
+      secret: false
+    - name: APP_DATABASE_PORT
+      value: "3306"
+      secret: false
+    - name: APP_DATABASE_NAME
+      value: "akeneo"
+      secret: false
+    - name: APP_DATABASE_USER
+      value: "akeneo"
+      secret: false
+    - name: APP_DATABASE_PASSWORD
+      value: "{{ vault_akeneo_password }}"
+      secret: true
+    - name: APP_ELASTICSEARCH_HOST
+      value: "elasticsearch"
+      secret: false
+    - name: APP_ELASTICSEARCH_PORT
+      value: "9200"
+      secret: false
+    - name: APP_INDEX_NAME
+      value: "akeneo"
+      secret: false
+    - name: APP_SECRET
+      value: "{{ vault_akeneo_secret }}"
+      secret: true
+    - name: APP_LOCALE
+      value: "nl_NL"
+      secret: false
+    - name: APP_CURRENCY
+      value: "EUR"
+      secret: false
+    - name: MAILER_URL
+      value: "smtp://smtp.{{ domain }}:587?username=akeneo@{{ domain }}&password={{ vault_smtp_password }}"
+      secret: true
+    - name: MAILER_FROM
+      value: "akeneo@{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

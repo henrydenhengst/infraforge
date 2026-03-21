@@ -1,0 +1,107 @@
+---
+# =============================================================================
+# ERPNEXT - VOLLEDIG ERP SYSTEEM
+# =============================================================================
+# Beschrijving: Volledig HR en ERP systeem
+# Website: https://erpnext.com
+# =============================================================================
+
+application:
+  name: erpnext
+  version: 15.0.0
+  description: "ERPNext - Volledig ERP systeem"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: finance-team
+    contact: finance@company.local
+    slack: "#finance"
+    documentation: "https://erpnext.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /home/frappe/frappe-bench/sites
+      - name: assets
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /home/frappe/frappe-bench/sites/assets
+        
+  network_requirements:
+    vlans:
+      - finance
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "ERPNext web interface"
+      - container: 9000
+        host: 9000
+        protocol: tcp
+        public: false
+        description: "ERPNext socketio"
+    dns:
+      - "erpnext.{{ domain }}"
+      - "erp.{{ domain }}"
+      
+  container:
+    image: frappe/erpnext:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: DB_HOST
+      value: "mariadb"
+      secret: false
+    - name: DB_PORT
+      value: "3306"
+      secret: false
+    - name: DB_ROOT_USER
+      value: "root"
+      secret: false
+    - name: DB_ROOT_PASSWORD
+      value: "{{ vault_mariadb_root_password }}"
+      secret: true
+    - name: SITE_NAME
+      value: "erpnext.{{ domain }}"
+      secret: false
+    - name: ADMIN_PASSWORD
+      value: "{{ vault_erpnext_admin_password }}"
+      secret: true
+    - name: INSTALL_ERPNext
+      value: "true"
+      secret: false
+      
+  modules:
+    - accounts
+    - stock
+    - selling
+    - buying
+    - hr
+    - projects
+    - manufacturing
+    - website
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /api/method/ping
+      port: 8000

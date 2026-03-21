@@ -1,0 +1,91 @@
+---
+# =============================================================================
+# BACKUP ROLE DEFAULTS
+# =============================================================================
+
+# Backup user
+backup_user: root
+backup_group: root
+
+# Backup directories
+backup_base_dir: /backup
+backup_log_dir: /var/log/backup
+
+# Backup strategy
+backup_strategy: full  # full, incremental, differential
+backup_compression: true
+backup_compression_type: gzip  # gzip, pigz, pbzip2, lz4, zstd
+backup_encryption: true
+backup_encryption_key: "{{ vault_backup_encryption_key }}"
+
+# Database backups
+backup_databases: false
+postgres_databases: []
+mysql_databases: []
+mongodb_databases: []
+redis_databases: []
+
+# Volume backups
+backup_volumes: false
+backup_volumes_list: []
+backup_docker_volumes: false
+backup_docker_volumes_list: []
+
+# Application backups
+backup_applications: false
+backup_apps_list: []
+
+# Config backups
+backup_config: true
+backup_config_paths:
+  - /etc
+  - /opt
+  - /home
+  - /root
+
+# Remote backup
+backup_remote_enabled: false
+backup_remote_type: s3  # s3, nfs, rsync, borg
+backup_remote_endpoint: ""
+backup_remote_bucket: ""
+backup_remote_access_key: "{{ vault_backup_access_key }}"
+backup_remote_secret_key: "{{ vault_backup_secret_key }}"
+
+# Retention
+backup_retention_daily: 7
+backup_retention_weekly: 4
+backup_retention_monthly: 12
+backup_retention_yearly: 3
+
+# Notifications
+backup_notify_email: "alerts@{{ domain }}"
+backup_notify_slack: "{{ vault_slack_webhook }}"
+backup_notify_on_success: false
+backup_notify_on_failure: true
+
+# Backup schedules
+backup_cron_jobs:
+  - name: "daily-backup"
+    minute: "0"
+    hour: "1"
+    job: "/backup/scripts/backup.sh daily >> /var/log/backup/daily.log 2>&1"
+  - name: "weekly-backup"
+    minute: "0"
+    hour: "2"
+    weekday: "0"
+    job: "/backup/scripts/backup.sh weekly >> /var/log/backup/weekly.log 2>&1"
+  - name: "monthly-backup"
+    minute: "0"
+    hour: "3"
+    day: "1"
+    job: "/backup/scripts/backup.sh monthly >> /var/log/backup/monthly.log 2>&1"
+  - name: "cleanup-backup"
+    minute: "0"
+    hour: "4"
+    day: "*"
+    job: "/backup/scripts/cleanup.sh >> /var/log/backup/cleanup.log 2>&1"
+
+# Backup performance
+backup_parallel_jobs: 4
+backup_bandwidth_limit: 0  # 0 = unlimited
+backup_io_priority: 7  # 0-7 (lower = higher priority)

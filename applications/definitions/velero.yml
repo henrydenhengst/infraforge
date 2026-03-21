@@ -1,0 +1,93 @@
+---
+# =============================================================================
+# METABASE - BUSINESS INTELLIGENCE
+# =============================================================================
+# Beschrijving: Business Intelligence tool voor vragen en dashboards
+# Website: https://www.metabase.com
+# =============================================================================
+
+application:
+  name: metabase
+  version: 0.48.0
+  description: "Metabase - Business Intelligence"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://www.metabase.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /metabase.db
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Metabase web interface"
+    dns:
+      - "metabase.{{ domain }}"
+      - "bi.{{ domain }}"
+      
+  container:
+    image: metabase/metabase:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: MB_DB_TYPE
+      value: "postgres"
+      secret: false
+    - name: MB_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: MB_DB_PORT
+      value: "5432"
+      secret: false
+    - name: MB_DB_DBNAME
+      value: "metabase"
+      secret: false
+    - name: MB_DB_USER
+      value: "metabase"
+      secret: false
+    - name: MB_DB_PASS
+      value: "{{ vault_metabase_password }}"
+      secret: true
+    - name: MB_ENCRYPTION_SECRET_KEY
+      value: "{{ vault_metabase_secret }}"
+      secret: true
+    - name: MB_PASSWORD_COMPLEXITY
+      value: "strong"
+      secret: false
+    - name: MB_PASSWORD_LENGTH
+      value: "10"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 3000

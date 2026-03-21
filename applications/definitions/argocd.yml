@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# ADGUARDHOME - NETWERKBREEDE ADVERTENTIEBLOCKER
+# =============================================================================
+# Beschrijving: Netwerkbrede advertentieblocker en DNS-server
+# Website: https://adguard.com/adguard-home
+# =============================================================================
+
+application:
+  name: adguardhome
+  version: 0.107.0
+  description: "AdGuardHome - Netwerkbrede advertentieblocker"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://github.com/AdguardTeam/AdGuardHome"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: work
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/adguardhome/work
+      - name: conf
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/adguardhome/conf
+        
+  network_requirements:
+    vlans:
+      - security
+      - dmz
+    ports:
+      - container: 53
+        host: 53
+        protocol: tcp
+        public: false
+        description: "DNS TCP"
+      - container: 53
+        host: 53
+        protocol: udp
+        public: false
+        description: "DNS UDP"
+      - container: 784
+        host: 784
+        protocol: udp
+        public: false
+        description: "DNS over QUIC"
+      - container: 853
+        host: 853
+        protocol: tcp
+        public: false
+        description: "DNS over TLS"
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "AdGuardHome web interface"
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "HTTP"
+    dns:
+      - "adguard.{{ domain }}"
+      
+  container:
+    image: adguard/adguardhome:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000

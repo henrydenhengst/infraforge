@@ -1,0 +1,74 @@
+---
+# =============================================================================
+# KEYSTONEJS - NODE.JS CMS FRAMEWORK
+# =============================================================================
+# Beschrijving: Node.js CMS framework met GraphQL API
+# Website: https://keystonejs.com
+# =============================================================================
+
+application:
+  name: keystonejs
+  version: 6.0.0
+  description: "KeystoneJS - Node.js CMS framework"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://keystonejs.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: true
+        description: "KeystoneJS web interface"
+    dns:
+      - "keystone.{{ domain }}"
+      
+  container:
+    image: keystonejs/keystone:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DATABASE_URL
+      value: "postgresql://keystone:{{ vault_keystone_password }}@postgres:5432/keystone"
+      secret: true
+    - name: SESSION_SECRET
+      value: "{{ vault_keystone_secret }}"
+      secret: true
+    - name: COOKIE_SECRET
+      value: "{{ vault_keystone_cookie }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /_health
+      port: 3000

@@ -1,0 +1,22 @@
+# {{ ansible_managed }}
+- rule: Write below binary dir
+  desc: an attempt to write to any file below a set of binary directories
+  condition: >
+    fd.directory in (bin_dir, sbin_dir, usr_bin_dir, usr_sbin_dir)
+    and evt.type in (open, openat, creat)
+    and evt.arg.flags contains "O_WRONLY" or evt.arg.flags contains "O_RDWR"
+  output: >
+    File below known binary directory opened for writing (user=%user.name command=%proc.cmdline file=%fd.name)
+  priority: ERROR
+  tags: [filesystem, mitre_persistence]
+
+- rule: Write below etc
+  desc: an attempt to write to any file below /etc
+  condition: >
+    fd.directory startswith /etc
+    and evt.type in (open, openat, creat)
+    and evt.arg.flags contains "O_WRONLY" or evt.arg.flags contains "O_RDWR"
+  output: >
+    File below /etc opened for writing (user=%user.name command=%proc.cmdline file=%fd.name)
+  priority: ERROR
+  tags: [filesystem, mitre_persistence]

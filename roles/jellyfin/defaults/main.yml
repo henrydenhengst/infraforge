@@ -1,0 +1,7 @@
+---
+jellyfin_config_path: /opt/jellyfin/config
+jellyfin_cache_path: /opt/jellyfin/cache
+jellyfin_media_path: /media
+jellyfin_uid: 1000
+jellyfin_gid: 1000
+timezone: Europe/Amsterdam

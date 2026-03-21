@@ -1,0 +1,133 @@
+---
+# =============================================================================
+# BACKUP PLAYBOOK - Backups uitvoeren
+# =============================================================================
+# Dit playbook voert backups uit op alle servers.
+# Gebruik: ansible-playbook playbooks/backup.yml -e backup_type=daily
+# =============================================================================
+
+- name: Voer backups uit
+  hosts: backup_servers
+  gather_facts: yes
+  become: yes
+  vars:
+    backup_type: "{{ backup_type | default('daily') }}"
+  tasks:
+    - name: Controleer backup type
+      fail:
+        msg: "backup_type moet daily, weekly of monthly zijn"
+      when: backup_type not in ['daily', 'weekly', 'monthly']
+
+    - name: Maak backup directory
+      file:
+        path: "{{ backup_base_dir }}/{{ backup_type }}"
+        state: directory
+        mode: '0755'
+      vars:
+        backup_base_dir: /backup
+
+    - name: Backup PostgreSQL databases
+      shell: |
+        PGPASSWORD="{{ item.password }}" pg_dump -h localhost -U {{ item.user }} {{ item.name }} | gzip > "{{ backup_base_dir }}/{{ backup_type }}/{{ item.name }}-{{ ansible_date_time.date }}.sql.gz"
+      loop: "{{ postgres_databases | default([]) }}"
+      when: postgres_databases is defined
+      tags: [database]
+
+    - name: Backup MySQL databases
+      shell: |
+        mysqldump -u root -p{{ vault_mysql_root_password }} {{ item.name }} | gzip > "{{ backup_base_dir }}/{{ backup_type }}/{{ item.name }}-{{ ansible_date_time.date }}.sql.gz"
+      loop: "{{ mysql_databases | default([]) }}"
+      when: mysql_databases is defined
+      tags: [database]
+
+    - name: Backup Docker volumes
+      shell: |
+        for volume in $(docker volume ls -q); do
+          docker run --rm -v $volume:/data -v {{ backup_base_dir }}/{{ backup_type }}:/backup alpine tar czf /backup/$volume-{{ ansible_date_time.date }}.tar.gz -C /data .
+        done
+      when: backup_docker_volumes | default(false)
+      tags: [volumes]
+
+    - name: Backup configuratie
+      archive:
+        path: "{{ item }}"
+        dest: "{{ backup_base_dir }}/{{ backup_type }}/config-{{ ansible_date_time.date }}.tar.gz"
+        format: gz
+      loop: "{{ backup_config_paths | default(['/etc', '/opt', '/home']) }}"
+      tags: [config]
+
+    - name: Backup applicaties
+      shell: |
+        for app in /opt/applications/*; do
+          tar czf "{{ backup_base_dir }}/{{ backup_type }}/$(basename $app)-{{ ansible_date_time.date }}.tar.gz" -C /opt/applications $(basename $app)
+        done
+      when: backup_applications | default(false)
+      tags: [applications]
+
+- name: Upload backups naar remote storage
+  hosts: backup_servers
+  become: yes
+  vars:
+    backup_type: "{{ backup_type | default('daily') }}"
+  tasks:
+    - name: Upload naar S3/MinIO
+      shell: |
+        aws s3 sync {{ backup_base_dir }}/{{ backup_type }} s3://{{ backup_bucket }}/{{ inventory_hostname }}/{{ backup_type }}/ \
+          --endpoint-url {{ backup_endpoint }}
+      when: backup_remote_enabled | default(false) and backup_remote_type == 's3'
+      tags: [remote]
+
+    - name: Upload naar NFS
+      shell: |
+        rsync -avz {{ backup_base_dir }}/{{ backup_type }}/ {{ backup_nfs_mount }}/{{ inventory_hostname }}/{{ backup_type }}/
+      when: backup_remote_enabled | default(false) and backup_remote_type == 'nfs'
+      tags: [remote]
+
+- name: Cleanup oude backups
+  hosts: backup_servers
+  become: yes
+  tasks:
+    - name: Verwijder oude dagelijkse backups
+      shell: |
+        find {{ backup_base_dir }}/daily -type f -mtime +{{ backup_retention_daily | default(7) }} -delete
+      tags: [cleanup]
+
+    - name: Verwijder oude wekelijkse backups
+      shell: |
+        find {{ backup_base_dir }}/weekly -type f -mtime +{{ backup_retention_weekly | default(30) }} -delete
+      tags: [cleanup]
+
+    - name: Verwijder oude maandelijkse backups
+      shell: |
+        find {{ backup_base_dir }}/monthly -type f -mtime +{{ backup_retention_monthly | default(90) }} -delete
+      tags: [cleanup]
+
+- name: Backup notificaties
+  hosts: backup_servers
+  become: no
+  tasks:
+    - name: Stuur Slack notificatie
+      uri:
+        url: "{{ vault_slack_webhook }}"
+        method: POST
+        body: |
+          {
+            "text": "Backup {{ backup_type }} voltooid op {{ inventory_hostname }}",
+            "username": "Ansible Backup",
+            "icon_emoji": ":floppy_disk:"
+          }
+        body_format: json
+      when: backup_notify_slack | default(false)
+      tags: [notify]
+
+    - name: Stuur email notificatie
+      mail:
+        to: "{{ backup_notify_email }}"
+        subject: "Backup {{ backup_type }} voltooid op {{ inventory_hostname }}"
+        body: |
+          Backup voltooid op {{ ansible_date_time.date }}
+          Type: {{ backup_type }}
+          Server: {{ inventory_hostname }}
+          Status: ✅ Success
+      when: backup_notify_email | default(false)
+      tags: [notify]

@@ -1,0 +1,93 @@
+---
+# =============================================================================
+# LEANTIME - PROJECTMANAGEMENT MET OKR'S
+# =============================================================================
+# Beschrijving: Projectmanagement met strategie en OKR's
+# Website: https://leantime.io
+# =============================================================================
+
+application:
+  name: leantime
+  version: 2.4.0
+  description: "Leantime - Projectmanagement met OKR's"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: project-team
+    contact: pm@company.local
+    slack: "#project"
+    documentation: "https://docs.leantime.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        
+  network_requirements:
+    vlans:
+      - project
+      - internal
+    ports:
+      - container: 80
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Leantime web interface"
+    dns:
+      - "leantime.{{ domain }}"
+      - "strategy.{{ domain }}"
+      
+  container:
+    image: leantime/leantime:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: LEANTIME_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: LEANTIME_DB_DATABASE
+      value: "leantime"
+      secret: false
+    - name: LEANTIME_DB_USER
+      value: "leantime"
+      secret: false
+    - name: LEANTIME_DB_PASSWORD
+      value: "{{ vault_leantime_password }}"
+      secret: true
+    - name: LEANTIME_SESSION_PASSWORD
+      value: "{{ vault_leantime_session }}"
+      secret: true
+    - name: LEANTIME_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: LEANTIME_PASSWORD
+      value: "{{ vault_leantime_admin_password }}"
+      secret: true
+    - name: LEANTIME_FIRSTNAME
+      value: "Admin"
+      secret: false
+    - name: LEANTIME_LASTNAME
+      value: "User"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

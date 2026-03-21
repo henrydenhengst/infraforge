@@ -1,0 +1,6 @@
+---
+- name: Installeer Ansible via APT
+  ansible.builtin.apt:
+    name: ansible
+    state: present
+    update_cache: yes

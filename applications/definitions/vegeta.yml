@@ -1,0 +1,91 @@
+---
+# =============================================================================
+# GRAFANA LOKI - LOG AGGREGATION
+# =============================================================================
+# Beschrijving: Log aggregatie systeem voor efficiënte log opslag
+# Website: https://grafana.com/oss/loki
+# =============================================================================
+
+application:
+  name: grafana-loki
+  version: 2.9.0
+  description: "Grafana Loki - Log aggregatie"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://grafana.com/docs/loki"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /loki
+      - name: wal
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /loki/wal
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 3100
+        host: 3100
+        protocol: tcp
+        public: false
+        description: "Loki API"
+    dns:
+      - "loki.{{ domain }}"
+      
+  container:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: LOKI_AUTH_ENABLED
+      value: "false"
+      secret: false
+    - name: LOKI_SERVER_HTTP_LISTEN_PORT
+      value: "3100"
+      secret: false
+    - name: LOKI_STORAGE_TYPE
+      value: "filesystem"
+      secret: false
+    - name: LOKI_STORAGE_FILESYSTEM_DIRECTORY
+      value: "/loki"
+      secret: false
+    - name: LOKI_INGESTER_LIFECYCLER_RING_STORE
+      value: "inmemory"
+      secret: false
+    - name: LOKI_COMPACTOR_RETENTION_ENABLED
+      value: "true"
+      secret: false
+    - name: LOKI_COMPACTOR_RETENTION_DELETE_DELAY
+      value: "2h"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /ready
+      port: 3100

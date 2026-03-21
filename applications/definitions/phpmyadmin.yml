@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# SANITY - HEADLESS CMS (STRUCTURED CONTENT)
+# =============================================================================
+# Beschrijving: Headless CMS met real-time collaboration
+# Website: https://www.sanity.io
+# =============================================================================
+
+application:
+  name: sanity
+  version: 3.0.0
+  description: "Sanity - Headless CMS"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://www.sanity.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 3333
+        host: 3333
+        protocol: tcp
+        public: false
+        description: "Sanity Studio"
+    dns:
+      - "studio.{{ domain }}"
+      - "sanity.{{ domain }}"
+      
+  container:
+    image: sanity/studio:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: SANITY_STUDIO_API_PROJECT_ID
+      value: "{{ vault_sanity_project_id }}"
+      secret: true
+    - name: SANITY_STUDIO_API_DATASET
+      value: "production"
+      secret: false
+    - name: SANITY_STUDIO_API_CDN
+      value: "true"
+      secret: false
+    - name: SANITY_STUDIO_BASE_PATH
+      value: "/"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 3333

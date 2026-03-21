@@ -1,0 +1,68 @@
+---
+# =============================================================================
+# MONITORING ROLE - Monitoring stack configuratie
+# =============================================================================
+# Deze role installeert en configureert de monitoring stack:
+# - Prometheus (metrics)
+# - Grafana (dashboards)
+# - Loki (logs)
+# - Promtail (log collector)
+# - Node Exporter (system metrics)
+# - cAdvisor (container metrics)
+# =============================================================================
+
+- name: '{{ ansible_os_family }} | Installeer monitoring prerequisites'
+  ansible.builtin.package:
+    name: "{{ monitoring_prerequisites[ansible_os_family] }}"
+    state: present
+  tags: [prerequisites]
+
+- name: '{{ ansible_os_family }} | Maak monitoring directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ monitoring_user | default('root') }}"
+    group: "{{ monitoring_group | default('root') }}"
+    mode: '0755'
+  loop:
+    - /etc/prometheus
+    - /etc/prometheus/targets
+    - /etc/prometheus/rules
+    - /var/lib/prometheus
+    - /etc/grafana
+    - /var/lib/grafana
+    - /etc/loki
+    - /var/lib/loki
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Installeer en configureer Node Exporter'
+  ansible.builtin.include_tasks: "node_exporter.yml"
+  tags: [node_exporter]
+
+- name: '{{ ansible_os_family }} | Installeer en configureer cAdvisor'
+  ansible.builtin.include_tasks: "cadvisor.yml"
+  tags: [cadvisor]
+
+- name: '{{ ansible_os_family }} | Installeer en configureer Prometheus'
+  ansible.builtin.include_tasks: "prometheus.yml"
+  tags: [prometheus]
+
+- name: '{{ ansible_os_family }} | Installeer en configureer Grafana'
+  ansible.builtin.include_tasks: "grafana.yml"
+  tags: [grafana]
+
+- name: '{{ ansible_os_family }} | Installeer en configureer Loki'
+  ansible.builtin.include_tasks: "loki.yml"
+  tags: [loki]
+
+- name: '{{ ansible_os_family }} | Installeer en configureer Promtail'
+  ansible.builtin.include_tasks: "promtail.yml"
+  tags: [promtail]
+
+- name: '{{ ansible_os_family }} | Configureer alerting'
+  ansible.builtin.include_tasks: "alertmanager.yml"
+  tags: [alertmanager]
+
+- name: '{{ ansible_os_family }} | Valideer monitoring stack'
+  ansible.builtin.include_tasks: "validate.yml"
+  tags: [validate]

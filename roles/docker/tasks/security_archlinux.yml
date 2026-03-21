@@ -1,0 +1,12 @@
+---
+- name: Docker security configuratie (Arch)
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "userns-remap": "default",
+        "seccomp-profile": "/etc/docker/seccomp.json",
+        "no-new-privileges": true
+      }
+    mode: '0644'
+  notify: restart docker

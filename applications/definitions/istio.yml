@@ -1,0 +1,74 @@
+---
+# =============================================================================
+# HELM - KUBERNETES PACKAGE MANAGER
+# =============================================================================
+# Beschrijving: Kubernetes package manager voor applicaties en charts
+# Website: https://helm.sh
+# =============================================================================
+
+application:
+  name: helm
+  version: 3
+  description: "Helm - Kubernetes package manager"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://helm.sh/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 0.5
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: cache
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /root/.cache/helm
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /root/.config/helm
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports: []
+    dns: []
+    
+  container:
+    image: alpine/helm:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  command: ["tail", "-f", "/dev/null"]
+  
+  environment_variables:
+    - name: HELM_CACHE_HOME
+      value: "/root/.cache/helm"
+      secret: false
+    - name: HELM_CONFIG_HOME
+      value: "/root/.config/helm"
+      secret: false
+    - name: KUBECONFIG
+      value: "/root/.kube/config"
+      secret: false
+      
+  volumes:
+    - helm_cache:/root/.cache/helm
+    - helm_config:/root/.config/helm
+    - ~/.kube:/root/.kube:ro

@@ -1,0 +1,18 @@
+---
+- name: Configureer dnf-automatic (RedHat)
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/automatic.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^apply_updates', line: 'apply_updates = yes' }
+    - { regexp: '^download_updates', line: 'download_updates = yes' }
+    - { regexp: '^reboot', line: 'reboot = "{{ automatic_updates_reboot | lower }}"' }
+    - { regexp: '^reboot_time', line: 'reboot_time = "{{ automatic_updates_reboot_time }}"' }
+  notify: restart dnf-automatic
+
+- name: Start en enable dnf-automatic
+  ansible.builtin.service:
+    name: dnf-automatic
+    state: started
+    enabled: yes

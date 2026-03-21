@@ -1,0 +1,29 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Vagrant'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Installeer Vagrant plugins'
+  ansible.builtin.shell: |
+    vagrant plugin install {{ item }}
+  loop: "{{ vagrant_plugins }}"
+  when: vagrant_plugins is defined
+  tags: [plugins]
+
+- name: '{{ ansible_os_family }} | Valideer Vagrant installatie'
+  ansible.builtin.shell: vagrant --version
+  register: vagrant_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Vagrant versie
+  ansible.builtin.debug:
+    var: vagrant_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Maak Vagrant workspace'
+  ansible.builtin.file:
+    path: "{{ vagrant_workspace }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]

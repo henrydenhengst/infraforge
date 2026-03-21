@@ -1,0 +1,119 @@
+---
+# =============================================================================
+# WORDPRESS - WEBSITE PLATFORM
+# =============================================================================
+# Beschrijving: Website platform voor blogs, bedrijfswebsites en e-commerce
+# Website: https://wordpress.org
+# =============================================================================
+
+application:
+  name: wordpress
+  version: 6.4.3
+  description: "WordPress - Website platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: marketing-team
+    contact: marketing@company.local
+    slack: "#marketing"
+    documentation: "https://wordpress.org/support"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+      - name: plugins
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/wp-content/plugins
+      - name: themes
+        size_gb: 2
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/wp-content/themes
+      - name: uploads
+        size_gb: 20
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/wp-content/uploads
+        
+  network_requirements:
+    vlans:
+      - marketing
+      - dmz
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "WordPress HTTP"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: true
+        description: "WordPress HTTPS"
+    dns:
+      - "wordpress.{{ domain }}"
+      - "blog.{{ domain }}"
+      - "website.{{ domain }}"
+      
+  container:
+    image: wordpress:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: WORDPRESS_DB_HOST
+      value: "mysql:3306"
+      secret: false
+    - name: WORDPRESS_DB_USER
+      value: "wordpress"
+      secret: false
+    - name: WORDPRESS_DB_PASSWORD
+      value: "{{ vault_wordpress_password }}"
+      secret: true
+    - name: WORDPRESS_DB_NAME
+      value: "wordpress"
+      secret: false
+    - name: WORDPRESS_TABLE_PREFIX
+      value: "wp_"
+      secret: false
+    - name: WORDPRESS_DEBUG
+      value: "false"
+      secret: false
+    - name: WORDPRESS_CONFIG_EXTRA
+      value: |
+        define('WP_MEMORY_LIMIT', '256M');
+        define('WP_MAX_MEMORY_LIMIT', '512M');
+        define('DISALLOW_FILE_EDIT', true);
+        define('AUTOMATIC_UPDATER_DISABLED', false);
+      secret: false
+      
+  plugins:
+    - yoast-seo
+    - wordfence
+    - wp-rocket
+    - contact-form-7
+    - woocommerce
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /wp-admin/install.php
+      port: 80

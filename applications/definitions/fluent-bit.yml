@@ -1,0 +1,90 @@
+---
+# =============================================================================
+# TEMPO - DISTRIBUTED TRACING
+# =============================================================================
+# Beschrijving: Distributed tracing backend for observability
+# Website: https://grafana.com/oss/tempo
+# =============================================================================
+
+application:
+  name: tempo
+  version: 2.2.0
+  description: "Tempo - Distributed tracing"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://grafana.com/docs/tempo"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /tmp/tempo
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 3200
+        host: 3200
+        protocol: tcp
+        public: false
+        description: "Tempo API"
+      - container: 4317
+        host: 4317
+        protocol: tcp
+        public: false
+        description: "OTLP gRPC"
+      - container: 4318
+        host: 4318
+        protocol: tcp
+        public: false
+        description: "OTLP HTTP"
+    dns:
+      - "tempo.{{ domain }}"
+      
+  container:
+    image: grafana/tempo:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: TEMPO_STORAGE_TRACE_BACKEND
+      value: "local"
+      secret: false
+    - name: TEMPO_STORAGE_LOCAL_PATH
+      value: "/tmp/tempo"
+      secret: false
+    - name: TEMPO_INGESTER_LIFECYCLER_RING_STORE
+      value: "memberlist"
+      secret: false
+    - name: TEMPO_COMPACTOR_COMPACTION_RING_STORE
+      value: "memberlist"
+      secret: false
+    - name: TEMPO_QUERY_FRONTEND_QUERY_TIMEOUT
+      value: "30s"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /ready
+      port: 3200

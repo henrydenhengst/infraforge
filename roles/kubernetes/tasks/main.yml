@@ -1,0 +1,76 @@
+---
+# =============================================================================
+# KUBERNETES ROLE - Kubernetes cluster installatie en configuratie
+# =============================================================================
+# Deze role installeert en configureert een Kubernetes cluster
+# =============================================================================
+
+- name: '{{ ansible_os_family }} | Installeer Kubernetes prerequisites'
+  ansible.builtin.package:
+    name: "{{ kubernetes_prerequisites[ansible_os_family] }}"
+    state: present
+  tags: [prerequisites]
+
+- name: '{{ ansible_os_family }} | Configureer kernel modules'
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/kubernetes.conf
+    content: |
+      overlay
+      br_netfilter
+    mode: '0644'
+  tags: [kernel]
+
+- name: '{{ ansible_os_family }} | Laad kernel modules'
+  ansible.builtin.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - overlay
+    - br_netfilter
+  tags: [kernel]
+
+- name: '{{ ansible_os_family }} | Configureer sysctl parameters'
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-kubernetes.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward = 1
+    mode: '0644'
+  tags: [kernel]
+
+- name: '{{ ansible_os_family }} | Pas sysctl parameters toe'
+  ansible.builtin.shell: sysctl --system
+  tags: [kernel]
+
+- name: '{{ ansible_os_family }} | Installeer containerd'
+  ansible.builtin.include_tasks: containerd.yml
+  tags: [containerd]
+
+- name: '{{ ansible_os_family }} | Installeer Kubernetes packages'
+  ansible.builtin.include_tasks: packages.yml
+  tags: [packages]
+
+- name: '{{ ansible_os_family }} | Configureer Kubernetes cluster'
+  ansible.builtin.include_tasks: cluster.yml
+  tags: [cluster]
+
+- name: '{{ ansible_os_family }} | Configureer kubeconfig'
+  ansible.builtin.include_tasks: kubeconfig.yml
+  tags: [kubeconfig]
+
+- name: '{{ ansible_os_family }} | Installeer CNI plugin'
+  ansible.builtin.include_tasks: cni.yml
+  tags: [cni]
+
+- name: '{{ ansible_os_family }} | Installeer Kubernetes addons'
+  ansible.builtin.include_tasks: addons.yml
+  tags: [addons]
+
+- name: '{{ ansible_os_family }} | Configureer Kubernetes dashboard'
+  ansible.builtin.include_tasks: dashboard.yml
+  tags: [dashboard]
+
+- name: '{{ ansible_os_family }} | Valideer cluster status'
+  ansible.builtin.include_tasks: validate.yml
+  tags: [validate]

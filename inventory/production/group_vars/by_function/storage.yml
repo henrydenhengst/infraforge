@@ -1,0 +1,488 @@
+---
+# =============================================================================
+# STORAGE TOOLS
+# =============================================================================
+# Functie: storage
+# Beschrijving: Tools voor object storage, bestandssync en opslagbeheer
+# =============================================================================
+
+storage_tools:
+  # ---------------------------------------------------------------------------
+  # OBJECT STORAGE
+  # ---------------------------------------------------------------------------
+  - name: MinIO
+    profiel_tag: IT
+    functie_tag: storage
+    beschrijving: "Object storage (S3-compatible) voor grote datasets"
+    categorie: object_storage
+    docker_image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+      - minio_config:/root/.minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: "{{ vault_minio_password }}"
+      MINIO_PROMETHEUS_AUTH_TYPE: "public"
+      MINIO_BROWSER: "on"
+      MINIO_DOMAIN: "minio.{{ domain }}"
+    command: server /data --console-address ":9001"
+    url: "https://min.io"
+    
+  - name: MinIO Client
+    profiel_tag: IT
+    functie_tag: storage
+    beschrijving: "Client voor MinIO en S3-compatible storage"
+    categorie: object_storage
+    docker_image: minio/mc:latest
+    volumes:
+      - minio_client_config:/root/.mc
+    command: "tail -f /dev/null"
+    url: "https://min.io/docs/minio/linux/reference/minio-mc.html"
+    
+  # ---------------------------------------------------------------------------
+  # FILE SYNC & SHARE
+  # ---------------------------------------------------------------------------
+  - name: Seafile
+    profiel_tag: Algemeen
+    functie_tag: storage
+    beschrijving: "Bestandssync met versiebeheer en encryptie"
+    categorie: file_sync
+    docker_image: seafileltd/seafile:latest
+    ports:
+      - "8082:8000"
+      - "8083:8082"
+    volumes:
+      - seafile_data:/shared
+      - seafile_logs:/shared/logs
+      - seafile_db:/shared/db
+    environment:
+      SEAFILE_SERVER_HOSTNAME: "seafile.{{ domain }}"
+      SEAFILE_ADMIN_EMAIL: admin@{{ domain }}
+      SEAFILE_ADMIN_PASSWORD: "{{ vault_seafile_password }}"
+      SEAFILE_MYSQL_DB_HOST: mysql
+      SEAFILE_MYSQL_DB_PORT: 3306
+      SEAFILE_MYSQL_DB_USER: seafile
+      SEAFILE_MYSQL_DB_PASSWORD: "{{ vault_seafile_db_password }}"
+      SEAFILE_MYSQL_CCNET_DB: ccnet_db
+      SEAFILE_MYSQL_SEAFILE_DB: seafile_db
+      SEAFILE_MYSQL_SEAHUB_DB: seahub_db
+      TIME_ZONE: Europe/Amsterdam
+    database: mysql
+    url: "https://www.seafile.com"
+    
+  - name: Seafile
+    profiel_tag: Algemeen
+    functie_tag: storage
+    beschrijving: "Bestandssync met versiebeheer en encryptie"
+    categorie: file_sync
+    docker_image: seafileltd/seafile:latest
+    ports:
+      - "8082:8000"
+      - "8083:8082"
+    volumes:
+      - seafile_data:/shared
+    environment:
+      SEAFILE_SERVER_HOSTNAME: "seafile.{{ domain }}"
+      SEAFILE_ADMIN_EMAIL: admin@{{ domain }}
+      SEAFILE_ADMIN_PASSWORD: "{{ vault_seafile_password }}"
+    database: mysql
+    url: "https://www.seafile.com"
+    
+  # ---------------------------------------------------------------------------
+  # CLOUD STORAGE
+  # ---------------------------------------------------------------------------
+  - name: OwnCloud_Infinite
+    profiel_tag: Algemeen
+    functie_tag: storage
+    beschrijving: "Next-gen cloud opslag (Go-based) voor enorme volumes"
+    categorie: cloud_storage
+    docker_image: owncloud/ocis:latest
+    ports:
+      - "9200:9200"
+      - "9140:9140"
+      - "9160:9160"
+    volumes:
+      - ocis_data:/var/lib/ocis
+      - ocis_config:/etc/ocis
+    environment:
+      OCIS_INSECURE: "false"
+      OCIS_URL: "https://ocis.{{ domain }}"
+      OCIS_ADMIN_USER_ID: admin
+      OCIS_ADMIN_PASSWORD: "{{ vault_ocis_password }}"
+      OCIS_LOG_LEVEL: info
+      OCIS_LOG_COLOR: "true"
+      STORAGE_USERS_DRIVER: s3
+      STORAGE_USERS_S3_ENDPOINT: minio:9000
+      STORAGE_USERS_S3_BUCKET: ocis
+      STORAGE_USERS_S3_REGION: us-east-1
+      STORAGE_USERS_S3_ACCESS_KEY: minioadmin
+      STORAGE_USERS_S3_SECRET_KEY: "{{ vault_minio_password }}"
+      STORAGE_METADATA_DRIVER: s3
+      STORAGE_METADATA_S3_ENDPOINT: minio:9000
+      STORAGE_METADATA_S3_BUCKET: ocis-metadata
+      STORAGE_SYSTEM_DRIVER: s3
+      STORAGE_SYSTEM_S3_ENDPOINT: minio:9000
+      STORAGE_SYSTEM_S3_BUCKET: ocis-system
+    url: "https://owncloud.com/infinite-scale"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+storage_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Storage instellingen
+  storage:
+    default_quota: 10GB
+    max_file_size: 5GB
+    versioning: true
+    trash_clean_days: 30
+    
+  # S3 instellingen
+  s3:
+    endpoint: minio:9000
+    access_key: minioadmin
+    secret_key: "{{ vault_minio_password }}"
+    secure: false
+    region: us-east-1
+    
+  # Encryptie
+  encryption:
+    enabled: true
+    algorithm: AES256
+    key_rotation_days: 90
+    
+  # Compressie
+  compression:
+    enabled: true
+    algorithm: gzip
+    level: 6
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+minio_config:
+  # MinIO buckets
+  buckets:
+    - name: backups
+      policy: private
+      versioning: true
+      locking: false
+      quota: 1TB
+      lifecycle:
+        - days: 30
+          action: delete
+        - days: 90
+          action: glacier
+          
+    - name: data
+      policy: private
+      versioning: true
+      locking: false
+      quota: 5TB
+      
+    - name: logs
+      policy: private
+      versioning: false
+      locking: false
+      quota: 500GB
+      lifecycle:
+        - days: 30
+          action: delete
+          
+    - name: public
+      policy: public
+      versioning: false
+      locking: false
+      quota: 100GB
+      
+    - name: ocis
+      policy: private
+      versioning: true
+      locking: false
+      quota: 2TB
+      
+    - name: ocis-metadata
+      policy: private
+      versioning: true
+      locking: false
+      quota: 100GB
+      
+    - name: ocis-system
+      policy: private
+      versioning: true
+      locking: false
+      quota: 50GB
+      
+  # MinIO users
+  users:
+    - name: backup-user
+      policy: readwrite
+      secret_key: "{{ vault_minio_backup_user }}"
+    - name: app-user
+      policy: readonly
+      secret_key: "{{ vault_minio_app_user }}"
+    - name: ocis-user
+      policy: readwrite
+      secret_key: "{{ vault_minio_ocis_user }}"
+      
+  # MinIO policies
+  policies:
+    - name: readwrite
+      statements:
+        - effect: Allow
+          actions:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+          resources:
+            - arn:aws:s3:::backups/*
+            - arn:aws:s3:::backups
+            - arn:aws:s3:::data/*
+            - arn:aws:s3:::data
+    - name: readonly
+      statements:
+        - effect: Allow
+          actions:
+            - s3:GetObject
+            - s3:ListBucket
+          resources:
+            - arn:aws:s3:::public/*
+            - arn:aws:s3:::public
+            
+  # MinIO service accounts
+  service_accounts:
+    - name: prometheus
+      policy: readonly
+    - name: grafana
+      policy: readonly
+    - name: velero
+      policy: readwrite
+      
+  # MinIO lifecycle rules
+  lifecycle_rules:
+    - name: delete-old-logs
+      bucket: logs
+      rules:
+        - days: 30
+          action: delete
+    - name: archive-old-backups
+      bucket: backups
+      rules:
+        - days: 90
+          action: glacier
+        - days: 365
+          action: delete
+          
+  # MinIO replication
+  replication:
+    enabled: true
+    destination: minio-backup:9000
+    buckets:
+      - backups
+      - data
+      
+  # MinIO monitoring
+  monitoring:
+    enabled: true
+    prometheus_url: http://prometheus:9090
+    bucket_metrics: true
+    api_metrics: true
+
+seafile_config:
+  # Seafile libraries
+  libraries:
+    - name: Documenten
+      description: "Documenten library"
+      encrypted: true
+      password: "{{ vault_seafile_docs_password }}"
+      quota: 100GB
+      
+    - name: Foto's
+      description: "Foto library"
+      encrypted: false
+      quota: 500GB
+      
+    - name: Backups
+      description: "Backup library"
+      encrypted: true
+      password: "{{ vault_seafile_backup_password }}"
+      quota: 1TB
+      
+    - name: Projecten
+      description: "Project bestanden"
+      encrypted: false
+      quota: 200GB
+      
+    - name: Persoonlijk
+      description: "Persoonlijke bestanden"
+      encrypted: true
+      password: "{{ vault_seafile_personal_password }}"
+      quota: 50GB
+      
+  # Seafile gebruikers
+  users:
+    - email: admin@{{ domain }}
+      is_admin: true
+      password: "{{ vault_seafile_admin_password }}"
+      quota: 100GB
+      
+    - email: user1@{{ domain }}
+      is_admin: false
+      password: "{{ vault_seafile_user1_password }}"
+      quota: 50GB
+      
+    - email: user2@{{ domain }}
+      is_admin: false
+      password: "{{ vault_seafile_user2_password }}"
+      quota: 50GB
+      
+  # Seafile groepen
+  groups:
+    - name: Team
+      members:
+        - user1@{{ domain }}
+        - user2@{{ domain }}
+      libraries:
+        - Documenten
+        - Projecten
+        
+    - name: Administrators
+      members:
+        - admin@{{ domain }}
+      libraries:
+        - Backups
+        
+  # Seafile instellingen
+  settings:
+    file_size_limit: 100MB
+    trash_clean_days: 30
+    enable_auto_update: true
+    enable_encrypted_library: true
+    enable_repo_history: true
+    history_length: 30
+    max_upload_file_size: 100MB
+    max_download_file_size: 1GB
+    enable_thumbnail: true
+    thumbnail_size: 256
+    enable_virus_scan: true
+    virus_scan_interval: 24h
+    
+  # Seafile webdav
+  webdav:
+    enabled: true
+    port: 8082
+    max_rate: 100MB/s
+    
+  # Seafile sync
+  sync:
+    enabled: true
+    max_clients: 10
+    sync_interval: 30s
+
+ocis_config:
+  # OwnCloud Infinite Scale apps
+  apps:
+    - idp
+    - graph
+    - storage
+    - web
+    - thumbnails
+    - search
+    - settings
+    - accounts
+    - auth-basic
+    - auth-bearer
+    - auth-machine
+    - gateway
+    - frontend
+    - groups
+    - nats
+    - ocdav
+    - ocm
+    - onlyoffice
+    - proxy
+    - sharing
+    - users
+    - webdav
+    
+  # Storage providers
+  storage_providers:
+    - name: local
+      type: local
+      path: /var/lib/ocis/storage
+    - name: s3
+      type: s3
+      bucket: ocis
+      endpoint: minio:9000
+      access_key: minioadmin
+      secret_key: "{{ vault_minio_password }}"
+      region: us-east-1
+      
+  # Users
+  users:
+    - username: admin
+      role: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_ocis_admin_password }}"
+      quota: 100GB
+    - username: user
+      role: user
+      email: user@{{ domain }}
+      password: "{{ vault_ocis_user_password }}"
+      quota: 50GB
+      
+  # IDP settings
+  idp:
+    enabled: true
+    issuer: https://ocis.{{ domain }}
+    identity_provider: https://ocis.{{ domain }}
+    
+  # Web UI settings
+  web_ui:
+    theme: light
+    language: nl
+    product_name: "{{ company_name }} Cloud"
+    logo: /assets/images/logo.png
+    
+  # OnlyOffice integration
+  onlyoffice:
+    enabled: true
+    url: http://onlyoffice:8080
+    jwt_secret: "{{ vault_onlyoffice_secret }}"
+    
+  # Thumbnails
+  thumbnails:
+    enabled: true
+    sizes:
+      - 32x32
+      - 64x64
+      - 128x128
+      - 256x256
+      - 512x512
+    max_input_width: 1920
+    max_input_height: 1080
+    
+  # Search
+  search:
+    enabled: true
+    engine: bleve
+    index_path: /var/lib/ocis/search
+    
+  # Settings
+  settings:
+    allow_guest_signup: false
+    allow_public_sharing: true
+    allow_resharing: true
+    max_public_link_expiry_days: 30
+    default_role: user
+    maintenance_mode: false

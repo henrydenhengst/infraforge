@@ -1,0 +1,44 @@
+---
+- name: '{{ ansible_os_family }} | Maak Alertmanager directories'
+  ansible.builtin.file:
+    path: "{{ alertmanager_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Alertmanager container'
+  ansible.builtin.docker_container:
+    name: alertmanager
+    image: prom/alertmanager:latest
+    restart_policy: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - "{{ alertmanager_data_path }}:/alertmanager"
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.alertmanager.rule: "Host(`alertmanager.{{ domain }}`)"
+      traefik.http.services.alertmanager.loadbalancer.server.port: "9093"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Configureer Alertmanager'
+  ansible.builtin.template:
+    src: alertmanager.yml.j2
+    dest: /etc/alertmanager/alertmanager.yml
+    mode: '0644'
+  notify: restart alertmanager
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Wacht tot Alertmanager actief is'
+  ansible.builtin.wait_for:
+    port: 9093
+    timeout: 60
+  tags: [validate]
+
+- name: Toon Alertmanager URL
+  ansible.builtin.debug:
+    msg: "Alertmanager: https://alertmanager.{{ domain }}"
+  tags: [validate]

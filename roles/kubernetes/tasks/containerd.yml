@@ -1,0 +1,22 @@
+---
+- name: '{{ ansible_os_family }} | Installeer containerd packages'
+  ansible.builtin.package:
+    name: containerd
+    state: present
+  tags: [containerd]
+
+- name: '{{ ansible_os_family }} | Configureer containerd'
+  ansible.builtin.template:
+    src: containerd-config.toml.j2
+    dest: /etc/containerd/config.toml
+    mode: '0644'
+  notify: restart containerd
+  tags: [containerd]
+
+- name: '{{ ansible_os_family }} | Start en enable containerd'
+  ansible.builtin.systemd:
+    name: containerd
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [containerd]

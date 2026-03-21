@@ -1,0 +1,51 @@
+---
+# =============================================================================
+# SECURITY ROLE DEFAULTS
+# =============================================================================
+
+# SSH configuratie
+ssh_port: 22
+ssh_permit_root_login: no
+ssh_password_authentication: no
+ssh_pubkey_authentication: yes
+ssh_allow_users: []
+ssh_deny_users: []
+ssh_max_auth_retries: 3
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+
+# Fail2ban
+fail2ban_enabled: true
+fail2ban_max_retry: 5
+fail2ban_bantime: 3600
+fail2ban_findtime: 600
+fail2ban_ignore_ip:
+  - 127.0.0.1/8
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+
+# Firewall
+firewall_enabled: true
+firewall_default_policy: deny
+firewall_allowed_ports:
+  - 22/tcp  # SSH
+firewall_allowed_services: []
+
+# Auditd
+auditd_enabled: true
+
+# Automatic updates
+automatic_updates: true
+automatic_updates_reboot: false
+automatic_updates_reboot_time: "03:00"
+
+# Password policy
+password_min_length: 12
+password_require_upper: true
+password_require_lower: true
+password_require_number: true
+password_require_symbol: true
+password_max_age: 90
+password_min_age: 1
+password_warn_age: 7

@@ -1,0 +1,15 @@
+---
+- name: Configureer SuSEfirewall2 (SUSE)
+  ansible.builtin.template:
+    src: firewall_suse.j2
+    dest: /etc/sysconfig/SuSEfirewall2
+    mode: '0644'
+  notify: restart firewall
+  when: firewall_enabled | default(true)
+
+- name: Start en enable SuSEfirewall2
+  ansible.builtin.service:
+    name: SuSEfirewall2
+    state: started
+    enabled: yes
+  when: firewall_enabled | default(true)

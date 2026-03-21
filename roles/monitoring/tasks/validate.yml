@@ -1,0 +1,61 @@
+---
+- name: Check if Prometheus is reachable
+  ansible.builtin.uri:
+    url: "http://localhost:{{ prometheus_listen_port }}/-/healthy"
+    status_code: 200
+  register: prometheus_health
+  until: prometheus_health.status == 200
+  retries: 30
+  delay: 5
+  tags: [validate]
+
+- name: Check if Grafana is reachable
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_listen_port }}/api/health"
+    status_code: 200
+  register: grafana_health
+  until: grafana_health.status == 200
+  retries: 30
+  delay: 5
+  tags: [validate]
+
+- name: Check if Node Exporter is reachable
+  ansible.builtin.uri:
+    url: "http://localhost:{{ node_exporter_listen_port }}/metrics"
+    status_code: 200
+  register: node_exporter_health
+  until: node_exporter_health.status == 200
+  retries: 30
+  delay: 5
+  tags: [validate]
+
+- name: Check if cAdvisor is reachable
+  ansible.builtin.uri:
+    url: "http://localhost:{{ cadvisor_listen_port }}/metrics"
+    status_code: 200
+  register: cadvisor_health
+  until: cadvisor_health.status == 200
+  retries: 30
+  delay: 5
+  tags: [validate]
+
+- name: Check if Loki is reachable
+  ansible.builtin.uri:
+    url: "http://localhost:{{ loki_listen_port }}/ready"
+    status_code: 200
+  register: loki_health
+  until: loki_health.status == 200
+  retries: 30
+  delay: 5
+  tags: [validate]
+
+- name: Display monitoring endpoints
+  ansible.builtin.debug:
+    msg:
+      - "Prometheus: http://{{ ansible_default_ipv4.address }}:{{ prometheus_listen_port }}"
+      - "Grafana: http://{{ ansible_default_ipv4.address }}:{{ grafana_listen_port }} (admin/{{ grafana_admin_password }})"
+      - "Node Exporter: http://{{ ansible_default_ipv4.address }}:{{ node_exporter_listen_port }}"
+      - "cAdvisor: http://{{ ansible_default_ipv4.address }}:{{ cadvisor_listen_port }}"
+      - "Loki: http://{{ ansible_default_ipv4.address }}:{{ loki_listen_port }}"
+      - "Alertmanager: http://{{ ansible_default_ipv4.address }}:{{ alertmanager_listen_port }}"
+  tags: [validate]

@@ -1,0 +1,84 @@
+---
+# =============================================================================
+# COUCHPOTATOSERVER - FILM DOWNLOADMANAGER
+# =============================================================================
+# Beschrijving: Film downloadmanager
+# Website: https://couchpota.to
+# =============================================================================
+
+application:
+  name: couchpotatoserver
+  version: 3.0.0
+  description: "CouchPotatoServer - Film downloadmanager"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://couchpota.to/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: downloads
+        size_gb: 500
+        performance: hdd
+        backup_required: false
+        mount_path: /downloads
+      - name: movies
+        size_gb: 1000
+        performance: hdd
+        backup_required: false
+        mount_path: /movies
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 5050
+        host: 5050
+        protocol: tcp
+        public: false
+        description: "CouchPotato web interface"
+    dns:
+      - "couchpotato.{{ domain }}"
+      
+  container:
+    image: linuxserver/couchpotato:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 5050

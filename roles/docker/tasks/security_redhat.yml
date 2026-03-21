@@ -1,0 +1,9 @@
+---
+- name: Configureer SELinux voor Docker
+  ansible.builtin.lineinfile:
+    path: /etc/sysconfig/docker
+    regexp: '^OPTIONS='
+    line: 'OPTIONS="--selinux-enabled"'
+    create: yes
+  notify: restart docker
+  when: ansible_selinux.status == 'enabled'

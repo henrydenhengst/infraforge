@@ -1,0 +1,64 @@
+---
+# =============================================================================
+# STARBOARD - KUBERNETES SECURITY TOOLKIT
+# =============================================================================
+# Beschrijving: Kubernetes-native security toolkit
+# Website: https://aquasecurity.github.io/starboard
+# =============================================================================
+
+application:
+  name: starboard
+  version: 0.15.0
+  description: "Starboard - Kubernetes security toolkit"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://aquasecurity.github.io/starboard"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: aquasec/starboard:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: STARBOARD_NAMESPACE
+      value: "starboard"
+      secret: false
+    - name: STARBOARD_CONFIG
+      value: "/data/config.yaml"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["starboard", "version"]

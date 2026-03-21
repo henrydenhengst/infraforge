@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+DEVICE={{ name }}
+BOOTPROTO={{ family | default('static') }}
+ONBOOT=yes
+{% if family == 'static' %}
+IPADDR={{ address }}
+NETMASK={{ netmask | default('255.255.255.0') }}
+GATEWAY={{ gateway | default('') }}
+{% endif %}
+{% if mtu is defined %}
+MTU={{ mtu }}
+{% endif %}
+{% if dns_servers is defined %}
+DNS1={{ dns_servers[0] }}
+DNS2={{ dns_servers[1] | default('') }}
+{% endif %}

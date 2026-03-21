@@ -1,0 +1,26 @@
+---
+- name: Installeer Calico CNI
+  ansible.builtin.shell: |
+    kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/{{ cni_version }}/manifests/calico.yaml
+  when: cni_plugin == "calico"
+  tags: [cni]
+
+- name: Installeer Flannel CNI
+  ansible.builtin.shell: |
+    kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+  when: cni_plugin == "flannel"
+  tags: [cni]
+
+- name: Installeer Cilium CNI
+  ansible.builtin.shell: |
+    helm repo add cilium https://helm.cilium.io/
+    helm install cilium cilium/cilium --namespace kube-system --version 1.14.0
+  when: cni_plugin == "cilium"
+  tags: [cni]
+
+- name: Wacht tot CNI actief is
+  ansible.builtin.shell: |
+    kubectl wait --for=condition=ready pod -l k8s-app=calico-node -n kube-system --timeout=300s
+  when: cni_plugin == "calico"
+  ignore_errors: yes
+  tags: [cni]

@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# MONGO EXPRESS - MONGODB MANAGEMENT
+# =============================================================================
+# Beschrijving: Web-based MongoDB administration interface
+# Website: https://github.com/mongo-express/mongo-express
+# =============================================================================
+
+application:
+  name: mongo-express
+  version: 1.0.0
+  description: "Mongo Express - MongoDB management tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: dba-team
+    contact: dba@company.local
+    slack: "#database"
+    documentation: "https://github.com/mongo-express/mongo-express"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - database
+      - internal
+    ports:
+      - container: 8081
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Mongo Express UI"
+    dns:
+      - "mongo-admin.{{ domain }}"
+      - "mongo-express.{{ domain }}"
+      
+  container:
+    image: mongo-express:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: ME_CONFIG_MONGODB_SERVER
+      value: "mongodb"
+      secret: false
+    - name: ME_CONFIG_MONGODB_PORT
+      value: "27017"
+      secret: false
+    - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+      value: "admin"
+      secret: false
+    - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+      value: "{{ vault_mongodb_password }}"
+      secret: true
+    - name: ME_CONFIG_BASICAUTH_USERNAME
+      value: "admin"
+      secret: false
+    - name: ME_CONFIG_BASICAUTH_PASSWORD
+      value: "{{ vault_mongo_express_password }}"
+      secret: true
+    - name: ME_CONFIG_OPTIONS_EDITORTHEME
+      value: "ambiance"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8081

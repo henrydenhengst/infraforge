@@ -1,0 +1,105 @@
+---
+# =============================================================================
+# OPENHAB - VENDOR-AGNOSTIC HOME AUTOMATION
+# =============================================================================
+# Beschrijving: Vendor-agnostic home automation platform
+# Website: https://www.openhab.org
+# =============================================================================
+
+application:
+  name: openhab
+  version: 4.1.0
+  description: "openHAB - Vendor-agnostic home automation"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: iot-team
+    contact: iot@company.local
+    slack: "#iot"
+    documentation: "https://www.openhab.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: addons
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /openhab/addons
+      - name: conf
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /openhab/conf
+      - name: userdata
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /openhab/userdata
+        
+  network_requirements:
+    vlans:
+      - iot
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "openHAB web interface"
+      - container: 8443
+        host: 8443
+        protocol: tcp
+        public: false
+        description: "openHAB HTTPS"
+      - container: 8101
+        host: 8101
+        protocol: tcp
+        public: false
+        description: "openHAB console"
+      - container: 5007
+        host: 5007
+        protocol: tcp
+        public: false
+        description: "openHAB remote"
+    dns:
+      - "openhab.{{ domain }}"
+      
+  container:
+    image: openhab/openhab:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/ttyACM0:/dev/ttyACM0"
+        
+  environment_variables:
+    - name: OPENHAB_HTTP_PORT
+      value: "8080"
+      secret: false
+    - name: OPENHAB_HTTPS_PORT
+      value: "8443"
+      secret: false
+    - name: EXTRA_JAVA_OPTS
+      value: "-Duser.timezone=Europe/Amsterdam"
+      secret: false
+    - name: CRYPTO_POLICY
+      value: "unlimited"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /rest
+      port: 8080

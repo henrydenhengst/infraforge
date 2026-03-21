@@ -1,0 +1,64 @@
+---
+# =============================================================================
+# COSIGN - CONTAINER SIGNING
+# =============================================================================
+# Beschrijving: Container signing and verification
+# Website: https://github.com/sigstore/cosign
+# =============================================================================
+
+application:
+  name: cosign
+  version: 2.2.0
+  description: "Cosign - Container signing"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://docs.sigstore.dev/cosign"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: sigstore/cosign:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2Gi
+      requests:
+        cpu: "0.5"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: COSIGN_PASSWORD
+      value: "{{ vault_cosign_password }}"
+      secret: true
+    - name: COSIGN_KEY
+      value: "/data/cosign.key"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["cosign", "version"]

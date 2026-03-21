@@ -1,0 +1,25 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# MySQL backup script
+
+BACKUP_TYPE="${1:-daily}"
+BACKUP_DIR="{{ backup_base_dir }}/database/mysql/$BACKUP_TYPE"
+LOG_FILE="{{ backup_log_dir }}/mysql-backup.log"
+DATE=$(date +%Y%m%d-%H%M%S)
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+mkdir -p "$BACKUP_DIR"
+
+{% for db in mysql_databases %}
+log "Backing up MySQL database: {{ db.name }}"
+{% if db.host is defined %}
+mysqldump -h {{ db.host }} -P {{ db.port | default(3306) }} -u {{ db.user }} -p{{ db.password }} {{ db.name }} | gzip > "$BACKUP_DIR/{{ db.name }}-$DATE.sql.gz"
+{% else %}
+mysqldump -u root -p{{ vault_mysql_root_password }} {{ db.name }} | gzip > "$BACKUP_DIR/{{ db.name }}-$DATE.sql.gz"
+{% endif %}
+{% endfor %}
+
+log "MySQL backup completed"

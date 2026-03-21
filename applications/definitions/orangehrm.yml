@@ -1,0 +1,103 @@
+---
+# =============================================================================
+# THEHIVE - INCIDENT RESPONSE PLATFORM
+# =============================================================================
+# Beschrijving: Incident Response platform voor security teams
+# Website: https://thehive-project.org
+# =============================================================================
+
+application:
+  name: thehive
+  version: 5.2.0
+  description: "TheHive - Incident Response platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://docs.thehive-project.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/thp/data
+      - name: index
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/thp/index
+      - name: files
+        size_gb: 100
+        performance: hdd
+        backup_required: true
+        mount_path: /opt/thp/files
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 9000
+        host: 9000
+        protocol: tcp
+        public: false
+        description: "TheHive web interface"
+    dns:
+      - "incident.{{ domain }}"
+      - "thehive.{{ domain }}"
+      
+  container:
+    image: strangebee/thehive:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: JVM_OPTS
+      value: "-Xms2G -Xmx4G"
+      secret: false
+    - name: DATABASE_HOST
+      value: "cassandra"
+      secret: false
+    - name: DATABASE_KEYSPACE
+      value: "thehive"
+      secret: false
+    - name: SEARCH_HOST
+      value: "elasticsearch"
+      secret: false
+    - name: SEARCH_INDEX_NAME
+      value: "thehive"
+      secret: false
+    - name: SECRET_KEY
+      value: "{{ vault_thehive_secret }}"
+      secret: true
+    - name: THEHIVE_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: THEHIVE_ADMIN_PASSWORD
+      value: "{{ vault_thehive_admin_password }}"
+      secret: true
+    - name: THEHIVE_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 9000

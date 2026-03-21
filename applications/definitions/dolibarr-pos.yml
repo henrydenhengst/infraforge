@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# STIRLING-PDF-AI - PDF BEWERKING MET AI
+# =============================================================================
+# Beschrijving: PDF-bewerking met AI-samenvattingen en OCR
+# Website: https://www.stirlingpdf.com
+# =============================================================================
+
+application:
+  name: stirling-pdf-ai
+  version: 0.20.0
+  description: "Stirling-PDF-AI - PDF bewerking met AI"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: office-team
+    contact: office@company.local
+    slack: "#office"
+    documentation: "https://github.com/Stirling-Tools/Stirling-PDF"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /usr/share/tesseract-ocr/5/tessdata
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /configs
+        
+  network_requirements:
+    vlans:
+      - office
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Stirling-PDF-AI web interface"
+    dns:
+      - "pdf-ai.{{ domain }}"
+      - "stirling-ai.{{ domain }}"
+      
+  container:
+    image: frooodle/s-pdf:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: DOCKER_ENABLE_SECURITY
+      value: "false"
+      secret: false
+    - name: SECURITY_ENABLE_LOGIN
+      value: "false"
+      secret: false
+    - name: SYSTEM_DEFAULTLOCALE
+      value: "nl-NL"
+      secret: false
+    - name: UI_APP_NAME
+      value: "Stirling-PDF AI"
+      secret: false
+    - name: OCR_LAYER
+      value: "true"
+      secret: false
+    - name: OCR_LANGUAGES
+      value: "nld+eng"
+      secret: false
+    - name: AI_ENABLED
+      value: "true"
+      secret: false
+    - name: AI_MODEL
+      value: "llama3"
+      secret: false
+    - name: AI_API_URL
+      value: "http://ollama:11434"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

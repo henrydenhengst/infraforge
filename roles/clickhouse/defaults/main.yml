@@ -1,0 +1,5 @@
+---
+clickhouse_port: 8123
+clickhouse_tcp_port: 9000
+clickhouse_databases: []
+clickhouse_default_password: "{{ vault_clickhouse_password }}"

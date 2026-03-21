@@ -1,0 +1,81 @@
+---
+- name: '{{ ansible_os_family }} | Maak Prometheus directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+  loop:
+    - /etc/prometheus
+    - /etc/prometheus/targets
+    - /etc/prometheus/rules
+    - /var/lib/prometheus
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Creëer Prometheus gebruiker'
+  ansible.builtin.user:
+    name: prometheus
+    system: yes
+    shell: /sbin/nologin
+    create_home: no
+  tags: [user]
+
+- name: '{{ ansible_os_family }} | Download Prometheus'
+  ansible.builtin.get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-{{ arch_map[ansible_architecture] }}.tar.gz"
+    dest: "/tmp/prometheus.tar.gz"
+  tags: [download]
+
+- name: Extract Prometheus
+  ansible.builtin.unarchive:
+    src: "/tmp/prometheus.tar.gz"
+    dest: /tmp/
+    remote_src: yes
+  tags: [extract]
+
+- name: Install Prometheus binaries
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: '0755'
+    remote_src: yes
+  loop:
+    - { src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ arch_map[ansible_architecture] }}/prometheus", dest: "/usr/local/bin/prometheus" }
+    - { src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ arch_map[ansible_architecture] }}/promtool", dest: "/usr/local/bin/promtool" }
+  tags: [install]
+
+- name: Configure Prometheus
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: /etc/prometheus/prometheus.yml
+    mode: '0644'
+    owner: prometheus
+    group: prometheus
+  notify: reload prometheus
+  tags: [config]
+
+- name: Create Prometheus systemd service
+  ansible.builtin.template:
+    src: prometheus.service.j2
+    dest: /etc/systemd/system/prometheus.service
+    mode: '0644'
+  notify: restart prometheus
+  tags: [service]
+
+- name: Start and enable Prometheus
+  ansible.builtin.systemd:
+    name: prometheus
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [service]
+
+- name: Cleanup temp files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/prometheus.tar.gz"
+    - "/tmp/prometheus-{{ prometheus_version }}.linux-{{ arch_map[ansible_architecture] }}"
+  tags: [cleanup]

@@ -1,0 +1,5 @@
+---
+cassandra_data_path: /opt/cassandra
+cassandra_cluster_name: "Main Cluster"
+cassandra_datacenter: "datacenter1"
+cassandra_rack: "rack1"

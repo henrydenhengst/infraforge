@@ -1,0 +1,3 @@
+---
+guacamole_data_path: /opt/guacamole
+guacamole_db_password: "{{ vault_guacamole_db_password }}"

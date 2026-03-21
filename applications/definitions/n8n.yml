@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# HASURA - GRAPHQL ENGINE
+# =============================================================================
+# Beschrijving: Instant GraphQL API op PostgreSQL
+# Website: https://hasura.io
+# =============================================================================
+
+application:
+  name: hasura
+  version: 2.35.0
+  description: "Hasura - GraphQL engine"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://hasura.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /hasura-data
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Hasura GraphQL API"
+    dns:
+      - "graphql.{{ domain }}"
+      - "hasura.{{ domain }}"
+      
+  container:
+    image: hasura/graphql-engine:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: HASURA_GRAPHQL_DATABASE_URL
+      value: "postgresql://hasura:{{ vault_hasura_password }}@postgres:5432/hasura"
+      secret: true
+    - name: HASURA_GRAPHQL_ENABLE_CONSOLE
+      value: "true"
+      secret: false
+    - name: HASURA_GRAPHQL_DEV_MODE
+      value: "false"
+      secret: false
+    - name: HASURA_GRAPHQL_ADMIN_SECRET
+      value: "{{ vault_hasura_admin_secret }}"
+      secret: true
+    - name: HASURA_GRAPHQL_JWT_SECRET
+      value: "{\"type\":\"HS256\",\"key\":\"{{ vault_hasura_jwt }}\"}"
+      secret: true
+    - name: HASURA_GRAPHQL_UNAUTHORIZED_ROLE
+      value: "anonymous"
+      secret: false
+    - name: HASURA_GRAPHQL_CORS_DOMAIN
+      value: "https://{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /healthz
+      port: 8080

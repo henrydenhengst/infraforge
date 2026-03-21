@@ -1,0 +1,69 @@
+---
+# =============================================================================
+# KUBEBOX - TERMINAL KUBERNETES DASHBOARD
+# =============================================================================
+# Beschrijving: Terminal-based Kubernetes dashboard
+# Website: https://github.com/astefanutti/kubebox
+# =============================================================================
+
+application:
+  name: kubebox
+  version: 0.10.0
+  description: "Kubebox - Terminal Kubernetes dashboard"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://github.com/astefanutti/kubebox"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 0.5
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage: []
+    
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Kubebox web UI"
+    dns:
+      - "kubebox.{{ domain }}"
+      
+  container:
+    image: astefanutti/kubebox:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: KUBEBOX_SERVER
+      value: "true"
+      secret: false
+    - name: KUBEBOX_PORT
+      value: "8080"
+      secret: false
+    - name: KUBEBOX_NO_BROWSER
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

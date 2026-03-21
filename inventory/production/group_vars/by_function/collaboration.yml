@@ -1,0 +1,583 @@
+---
+# =============================================================================
+# COLLABORATION TOOLS
+# =============================================================================
+# Functie: collaboration
+# Beschrijving: Tools voor team samenwerking, document delen en projectmanagement
+# =============================================================================
+
+collaboration_tools:
+  # ---------------------------------------------------------------------------
+  # BESTANDSHARING & SYNC
+  # ---------------------------------------------------------------------------
+  - name: Nextcloud
+    profiel_tag: Algemeen
+    functie_tag: collaboration
+    beschrijving: "Bestandshub en office suite voor teams"
+    categorie: file_sharing
+    docker_image: nextcloud:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - nextcloud_data:/var/www/html
+      - nextcloud_config:/var/www/html/config
+      - nextcloud_apps:/var/www/html/custom_apps
+      - nextcloud_data_files:/var/www/html/data
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: "{{ vault_nextcloud_db_password }}"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NEXTCLOUD_ADMIN_USER: admin
+      NEXTCLOUD_ADMIN_PASSWORD: "{{ vault_nextcloud_admin_password }}"
+      NEXTCLOUD_TRUSTED_DOMAINS: "nextcloud.{{ domain }} cloud.{{ domain }}"
+      PHP_MEMORY_LIMIT: 512M
+      PHP_UPLOAD_LIMIT: 10G
+    database: postgresql
+    queue: redis
+    url: "https://nextcloud.com"
+    apps:
+      - calendar
+      - contacts
+      - mail
+      - talk
+      - deck
+      - notes
+      - tasks
+      - collectives
+      
+  - name: OwnCloud
+    profiel_tag: Algemeen
+    functie_tag: collaboration
+    beschrijving: "Bestandsopslag en synchronisatie"
+    categorie: file_sharing
+    docker_image: owncloud/server:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - owncloud_data:/mnt/data
+      - owncloud_config:/mnt/config
+    environment:
+      OWNCLOUD_DOMAIN: "owncloud.{{ domain }}"
+      OWNCLOUD_DB_TYPE: mysql
+      OWNCLOUD_DB_NAME: owncloud
+      OWNCLOUD_DB_USERNAME: owncloud
+      OWNCLOUD_DB_PASSWORD: "{{ vault_owncloud_password }}"
+      OWNCLOUD_DB_HOST: mysql
+      OWNCLOUD_ADMIN_USERNAME: admin
+      OWNCLOUD_ADMIN_PASSWORD: "{{ vault_owncloud_admin_password }}"
+      OWNCLOUD_REDIS_ENABLED: "true"
+      OWNCLOUD_REDIS_HOST: redis
+    database: mysql
+    url: "https://owncloud.com"
+    
+  - name: Seafile
+    profiel_tag: Algemeen
+    functie_tag: storage
+    beschrijving: "Bestandssync met versiebeheer en encryptie"
+    categorie: file_sync
+    docker_image: seafileltd/seafile:latest
+    ports:
+      - "8082:8000"  # Seahub
+      - "8083:8082"  # File Server
+    volumes:
+      - seafile_data:/shared
+    environment:
+      SEAFILE_SERVER_HOSTNAME: "seafile.{{ domain }}"
+      SEAFILE_ADMIN_EMAIL: admin@{{ domain }}
+      SEAFILE_ADMIN_PASSWORD: "{{ vault_seafile_password }}"
+      SEAFILE_MYSQL_DB_HOST: mysql
+      SEAFILE_MYSQL_DB_PORT: 3306
+      SEAFILE_MYSQL_DB_USER: seafile
+      SEAFILE_MYSQL_DB_PASSWORD: "{{ vault_seafile_db_password }}"
+    database: mysql
+    url: "https://www.seafile.com"
+    
+  # ---------------------------------------------------------------------------
+  # TAKEN & PROJECTMANAGEMENT
+  # ---------------------------------------------------------------------------
+  - name: Vikunja
+    profiel_tag: Algemeen
+    functie_tag: collaboration
+    beschrijving: "Takenlijst en projectmanagement tool"
+    categorie: task_management
+    docker_image: vikunja/vikunja:latest
+    ports:
+      - "8084:80"
+    volumes:
+      - vikunja_files:/app/vikunja/files
+    environment:
+      VIKUNJA_DATABASE_TYPE: postgres
+      VIKUNJA_DATABASE_HOST: postgres
+      VIKUNJA_DATABASE_PORT: 5432
+      VIKUNJA_DATABASE_USER: vikunja
+      VIKUNJA_DATABASE_PASSWORD: "{{ vault_vikunja_password }}"
+      VIKUNJA_DATABASE_DATABASE: vikunja
+      VIKUNJA_SERVICE_JWTSECRET: "{{ vault_vikunja_jwt }}"
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: "false"
+      VIKUNJA_SERVICE_TIMEZONE: Europe/Amsterdam
+    database: postgresql
+    url: "https://vikunja.io"
+    
+  - name: Leantime
+    profiel_tag: Projectbeheer
+    functie_tag: collaboration
+    beschrijving: "Projectmanagement met strategie en OKR's"
+    categorie: project_management
+    docker_image: leantime/leantime:latest
+    ports:
+      - "8085:80"
+    volumes:
+      - leantime_data:/var/www/html
+    environment:
+      LEANTIME_DB_HOST: mysql
+      LEANTIME_DB_DATABASE: leantime
+      LEANTIME_DB_USER: leantime
+      LEANTIME_DB_PASSWORD: "{{ vault_leantime_password }}"
+      LEANTIME_SESSION_PASSWORD: "{{ vault_leantime_session }}"
+      LEANTIME_EMAIL: admin@{{ domain }}
+      LEANTIME_PASSWORD: "{{ vault_leantime_admin_password }}"
+      LEANTIME_FIRSTNAME: Admin
+      LEANTIME_LASTNAME: User
+    database: mysql
+    url: "https://leantime.io"
+    
+  - name: Taiga
+    profiel_tag: Projectbeheer
+    functie_tag: collaboration
+    beschrijving: "Agile en Scrum platform voor softwareteams"
+    categorie: agile_management
+    docker_image: taigaio/taiga:latest
+    ports:
+      - "8086:80"
+    volumes:
+      - taiga_static:/taiga-back/static
+      - taiga_media:/taiga-back/media
+    environment:
+      TAIGA_DB_NAME: taiga
+      TAIGA_DB_USER: taiga
+      TAIGA_DB_PASSWORD: "{{ vault_taiga_password }}"
+      TAIGA_DB_HOST: postgres
+      TAIGA_PUBLIC_REGISTER_ENABLED: "false"
+      TAIGA_SITES_DOMAIN: "taiga.{{ domain }}"
+      TAIGA_SITES_SCHEME: https
+    database: postgresql
+    url: "https://taiga.io"
+    
+  - name: OpenProject
+    profiel_tag: Projectbeheer
+    functie_tag: collaboration
+    beschrijving: "Enterprise projectmanagement voor teams"
+    categorie: project_management
+    docker_image: openproject/community:latest
+    ports:
+      - "8087:80"
+    volumes:
+      - openproject_pgdata:/var/lib/postgresql
+      - openproject_assets:/var/openproject/assets
+    environment:
+      OPENPROJECT_HOST__NAME: "openproject.{{ domain }}"
+      OPENPROJECT_HTTPS: "true"
+      OPENPROJECT_DEFAULT__LANGUAGE: nl
+      OPENPROJECT_SEED__ADMIN__PASSWORD: "{{ vault_openproject_admin_password }}"
+    database: postgresql
+    url: "https://www.openproject.org"
+    
+  - name: Focalboard
+    profiel_tag: Projectbeheer
+    functie_tag: collaboration
+    beschrijving: "Open-source alternatief voor Trello"
+    categorie: kanban
+    docker_image: mattermost/focalboard:latest
+    ports:
+      - "8088:8000"
+    volumes:
+      - focalboard_data:/data
+    environment:
+      FOCALBOARD_PORT: 8000
+      FOCALBOARD_SERVER_ROOT: "https://focalboard.{{ domain }}"
+    url: "https://www.focalboard.com"
+    
+  - name: Plane
+    profiel_tag: Projectbeheer
+    functie_tag: collaboration
+    beschrijving: "Moderne software planning tool (Linear alternatief)"
+    categorie: product_management
+    docker_image: makeplane/plane:latest
+    ports:
+      - "8089:80"
+    volumes:
+      - plane_data:/data
+    environment:
+      DATABASE_URL: "postgresql://plane:{{ vault_plane_password }}@postgres:5432/plane"
+      SECRET_KEY: "{{ vault_plane_secret }}"
+      NEXT_PUBLIC_API_BASE_URL: "https://plane.{{ domain }}/api"
+      NEXT_PUBLIC_ADMIN_EMAIL: admin@{{ domain }}
+      NEXT_PUBLIC_ADMIN_PASSWORD: "{{ vault_plane_admin_password }}"
+    database: postgresql
+    url: "https://plane.so"
+    
+  - name: OpenProject-AI
+    profiel_tag: Projectbeheer
+    functie_tag: collaboration
+    beschrijving: "Project-planning en risicoanalyse via AI"
+    categorie: ai_management
+    docker_image: openproject/community:latest
+    ports:
+      - "8090:80"
+    volumes:
+      - openproject_ai_data:/var/openproject/assets
+    environment:
+      OPENPROJECT_AI_ENABLED: "true"
+      OPENPROJECT_AI_API_KEY: "{{ vault_openai_key }}"
+      OPENPROJECT_AI_MODEL: gpt-4
+      OPENPROJECT_AI_TEMPERATURE: 0.7
+    database: postgresql
+    url: "https://www.openproject.org"
+    
+  # ---------------------------------------------------------------------------
+  # WIKI & DOCUMENTATIE
+  # ---------------------------------------------------------------------------
+  - name: BookStack
+    profiel_tag: HR
+    functie_tag: wiki
+    beschrijving: "Documentatie en personeelshandboek"
+    categorie: wiki
+    docker_image: linuxserver/bookstack:latest
+    ports:
+      - "8091:80"
+    volumes:
+      - bookstack_config:/config
+    environment:
+      APP_URL: "https://bookstack.{{ domain }}"
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: bookstack
+      DB_USERNAME: bookstack
+      DB_PASSWORD: "{{ vault_bookstack_password }}"
+    database: mysql
+    url: "https://www.bookstackapp.com"
+    
+  - name: Trilium
+    profiel_tag: Algemeen
+    functie_tag: office
+    beschrijving: "Notitiebeheer met hiërarchische structuur"
+    categorie: notes
+    docker_image: zadam/trilium:latest
+    ports:
+      - "8092:8080"
+    volumes:
+      - trilium_data:/home/node/trilium-data
+    environment:
+      TRILIUM_PORT: 8080
+    url: "https://github.com/zadam/trilium"
+    
+  # ---------------------------------------------------------------------------
+  # OFFICE SUITES
+  # ---------------------------------------------------------------------------
+  - name: Cryptpad
+    profiel_tag: Algemeen
+    functie_tag: office
+    beschrijving: "Privacy-vriendelijke samenwerking (docs, sheets, presentaties)"
+    categorie: office_suite
+    docker_image: cryptpad/cryptpad:latest
+    ports:
+      - "8093:80"
+      - "8094:443"
+    volumes:
+      - cryptpad_data:/cryptpad/datastore
+      - cryptpad_blob:/cryptpad/blob
+    environment:
+      CPAD_HTTP_PORT: 80
+      CPAD_HTTPS_PORT: 443
+      CPAD_DOMAIN: "cryptpad.{{ domain }}"
+      CPAD_ADMIN_EMAIL: admin@{{ domain }}
+      CPAD_ADMIN_PASSWORD: "{{ vault_cryptpad_password }}"
+    url: "https://cryptpad.fr"
+    
+  - name: Etherpad
+    profiel_tag: Algemeen
+    functie_tag: office
+    beschrijving: "Real-time teksteditor voor samenwerking"
+    categorie: collaborative_editing
+    docker_image: etherpad/etherpad:latest
+    ports:
+      - "8095:9001"
+    volumes:
+      - etherpad_data:/opt/etherpad/var
+    environment:
+      ETHERPAD_TITLE: "Team Notes"
+      ETHERPAD_ADMIN_PASSWORD: "{{ vault_etherpad_password }}"
+      ETHERPAD_DB_HOST: postgres
+      ETHERPAD_DB_USER: etherpad
+      ETHERPAD_DB_PASSWORD: "{{ vault_etherpad_db_password }}"
+      ETHERPAD_DB_DATABASE: etherpad
+    database: postgresql
+    url: "https://etherpad.org"
+    
+  - name: Excalidraw
+    profiel_tag: Marketing
+    functie_tag: office
+    beschrijving: "Whiteboard tool voor diagrammen en wireframes"
+    categorie: diagramming
+    docker_image: excalidraw/excalidraw:latest
+    ports:
+      - "8096:80"
+    volumes:
+      - excalidraw_data:/data
+    environment:
+      EXCALIDRAW_BACKEND_URL: "https://excalidraw.{{ domain }}"
+    url: "https://excalidraw.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+collaboration_defaults:
+  # Algemene samenwerkingsinstellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Gebruikersinstellingen
+  users:
+    allow_registration: false
+    allow_guest: false
+    default_user_quota: 10GB
+    admin_quota: 100GB
+    
+  # Bestandsinstellingen
+  files:
+    max_upload_size: 10GB
+    allowed_extensions:
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - md
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - zip
+    versioning_enabled: true
+    versions_to_keep: 5
+    trash_clean_days: 30
+    
+  # Share-instellingen
+  sharing:
+    public_links: true
+    link_expiry_days: 7
+    password_protection: true
+    email_notifications: true
+    
+  # Integraties
+  integrations:
+    onlyoffice: true
+    collabora: true
+    talk: true
+    mail: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+nextcloud_config:
+  # Nextcloud apps
+  apps:
+    - name: calendar
+      enabled: true
+    - name: contacts
+      enabled: true
+    - name: mail
+      enabled: true
+    - name: talk
+      enabled: true
+      config:
+        turn_server: turn.{{ domain }}
+        turn_secret: "{{ vault_turn_secret }}"
+        stun_server: stun.{{ domain }}
+    - name: deck
+      enabled: true
+    - name: notes
+      enabled: true
+    - name: tasks
+      enabled: true
+    - name: collectives
+      enabled: true
+    - name: groupfolders
+      enabled: true
+    - name: onlyoffice
+      enabled: true
+      config:
+        document_server_url: "https://onlyoffice.{{ domain }}"
+        document_server_secret: "{{ vault_onlyoffice_secret }}"
+        
+  # Nextcloud gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      groups: ["admin"]
+      quota: 100GB
+    - username: user1
+      email: user1@{{ domain }}
+      groups: ["team"]
+      quota: 50GB
+      
+  # Nextcloud groepen
+  groups:
+    - name: admin
+      display_name: Administrators
+    - name: team
+      display_name: Team
+    - name: finance
+      display_name: Finance
+      
+  # Nextcloud shares
+  shares:
+    - name: Team Documents
+      path: /Team
+      groups: ["team"]
+      permissions: read-write
+    - name: Finance Documents
+      path: /Finance
+      groups: ["finance"]
+      permissions: read-write
+      
+  # Nextcloud configuratie
+  config:
+    default_phone_region: NL
+    enable_previews: true
+    preview_max_x: 2048
+    preview_max_y: 2048
+    trashbin_retention_obligation: 30
+    versions_retention_obligation: "auto"
+    maintenance_window_start: 1
+    mail_domain: "{{ domain }}"
+    mail_from_address: nextcloud
+    mail_smtpmode: smtp
+    mail_smtpsecure: tls
+    mail_smtphost: smtp.{{ domain }}
+    mail_smtpport: 587
+    mail_smtpauthtype: LOGIN
+    mail_smtpauth: 1
+    mail_smtpname: nextcloud@{{ domain }}
+    mail_smtppassword: "{{ vault_smtp_password }}"
+
+vikunja_config:
+  # Vikunja projecten
+  projects:
+    - name: Development
+      description: "Development team taken"
+      owner: team-dev
+    - name: Operations
+      description: "Operations team taken"
+      owner: team-ops
+    - name: Marketing
+      description: "Marketing team taken"
+      owner: team-marketing
+      
+  # Vikunja takenlijsten
+  lists:
+    - name: Sprint Backlog
+      project: Development
+    - name: In Progress
+      project: Development
+    - name: Review
+      project: Development
+    - name: Done
+      project: Development
+      
+  # Vikunja labels
+  labels:
+    - name: bug
+      color: "#ff0000"
+    - name: feature
+      color: "#00ff00"
+    - name: documentation
+      color: "#0000ff"
+    - name: high-priority
+      color: "#ff9900"
+      
+  # Vikunja teams
+  teams:
+    - name: Development
+      members:
+        - user1
+        - user2
+    - name: Operations
+      members:
+        - user3
+        - user4
+
+leantime_config:
+  # Leantime projecten
+  projects:
+    - name: Website Redesign
+      description: "Herontwerp van de bedrijfswebsite"
+      client: Internal
+      budget: 5000
+      status: active
+      
+    - name: Mobile App
+      description: "Ontwikkeling van de mobiele app"
+      client: Internal
+      budget: 15000
+      status: planning
+      
+  # Leantime doelen (OKRs)
+  goals:
+    - name: "Verbeter klanttevredenheid"
+      objective: "Verhoog CSAT naar 90%"
+      key_results:
+        - name: "Implementeer feedback systeem"
+          target: 100
+          current: 60
+        - name: "Los top 10 bugs op"
+          target: 10
+          current: 3
+          
+  # Leantime tijdsregistratie
+  timesheets:
+    enabled: true
+    hourly_rate: 75
+    currency: EUR
+
+taiga_config:
+  # Taiga projecten
+  projects:
+    - name: Development
+      description: "Hoofdontwikkelproject"
+      is_private: false
+      total_milestones: 10
+      total_story_points: 100
+      
+  # Taiga sprints
+  sprints:
+    - name: Sprint 1
+      project: Development
+      start_date: "{{ current_date }}"
+      end_date: "{{ current_date + 14 }}"
+      total_points: 20
+      
+  # Taiga gebruikersrollen
+  roles:
+    - name: Product Owner
+      permissions:
+        - add_issue
+        - modify_issue
+        - delete_issue
+        - add_task
+        - modify_task
+        - delete_task
+    - name: Developer
+      permissions:
+        - modify_issue
+        - add_task
+        - modify_task

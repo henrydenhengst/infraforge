@@ -1,0 +1,60 @@
+---
+# =============================================================================
+# APPLICATION ROLE VARIABELEN
+# =============================================================================
+
+app_prerequisites:
+  Debian:
+    - docker-compose-plugin
+    - python3-docker
+    - curl
+    - jq
+    - yq
+  RedHat:
+    - docker-compose-plugin
+    - python3-docker
+    - curl
+    - jq
+    - yq
+  Suse:
+    - docker-compose
+    - python3-docker-py
+    - curl
+    - jq
+    - yq
+  Archlinux:
+    - docker-compose
+    - python-docker
+    - curl
+    - jq
+    - yq
+  Alpine:
+    - docker-compose
+    - py3-docker
+    - curl
+    - jq
+    - yq
+
+# Application user
+app_user: root
+app_group: docker
+
+# Default Docker networks
+default_docker_networks:
+  - name: web
+    driver: bridge
+    ipam_config:
+      - subnet: 172.20.0.0/16
+        gateway: 172.20.0.1
+  - name: internal
+    driver: bridge
+    internal: true
+    ipam_config:
+      - subnet: 172.21.0.0/16
+        gateway: 172.21.0.1
+  - name: database
+    driver: bridge
+    internal: true
+    ipam_config:
+      - subnet: 172.22.0.0/16
+        gateway: 172.22.0.1

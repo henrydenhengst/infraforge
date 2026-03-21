@@ -1,0 +1,42 @@
+---
+- name: '{{ ansible_os_family }} | Maak Pyroscope directories'
+  ansible.builtin.file:
+    path: "{{ pyroscope_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Pyroscope container'
+  ansible.builtin.docker_container:
+    name: pyroscope
+    image: pyroscope/pyroscope:latest
+    restart_policy: unless-stopped
+    ports:
+      - "4040:4040"
+    volumes:
+      - "{{ pyroscope_data_path }}:/var/lib/pyroscope"
+    command: server
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.pyroscope.rule: "Host(`pyroscope.{{ domain }}`)"
+      traefik.http.services.pyroscope.loadbalancer.server.port: "4040"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Configureer Pyroscope'
+  ansible.builtin.template:
+    src: pyroscope.yml.j2
+    dest: /etc/pyroscope.yml
+    mode: '0644'
+  notify: restart pyroscope
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Wacht tot Pyroscope actief is'
+  ansible.builtin.wait_for:
+    port: 4040
+    timeout: 60
+  tags: [validate]
+
+- name: Toon Pyroscope URL
+  ansible.builtin.debug:
+    msg: "Pyroscope: https://pyroscope.{{ domain }}"
+  tags: [validate]

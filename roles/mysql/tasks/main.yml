@@ -1,0 +1,61 @@
+---
+- name: '{{ ansible_os_family }} | Installeer MySQL'
+  ansible.builtin.package:
+    name: "{{ mysql_packages[ansible_os_family] }}"
+    state: present
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Start en enable MySQL'
+  ansible.builtin.service:
+    name: "{{ mysql_service[ansible_os_family] }}"
+    state: started
+    enabled: yes
+  tags: [service]
+
+- name: '{{ ansible_os_family }} | Configureer MySQL root wachtwoord'
+  ansible.builtin.shell: |
+    mysqladmin -u root password "{{ mysql_root_password }}"
+  when: mysql_root_password is defined
+  ignore_errors: yes
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Configureer MySQL'
+  ansible.builtin.template:
+    src: my.cnf.j2
+    dest: "{{ mysql_config_path[ansible_os_family] }}/my.cnf"
+    mode: '0644'
+  notify: restart mysql
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Maak databases aan'
+  ansible.builtin.shell: |
+    mysql -u root -p{{ mysql_root_password }} -e "CREATE DATABASE IF NOT EXISTS {{ item.name }} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+  loop: "{{ mysql_databases }}"
+  when: mysql_databases is defined
+  tags: [databases]
+
+- name: '{{ ansible_os_family }} | Maak gebruikers aan'
+  ansible.builtin.shell: |
+    mysql -u root -p{{ mysql_root_password }} -e "CREATE USER IF NOT EXISTS '{{ item.user }}'@'localhost' IDENTIFIED BY '{{ item.password }}';"
+    mysql -u root -p{{ mysql_root_password }} -e "GRANT {{ item.privs | default('ALL PRIVILEGES') }} ON {{ item.database }}.* TO '{{ item.user }}'@'localhost';"
+    mysql -u root -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
+  loop: "{{ mysql_users }}"
+  when: mysql_users is defined
+  tags: [users]
+
+- name: '{{ ansible_os_family }} | Configureer MySQL monitoring'
+  ansible.builtin.include_tasks: monitoring.yml
+  when: mysql_monitoring_enabled | default(true)
+  tags: [monitoring]
+
+- name: '{{ ansible_os_family }} | Valideer MySQL configuratie'
+  ansible.builtin.shell: mysqladmin -u root -p{{ mysql_root_password }} ping
+  register: mysql_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon MySQL status
+  ansible.builtin.debug:
+    msg: "MySQL: {{ mysql_test.stdout }}"
+  when: mysql_test.stdout is defined
+  tags: [validate]

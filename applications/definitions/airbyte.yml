@@ -1,0 +1,120 @@
+---
+# =============================================================================
+# ODOO - ERP/CRM SUITE
+# =============================================================================
+# Beschrijving: Volledig ERP/CRM suite met uitgebreide functionaliteit
+# Website: https://www.odoo.com
+# =============================================================================
+
+application:
+  name: odoo
+  version: 17.0
+  description: "Odoo - ERP/CRM suite"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: finance-team
+    contact: finance@company.local
+    slack: "#finance"
+    documentation: "https://www.odoo.com/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/odoo
+      - name: addons
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /mnt/extra-addons
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/odoo
+        
+  network_requirements:
+    vlans:
+      - finance
+      - internal
+    ports:
+      - container: 8069
+        host: 8069
+        protocol: tcp
+        public: false
+        description: "Odoo web interface"
+    dns:
+      - "odoo.{{ domain }}"
+      - "erp.{{ domain }}"
+      
+  container:
+    image: odoo:17
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: HOST
+      value: "postgres"
+      secret: false
+    - name: PORT
+      value: "5432"
+      secret: false
+    - name: USER
+      value: "odoo"
+      secret: false
+    - name: PASSWORD
+      value: "{{ vault_odoo_password }}"
+      secret: true
+    - name: DB_NAME
+      value: "odoo"
+      secret: false
+    - name: ADMIN_PASSWORD
+      value: "{{ vault_odoo_admin_password }}"
+      secret: true
+    - name: EMAIL_FROM
+      value: "odoo@{{ domain }}"
+      secret: false
+    - name: SMTP_SERVER
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: SMTP_PORT
+      value: "587"
+      secret: false
+    - name: SMTP_USER
+      value: "odoo@{{ domain }}"
+      secret: false
+    - name: SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+      
+  modules:
+    - sale
+    - purchase
+    - stock
+    - account
+    - hr
+    - project
+    - crm
+    - website
+    - point_of_sale
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /web/database/selector
+      port: 8069

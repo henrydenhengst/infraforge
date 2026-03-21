@@ -1,0 +1,25 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Salt'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Valideer Salt installatie'
+  ansible.builtin.shell: salt --version
+  register: salt_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Salt versie
+  ansible.builtin.debug:
+    var: salt_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Maak Salt directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/salt
+    - /srv/salt
+  tags: [directories]

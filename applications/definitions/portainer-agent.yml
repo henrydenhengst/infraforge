@@ -1,0 +1,110 @@
+---
+# =============================================================================
+# SUPABASE - OPEN-SOURCE FIREBASE ALTERNATIEF
+# =============================================================================
+# Beschrijving: Open-source Firebase alternatief met PostgreSQL
+# Website: https://supabase.com
+# =============================================================================
+
+application:
+  name: supabase
+  version: 1.0.0
+  description: "Supabase - Open-source Firebase alternatief"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://supabase.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/postgresql/data
+      - name: storage
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/supabase/storage
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "Supabase API"
+      - container: 5432
+        host: 5432
+        protocol: tcp
+        public: false
+        description: "PostgreSQL"
+      - container: 54321
+        host: 54321
+        protocol: tcp
+        public: false
+        description: "Storage API"
+    dns:
+      - "supabase.{{ domain }}"
+      - "api.{{ domain }}"
+      
+  container:
+    image: supabase/supabase:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  sidecars:
+    - name: postgres
+      image: supabase/postgres:latest
+    - name: kong
+      image: kong:latest
+    - name: gotrue
+      image: supabase/gotrue:latest
+    - name: realtime
+      image: supabase/realtime:latest
+    - name: storage
+      image: supabase/storage-api:latest
+    - name: auth
+      image: supabase/auth:latest
+      
+  environment_variables:
+    - name: POSTGRES_PASSWORD
+      value: "{{ vault_supabase_postgres_password }}"
+      secret: true
+    - name: JWT_SECRET
+      value: "{{ vault_supabase_jwt }}"
+      secret: true
+    - name: ANON_KEY
+      value: "{{ vault_supabase_anon_key }}"
+      secret: true
+    - name: SERVICE_ROLE_KEY
+      value: "{{ vault_supabase_service_key }}"
+      secret: true
+    - name: SITE_URL
+      value: "https://supabase.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8000

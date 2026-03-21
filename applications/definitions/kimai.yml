@@ -1,0 +1,106 @@
+---
+# =============================================================================
+# ZAMMAD - TICKETSYSTEEM EN HELPDESK
+# =============================================================================
+# Beschrijving: Modern ticketsysteem en helpdesk voor klantenservice
+# Website: https://zammad.com
+# =============================================================================
+
+application:
+  name: zammad
+  version: 6.2.0
+  description: "Zammad - Ticketsysteem en helpdesk"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: support-team
+    contact: support@company.local
+    slack: "#support"
+    documentation: "https://docs.zammad.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/zammad
+      - name: backups
+        size_gb: 50
+        performance: hdd
+        backup_required: false
+        mount_path: /var/tmp/zammad
+        
+  network_requirements:
+    vlans:
+      - support
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "Zammad HTTP"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: true
+        description: "Zammad HTTPS"
+    dns:
+      - "support.{{ domain }}"
+      - "zammad.{{ domain }}"
+      
+  container:
+    image: zammad/zammad:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: ZAMMAD_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: ZAMMAD_DB_USER
+      value: "zammad"
+      secret: false
+    - name: ZAMMAD_DB_PASS
+      value: "{{ vault_zammad_password }}"
+      secret: true
+    - name: ZAMMAD_DB_NAME
+      value: "zammad"
+      secret: false
+    - name: ZAMMAD_ELASTICSEARCH_HOST
+      value: "elasticsearch"
+      secret: false
+    - name: ZAMMAD_ELASTICSEARCH_PORT
+      value: "9200"
+      secret: false
+    - name: ZAMMAD_RAILS_PORT
+      value: "3000"
+      secret: false
+    - name: ZAMMAD_WEBSOCKET_PORT
+      value: "6042"
+      secret: false
+    - name: ZAMMAD_MAILBOX_USER
+      value: "support@{{ domain }}"
+      secret: false
+    - name: ZAMMAD_MAILBOX_PASSWORD
+      value: "{{ vault_zammad_mailbox_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/health_check
+      port: 80

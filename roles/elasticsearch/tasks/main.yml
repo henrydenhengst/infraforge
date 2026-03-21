@@ -1,0 +1,45 @@
+---
+- name: '{{ ansible_os_family }} | Maak Elasticsearch directories'
+  ansible.builtin.file:
+    path: "{{ elasticsearch_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Elasticsearch container'
+  ansible.builtin.docker_container:
+    name: elasticsearch
+    image: elasticsearch:8.11.0
+    restart_policy: unless-stopped
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - "{{ elasticsearch_data_path }}:/usr/share/elasticsearch/data"
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms{{ elasticsearch_heap_size }} -Xmx{{ elasticsearch_heap_size }}"
+      xpack.security.enabled: "false"
+      xpack.security.enrollment.enabled: "false"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.elasticsearch.rule: "Host(`elasticsearch.{{ domain }}`)"
+      traefik.http.services.elasticsearch.loadbalancer.server.port: "9200"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Elasticsearch actief is'
+  ansible.builtin.wait_for:
+    port: 9200
+    timeout: 120
+  tags: [validate]
+
+- name: Toon Elasticsearch informatie
+  ansible.builtin.debug:
+    msg:
+      - "Elasticsearch: https://elasticsearch.{{ domain }}"
+      - "Heap size: {{ elasticsearch_heap_size }}"
+  tags: [validate]

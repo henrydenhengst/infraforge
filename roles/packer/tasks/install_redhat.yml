@@ -1,0 +1,14 @@
+---
+- name: Voeg HashiCorp repository toe
+  ansible.builtin.yum_repository:
+    name: hashicorp
+    description: HashiCorp Stable
+    baseurl: https://rpm.releases.hashicorp.com/RHEL/8/x86_64/stable/
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://rpm.releases.hashicorp.com/gpg
+
+- name: Installeer Packer
+  ansible.builtin.dnf:
+    name: packer
+    state: present

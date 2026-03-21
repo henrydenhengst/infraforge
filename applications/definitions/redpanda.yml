@@ -1,0 +1,92 @@
+---
+# =============================================================================
+# STACKGRES - POSTGRESQL OPERATOR
+# =============================================================================
+# Beschrijving: Kubernetes operator voor PostgreSQL
+# Website: https://stackgres.io
+# =============================================================================
+
+application:
+  name: stackgres
+  version: 1.10.0
+  description: "StackGres - PostgreSQL operator voor Kubernetes"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: dba-team
+    contact: dba@company.local
+    slack: "#database"
+    documentation: "https://stackgres.io/doc"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/stackgres
+        
+  network_requirements:
+    vlans:
+      - database
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "StackGres REST API"
+      - container: 8443
+        host: 8443
+        protocol: tcp
+        public: false
+        description: "StackGres UI"
+    dns:
+      - "stackgres.{{ domain }}"
+      
+  container:
+    image: stackgres/operator:latest
+    restart: unless-stopped
+    orchestratie: kubernetes
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: OPERATOR_NAMESPACE
+      value: "stackgres"
+      secret: false
+    - name: OPERATOR_IMAGE
+      value: "stackgres/operator:latest"
+      secret: false
+    - name: OPERATOR_IMAGE_PULL_POLICY
+      value: "Always"
+      secret: false
+    - name: CONTAINER_IMAGE_REGISTRY
+      value: "docker.io"
+      secret: false
+    - name: CONTAINER_IMAGE_REPOSITORY
+      value: "stackgres"
+      secret: false
+    - name: CONTAINER_IMAGE_NAME
+      value: "stackgres"
+      secret: false
+    - name: CONTAINER_IMAGE_TAG
+      value: "latest"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

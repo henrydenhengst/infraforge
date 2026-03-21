@@ -1,0 +1,93 @@
+---
+# =============================================================================
+# TTRSS - RSS-LEZER
+# =============================================================================
+# Beschrijving: Tiny Tiny RSS - RSS-lezer
+# Website: https://tt-rss.org
+# =============================================================================
+
+application:
+  name: ttrss
+  version: 2.0.0
+  description: "TTRSS - RSS-lezer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://tt-rss.org/wiki"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "TTRSS web interface"
+    dns:
+      - "rss.{{ domain }}"
+      - "ttrss.{{ domain }}"
+      
+  container:
+    image: linuxserver/tt-rss:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: DB_HOST
+      value: "postgres"
+      secret: false
+    - name: DB_PORT
+      value: "5432"
+      secret: false
+    - name: DB_NAME
+      value: "ttrss"
+      secret: false
+    - name: DB_USER
+      value: "ttrss"
+      secret: false
+    - name: DB_PASS
+      value: "{{ vault_ttrss_password }}"
+      secret: true
+    - name: SELF_URL_PATH
+      value: "https://rss.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

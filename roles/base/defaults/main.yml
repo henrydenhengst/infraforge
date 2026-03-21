@@ -1,0 +1,19 @@
+---
+# =============================================================================
+# BASE ROLE DEFAULTS
+# =============================================================================
+
+# Tijdzone
+timezone: Europe/Amsterdam
+default_locale: nl_NL.UTF-8
+
+# Updates
+package_cache_update: true
+security_updates: true
+
+# Ansible gebruiker
+create_ansible_user: true
+ansible_user_groups: sudo,wheel
+
+# Kernel parameters
+kernel_parameters_enabled: true

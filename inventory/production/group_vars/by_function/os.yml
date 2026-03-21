@@ -1,0 +1,169 @@
+---
+# =============================================================================
+# OPERATING SYSTEMS
+# =============================================================================
+# Functie: os
+# Beschrijving: Linux distributies voor servers en containers
+# =============================================================================
+
+os_tools:
+  # ---------------------------------------------------------------------------
+  # DEBIAN FAMILIE
+  # ---------------------------------------------------------------------------
+  - name: Debian
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Stabiele Linux distributie voor servers"
+    categorie: linux
+    docker_image: debian:12
+    url: "https://www.debian.org"
+    
+  - name: Ubuntu
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Populaire Linux distributie voor developers"
+    categorie: linux
+    docker_image: ubuntu:22.04
+    url: "https://ubuntu.com"
+    
+  # ---------------------------------------------------------------------------
+  # REDHAT FAMILIE
+  # ---------------------------------------------------------------------------
+  - name: AlmaLinux
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Enterprise Linux distributie (RHEL fork)"
+    categorie: linux
+    docker_image: almalinux:9
+    url: "https://almalinux.org"
+    
+  - name: RockyLinux
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Enterprise Linux distributie (RHEL fork)"
+    categorie: linux
+    docker_image: rockylinux:9
+    url: "https://rockylinux.org"
+    
+  - name: CentOS
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Enterprise Linux OS (RHEL fork)"
+    categorie: linux
+    docker_image: centos:7
+    url: "https://centos.org"
+    
+  - name: Fedora
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Linux voor developers met nieuwste software"
+    categorie: linux
+    docker_image: fedora:39
+    url: "https://fedoraproject.org"
+    
+  - name: OracleLinux
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Enterprise Linux van Oracle"
+    categorie: linux
+    docker_image: oraclelinux:9
+    url: "https://www.oracle.com/linux"
+    
+  - name: AmazonLinux
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "AWS geoptimaliseerde Linux"
+    categorie: linux
+    docker_image: amazonlinux:2023
+    url: "https://aws.amazon.com/amazon-linux-2"
+    
+  # ---------------------------------------------------------------------------
+  # SUSE FAMILIE
+  # ---------------------------------------------------------------------------
+  - name: OpenSUSE
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Linux OS van SUSE"
+    categorie: linux
+    docker_image: opensuse/leap:15.5
+    url: "https://www.opensuse.org"
+    
+  # ---------------------------------------------------------------------------
+  # ANDERE LINUX
+  # ---------------------------------------------------------------------------
+  - name: Alpine
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Lichtgewicht container OS"
+    categorie: linux
+    docker_image: alpine:3.19
+    url: "https://alpinelinux.org"
+    
+  - name: Archlinux
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Rolling release Linux voor developers"
+    categorie: linux
+    docker_image: archlinux:latest
+    url: "https://archlinux.org"
+    
+  # ---------------------------------------------------------------------------
+  # CONTAINER OPTIMIZED
+  # ---------------------------------------------------------------------------
+  - name: Alpine
+    profiel_tag: IT
+    functie_tag: os
+    beschrijving: "Lichtgewicht container OS"
+    categorie: container_os
+    docker_image: alpine:3.19
+    url: "https://alpinelinux.org"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+os_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # OS specifieke instellingen per familie
+  os_families:
+    Debian:
+      package_manager: apt
+      init_system: systemd
+      firewall: ufw
+      default_user: debian
+      
+    RedHat:
+      package_manager: dnf
+      init_system: systemd
+      firewall: firewalld
+      selinux: enforcing
+      default_user: ec2-user
+      
+    Suse:
+      package_manager: zypper
+      init_system: systemd
+      firewall: SuSEfirewall2
+      default_user: opensuse
+      
+    Alpine:
+      package_manager: apk
+      init_system: openrc
+      firewall: iptables
+      default_user: alpine
+      
+    Arch:
+      package_manager: pacman
+      init_system: systemd
+      firewall: iptables
+      default_user: arch
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+# Deze worden per OS gedefinieerd in platform/os/[distro]/main.yml
+# Hier alleen de container images voor build doeleinden

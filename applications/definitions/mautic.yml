@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# UMAMI - PRIVACY-VRIENDELIJKE WEB-ANALYTICS
+# =============================================================================
+# Beschrijving: Privacy-vriendelijke web-analytics, eenvoudig te installeren
+# Website: https://umami.is
+# =============================================================================
+
+application:
+  name: umami
+  version: 2.10.0
+  description: "Umami - Privacy-vriendelijke web-analytics"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: marketing-team
+    contact: marketing@company.local
+    slack: "#marketing"
+    documentation: "https://umami.is/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+        
+  network_requirements:
+    vlans:
+      - marketing
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Umami web interface"
+    dns:
+      - "umami.{{ domain }}"
+      - "stats.{{ domain }}"
+      
+  container:
+    image: ghcr.io/umami-software/umami:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DATABASE_URL
+      value: "postgresql://umami:{{ vault_umami_password }}@postgres:5432/umami"
+      secret: true
+    - name: DATABASE_TYPE
+      value: "postgresql"
+      secret: false
+    - name: HASH_SALT
+      value: "{{ vault_umami_salt }}"
+      secret: true
+    - name: TRACKER_SCRIPT_NAME
+      value: "umami.js"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 3000

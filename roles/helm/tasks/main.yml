@@ -1,0 +1,25 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Helm'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Valideer Helm installatie'
+  ansible.builtin.shell: helm version
+  register: helm_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Helm versie
+  ansible.builtin.debug:
+    var: helm_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Voeg Helm repositories toe'
+  ansible.builtin.shell: |
+    helm repo add stable https://charts.helm.sh/stable
+    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+    helm repo add jetstack https://charts.jetstack.io
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    helm repo add grafana https://grafana.github.io/helm-charts
+    helm repo update
+  tags: [repos]

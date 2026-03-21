@@ -1,0 +1,613 @@
+---
+# =============================================================================
+# GITLAB - GIT PLATFORM EN CI/CD
+# =============================================================================
+# Beschrijving: Volledig DevOps-platform met Git repositories, CI/CD en meer
+# Website: https://about.gitlab.com
+# =============================================================================
+
+application:
+  name: gitlab
+  version: 16.8.0
+  description: "GitLab - Git repository management met CI/CD pipeline"
+  environment: "{{ environment | default('production') }}"
+  
+  # ===========================================================================
+  # EIGENAAR & CONTACT
+  # ===========================================================================
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://docs.gitlab.com"
+    
+  # ===========================================================================
+  # HARDWARE VEREISTEN
+  # ===========================================================================
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 8
+      min_ram_gb: 16
+      recommended_cpu_cores: 16
+      recommended_ram_gb: 32
+      cpu_architecture: x86_64
+      gpu_required: false
+      
+    storage:
+      - name: config
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /etc/gitlab
+        description: "GitLab configuratie"
+        
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /var/opt/gitlab
+        description: "GitLab data (repositories, database, uploads)"
+        
+      - name: logs
+        size_gb: 50
+        performance: any
+        backup_required: false
+        mount_path: /var/log/gitlab
+        description: "GitLab log bestanden"
+        
+      - name: backups
+        size_gb: 200
+        performance: hdd
+        backup_required: false
+        mount_path: /var/opt/gitlab/backups
+        description: "GitLab backups"
+        
+  # ===========================================================================
+  # NETWERK VEREISTEN
+  # ===========================================================================
+  network_requirements:
+    vlans:
+      - dmz
+      - app
+      - internal
+      
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "HTTP (wordt omgeleid naar HTTPS)"
+        
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: true
+        description: "HTTPS web interface"
+        
+      - container: 22
+        host: 2222
+        protocol: tcp
+        public: true
+        description: "SSH voor Git toegang"
+        
+    dns:
+      - "gitlab.{{ domain }}"
+      - "git.{{ domain }}"
+      - "registry.{{ domain }}"
+      - "pages.{{ domain }}"
+      
+  # ===========================================================================
+  # CONTAINER CONFIGURATIE
+  # ===========================================================================
+  container:
+    image: gitlab/gitlab-ce:16.8.0-ce.0
+    restart: unless-stopped
+    
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+    security_context:
+      run_as_user: 998
+      run_as_group: 998
+      fs_group: 998
+      
+  # ===========================================================================
+  # OMGEVINGSVARIABELEN
+  # ===========================================================================
+  environment_variables:
+    - name: GITLAB_OMNIBUS_CONFIG
+      value: |
+        external_url 'https://gitlab.{{ domain }}'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        gitlab_rails['initial_root_password'] = '{{ vault_gitlab_root_password }}'
+        gitlab_rails['time_zone'] = 'Europe/Amsterdam'
+        gitlab_rails['gitlab_email_enabled'] = true
+        gitlab_rails['gitlab_email_from'] = 'gitlab@{{ domain }}'
+        gitlab_rails['gitlab_email_display_name'] = 'GitLab'
+        gitlab_rails['smtp_enable'] = true
+        gitlab_rails['smtp_address'] = 'smtp.{{ domain }}'
+        gitlab_rails['smtp_port'] = 587
+        gitlab_rails['smtp_user_name'] = 'gitlab@{{ domain }}'
+        gitlab_rails['smtp_password'] = '{{ vault_smtp_password }}'
+        gitlab_rails['smtp_domain'] = '{{ domain }}'
+        gitlab_rails['smtp_authentication'] = 'login'
+        gitlab_rails['smtp_enable_starttls_auto'] = true
+        gitlab_rails['registry_enabled'] = true
+        gitlab_rails['registry_host'] = 'registry.{{ domain }}'
+        gitlab_rails['registry_port'] = 5005
+        gitlab_rails['pages_enabled'] = true
+        gitlab_rails['pages_external_url'] = 'https://pages.{{ domain }}'
+        gitlab_rails['pages_local_storage_enabled'] = true
+        gitlab_rails['pages_local_storage_path'] = '/var/opt/gitlab/gitlab-pages'
+        gitlab_rails['prometheus_monitoring_enable'] = true
+        gitlab_rails['grafana_enabled'] = true
+        gitlab_rails['backup_keep_time'] = 604800
+        gitlab_rails['backup_upload_connection'] = {
+          'provider' => 'AWS',
+          'region' => 'us-east-1',
+          'aws_access_key_id' => 'minioadmin',
+          'aws_secret_access_key' => '{{ vault_minio_password }}',
+          'endpoint' => 'https://minio.{{ domain }}',
+          'path_style' => true
+        }
+        gitlab_rails['backup_upload_remote_directory'] = 'gitlab-backups'
+      secret: true
+      description: "GitLab omnibus configuratie (multi-line)"
+      
+  # ===========================================================================
+  # GITLAB CONFIGURATIE DETAILS
+  # ===========================================================================
+  gitlab_config:
+    version: 16.8
+    
+    # Core settings
+    external_url: "https://gitlab.{{ domain }}"
+    ssh_port: 2222
+    timezone: "Europe/Amsterdam"
+    
+    # Features
+    signup_enabled: false
+    signin_enabled: true
+    require_two_factor_authentication: true
+    two_factor_grace_period: 48
+    default_projects_limit: 100
+    default_branch_protection: 2
+    
+    # Gravatar
+    gravatar_enabled: false
+    
+    # Email
+    email_from: gitlab@{{ domain }}
+    email_display_name: GitLab
+    email_reply_to: gitlab@{{ domain }}
+    
+    # SMTP
+    smtp:
+      enabled: true
+      address: smtp.{{ domain }}
+      port: 587
+      user_name: gitlab@{{ domain }}
+      password: "{{ vault_smtp_password }}"
+      domain: "{{ domain }}"
+      authentication: login
+      enable_starttls_auto: true
+    
+    # Registry
+    registry:
+      enabled: true
+      host: registry.{{ domain }}
+      port: 5005
+      api_url: "http://registry:5000"
+      key: /var/opt/gitlab/gitlab-rails/etc/registry.key
+      path: /var/opt/gitlab/gitlab-rails/shared/registry
+    
+    # Pages
+    pages:
+      enabled: true
+      external_url: "https://pages.{{ domain }}"
+      local_storage_enabled: true
+      local_storage_path: /var/opt/gitlab/gitlab-pages
+    
+    # Database
+    database:
+      adapter: postgresql
+      host: postgres
+      port: 5432
+      database: gitlabhq_production
+      username: gitlab
+      password: "{{ vault_gitlab_db_password }}"
+      pool: 10
+      encoding: utf8
+    
+    # Redis
+    redis:
+      host: redis
+      port: 6379
+      password: "{{ vault_redis_password }}"
+    
+    # Gitaly
+    gitaly:
+      enabled: true
+      internal_socket_dir: /var/opt/gitlab/gitaly
+    
+    # Sidekiq
+    sidekiq:
+      enabled: true
+      concurrency: 25
+    
+    # Monitoring
+    monitoring:
+      enabled: true
+      prometheus:
+        enabled: true
+        listen_address: "0.0.0.0:9090"
+      grafana:
+        enabled: true
+    
+    # Backup
+    backup:
+      keep_time: 604800
+      upload:
+        enabled: true
+        connection:
+          provider: AWS
+          region: us-east-1
+          aws_access_key_id: minioadmin
+          aws_secret_access_key: "{{ vault_minio_password }}"
+          endpoint: "https://minio.{{ domain }}"
+          path_style: true
+        remote_directory: gitlab-backups
+    
+  # ===========================================================================
+  # GEBRUIKERS
+  # ===========================================================================
+  users:
+    - username: root
+      email: admin@{{ domain }}
+      password: "{{ vault_gitlab_root_password }}"
+      admin: true
+      name: "Administrator"
+      
+    - username: devops
+      email: devops@{{ domain }}
+      password: "{{ vault_gitlab_devops_password }}"
+      admin: true
+      name: "DevOps Team"
+      
+    - username: developer
+      email: developer@{{ domain }}
+      password: "{{ vault_gitlab_developer_password }}"
+      admin: false
+      name: "Developer"
+      
+  # ===========================================================================
+  # GROEPEN
+  # ===========================================================================
+  groups:
+    - name: Development
+      path: dev
+      visibility: internal
+      description: "Development team"
+      members:
+        - username: developer
+          access_level: 30  # Developer
+          
+    - name: Operations
+      path: ops
+      visibility: internal
+      description: "Operations team"
+      members:
+        - username: devops
+          access_level: 40  # Maintainer
+          
+    - name: Data
+      path: data
+      visibility: internal
+      description: "Data science team"
+      
+  # ===========================================================================
+  # PROJECTEN
+  # ===========================================================================
+  projects:
+    - name: backend-api
+      path: backend-api
+      group: Development
+      visibility: internal
+      description: "Backend API services"
+      initialize_with_readme: true
+      default_branch: main
+      tags:
+        - backend
+        - api
+        
+    - name: frontend-app
+      path: frontend-app
+      group: Development
+      visibility: internal
+      description: "Frontend web applicatie"
+      default_branch: main
+      tags:
+        - frontend
+        - react
+        
+    - name: infrastructure
+      path: infrastructure
+      group: Operations
+      visibility: private
+      description: "Infrastructure as Code"
+      default_branch: main
+      tags:
+        - ansible
+        - terraform
+        - kubernetes
+        
+    - name: data-pipelines
+      path: data-pipelines
+      group: Data
+      visibility: internal
+      description: "Data processing pipelines"
+      default_branch: main
+      tags:
+        - airflow
+        - python
+        - etl
+        
+  # ===========================================================================
+  # CI/CD VARIABELEN
+  # ===========================================================================
+  ci_variables:
+    - key: DOCKER_REGISTRY
+      value: "registry.{{ domain }}"
+      protected: false
+      masked: false
+      environment: "*"
+      
+    - key: DOCKER_USERNAME
+      value: "{{ vault_docker_username }}"
+      protected: true
+      masked: true
+      environment: "*"
+      
+    - key: DOCKER_PASSWORD
+      value: "{{ vault_docker_password }}"
+      protected: true
+      masked: true
+      environment: "*"
+      
+    - key: KUBECONFIG
+      value: "{{ vault_kubeconfig }}"
+      protected: true
+      masked: true
+      environment: "production"
+      
+    - key: SLACK_WEBHOOK
+      value: "{{ vault_slack_webhook }}"
+      protected: false
+      masked: true
+      environment: "*"
+      
+  # ===========================================================================
+  # CI/CD TEMPLATES
+  # ===========================================================================
+  ci_templates:
+    - name: python
+      content: |
+        image: python:3.11
+        
+        stages:
+          - test
+          - build
+          - deploy
+        
+        before_script:
+          - pip install poetry
+        
+        test:
+          stage: test
+          script:
+            - poetry install
+            - poetry run pytest
+        
+        build:
+          stage: build
+          script:
+            - poetry build
+          artifacts:
+            paths:
+              - dist/
+        
+        deploy:
+          stage: deploy
+          script:
+            - pip install twine
+            - twine upload dist/*
+          only:
+            - tags
+            
+    - name: nodejs
+      content: |
+        image: node:18
+        
+        stages:
+          - test
+          - build
+          - deploy
+        
+        cache:
+          paths:
+            - node_modules/
+        
+        test:
+          stage: test
+          script:
+            - npm ci
+            - npm test
+        
+        build:
+          stage: build
+          script:
+            - npm run build
+          artifacts:
+            paths:
+              - dist/
+        
+        deploy:
+          stage: deploy
+          script:
+            - npx firebase deploy
+          only:
+            - main
+            
+  # ===========================================================================
+  # RUNNERS
+  # ===========================================================================
+  runners:
+    - name: docker-runner
+      executor: docker
+      docker_image: alpine:latest
+      tags:
+        - docker
+        - linux
+      run_untagged: true
+      locked: false
+      access_level: not_protected
+      maximum_timeout: 3600
+      
+    - name: shell-runner
+      executor: shell
+      tags:
+        - shell
+        - local
+      run_untagged: false
+      locked: false
+      
+    - name: kubernetes-runner
+      executor: kubernetes
+      tags:
+        - kubernetes
+        - k8s
+      run_untagged: false
+      locked: true
+      
+  # ===========================================================================
+  # WEBHOOKS
+  # ===========================================================================
+  webhooks:
+    - name: slack
+      url: "{{ vault_slack_webhook }}"
+      push_events: true
+      merge_requests_events: true
+      issues_events: true
+      note_events: true
+      job_events: true
+      pipeline_events: true
+      tag_push_events: true
+      
+    - name: mattermost
+      url: "{{ vault_mattermost_webhook }}"
+      push_events: true
+      merge_requests_events: true
+      pipeline_events: true
+      
+  # ===========================================================================
+  # HEALTH CHECKS
+  # ===========================================================================
+  health_checks:
+    liveness:
+      type: http
+      path: /-/health
+      port: 80
+      initial_delay: 120
+      period: 30
+      timeout: 10
+      retries: 5
+      
+    readiness:
+      type: http
+      path: /-/readiness
+      port: 80
+      initial_delay: 60
+      period: 15
+      timeout: 5
+      retries: 10
+      
+  # ===========================================================================
+  # MONITORING
+  # ===========================================================================
+  monitoring:
+    metrics:
+      enabled: true
+      exporter: gitlab-exporter
+      port: 9168
+      path: /metrics
+      scrape_interval: 30s
+      
+    logs:
+      enabled: true
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+      locations:
+        - /var/log/gitlab/gitlab-rails/production.log
+        - /var/log/gitlab/gitlab-workhorse/current
+        - /var/log/gitlab/gitaly/current
+        - /var/log/gitlab/sidekiq/current
+        
+    alerts:
+      - name: gitlab_down
+        condition: up{app="gitlab"} == 0
+        duration: 2m
+        severity: critical
+        action: pagerduty
+        description: "GitLab is niet bereikbaar"
+        
+      - name: high_cpu
+        condition: gitlab_cpu_usage > 80%
+        duration: 5m
+        severity: warning
+        action: slack
+        
+      - name: high_memory
+        condition: gitlab_memory_usage > 85%
+        duration: 5m
+        severity: warning
+        action: slack
+        
+      - name: disk_space_low
+        condition: gitlab_disk_usage > 85%
+        duration: 1h
+        severity: warning
+        action: email
+        
+      - name: failed_jobs
+        condition: rate(gitlab_ci_failed_jobs_total[5m]) > 10
+        duration: 5m
+        severity: warning
+        action: slack
+        
+  # ===========================================================================
+  # BACKUP
+  # ===========================================================================
+  backup:
+    enabled: true
+    type: gitlab-backup
+    schedule: "0 1 * * *"
+    retention_days: 7
+    volumes:
+      - data
+      - config
+    databases:
+      - type: postgres
+        name: gitlabhq_production
+    pre_backup:
+      - command: "gitlab-ctl stop unicorn"
+      - command: "gitlab-ctl stop sidekiq"
+    post_backup:
+      - command: "gitlab-ctl start unicorn"
+      - command: "gitlab-ctl start sidekiq"

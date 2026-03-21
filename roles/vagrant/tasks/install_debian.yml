@@ -1,0 +1,17 @@
+---
+- name: Installeer Vagrant via package manager
+  ansible.builtin.apt:
+    name: vagrant
+    state: present
+  ignore_errors: yes
+
+- name: Fallback naar directe download
+  ansible.builtin.get_url:
+    url: "https://releases.hashicorp.com/vagrant/{{ vagrant_version }}/vagrant_{{ vagrant_version }}_linux_{{ arch_map[ansible_architecture] }}.deb"
+    dest: "/tmp/vagrant.deb"
+  when: vagrant_install_failed | default(false)
+
+- name: Installeer Vagrant via dpkg
+  ansible.builtin.apt:
+    deb: "/tmp/vagrant.deb"
+  when: vagrant_install_failed | default(false)

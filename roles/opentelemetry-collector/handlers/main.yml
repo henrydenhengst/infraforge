@@ -1,0 +1,5 @@
+---
+- name: restart otel-collector
+  ansible.builtin.docker_container:
+    name: otel-collector
+    restart: yes

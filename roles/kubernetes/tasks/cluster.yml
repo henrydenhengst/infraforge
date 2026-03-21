@@ -1,0 +1,37 @@
+---
+- name: Initialize Kubernetes cluster (master node)
+  ansible.builtin.shell: |
+    kubeadm init \
+      --pod-network-cidr={{ pod_network_cidr }} \
+      --service-cidr={{ service_cidr }} \
+      --kubernetes-version=v{{ kubernetes_version }} \
+      {% if control_plane_endpoint %}--control-plane-endpoint={{ control_plane_endpoint }}{% endif %} \
+      {% if api_server_advertise_address %}--apiserver-advertise-address={{ api_server_advertise_address }}{% endif %}
+  when: node_role == "master"
+  tags: [cluster]
+
+- name: Maak kubeconfig directory voor gebruiker
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+  when: node_role == "master"
+  tags: [cluster]
+
+- name: Kopieer admin kubeconfig
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0600'
+    remote_src: yes
+  when: node_role == "master"
+  tags: [cluster]
+
+- name: Join worker node to cluster
+  ansible.builtin.shell: "{{ hostvars[groups['master'][0]]['join_command'] }}"
+  when: node_role == "worker" and groups['master'] is defined
+  tags: [cluster]

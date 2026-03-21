@@ -1,0 +1,88 @@
+---
+# =============================================================================
+# FAIL2BAN - BRUTE-FORCE BESCHERMING
+# =============================================================================
+# Beschrijving: Brute-force bescherming voor SSH, web, etc.
+# Website: https://www.fail2ban.org
+# =============================================================================
+
+application:
+  name: fail2ban
+  version: 1.0.0
+  description: "Fail2ban - Brute-force bescherming"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://www.fail2ban.org/wiki"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - management
+    ports: []
+    dns: []
+      
+  container:
+    image: crazymax/fail2ban:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    network_mode: host
+        
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: F2B_DB_PURGE_AGE
+      value: "30d"
+      secret: false
+    - name: F2B_LOG_TARGET
+      value: "STDOUT"
+      secret: false
+      
+  jails:
+    - name: sshd
+      enabled: true
+      maxretry: 5
+      bantime: 3600
+      findtime: 600
+    - name: nginx-http-auth
+      enabled: true
+      maxretry: 10
+      bantime: 3600
+      findtime: 600
+    - name: postfix
+      enabled: true
+      maxretry: 3
+      bantime: 7200
+      findtime: 300
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["fail2ban-client", "status"]

@@ -1,0 +1,91 @@
+---
+# =============================================================================
+# UPTRACE - DISTRIBUTED TRACING
+# =============================================================================
+# Beschrijving: Distributed tracing and observability platform
+# Website: https://uptrace.dev
+# =============================================================================
+
+application:
+  name: uptrace
+  version: 1.6.0
+  description: "Uptrace - Distributed tracing"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://uptrace.dev/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /logs
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 14318
+        host: 14318
+        protocol: tcp
+        public: false
+        description: "Uptrace API"
+      - container: 14319
+        host: 14319
+        protocol: tcp
+        public: false
+        description: "Uptrace UI"
+    dns:
+      - "trace.{{ domain }}"
+      - "uptrace.{{ domain }}"
+      
+  container:
+    image: uptrace/uptrace:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: UPTRACE_DSN
+      value: "http://project2_secret_token@localhost:14318/2"
+      secret: false
+    - name: UPTRACE_LISTEN
+      value: ":14318"
+      secret: false
+    - name: UPTRACE_HTTP_LISTEN
+      value: ":14319"
+      secret: false
+    - name: UPTRACE_PG_DSN
+      value: "postgres://uptrace:{{ vault_uptrace_password }}@postgres:5432/uptrace?sslmode=disable"
+      secret: true
+    - name: UPTRACE_CH_DSN
+      value: "clickhouse://clickhouse:9000/uptrace"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 14319

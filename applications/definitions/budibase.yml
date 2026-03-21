@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# ARGOCD - GITOPS VOOR KUBERNETES
+# =============================================================================
+# Beschrijving: GitOps voor Kubernetes
+# Website: https://argoproj.github.io/cd
+# =============================================================================
+
+application:
+  name: argocd
+  version: 2.9.0
+  description: "ArgoCD - GitOps voor Kubernetes"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://argo-cd.readthedocs.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /home/argocd
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "ArgoCD API"
+      - container: 8081
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "ArgoCD UI"
+    dns:
+      - "argocd.{{ domain }}"
+      
+  container:
+    image: argoproj/argocd:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: ARGOCD_SERVER_INSECURE
+      value: "true"
+      secret: false
+    - name: ARGOCD_ADMIN_PASSWORD
+      value: "{{ vault_argocd_password }}"
+      secret: true
+    - name: ARGOCD_SERVER_DOMAIN
+      value: "argocd.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /healthz
+      port: 8080

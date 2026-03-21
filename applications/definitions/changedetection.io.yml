@@ -1,0 +1,105 @@
+---
+# =============================================================================
+# APPWRITE - BACKEND-AS-A-SERVICE
+# =============================================================================
+# Beschrijving: Backend-as-a-service voor app-ontwikkelaars
+# Website: https://appwrite.io
+# =============================================================================
+
+application:
+  name: appwrite
+  version: 1.4.0
+  description: "Appwrite - Backend-as-a-service"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://appwrite.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /storage
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /appwrite/config
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Appwrite HTTP"
+      - container: 443
+        host: 8443
+        protocol: tcp
+        public: false
+        description: "Appwrite HTTPS"
+    dns:
+      - "appwrite.{{ domain }}"
+      
+  container:
+    image: appwrite/appwrite:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: _APP_OPENSSL_KEY_V1
+      value: "{{ vault_appwrite_key }}"
+      secret: true
+    - name: _APP_DOMAIN
+      value: "appwrite.{{ domain }}"
+      secret: false
+    - name: _APP_DOMAIN_TARGET
+      value: "appwrite.{{ domain }}"
+      secret: false
+    - name: _APP_REDIS_HOST
+      value: "redis"
+      secret: false
+    - name: _APP_REDIS_PORT
+      value: "6379"
+      secret: false
+    - name: _APP_DB_HOST
+      value: "mariadb"
+      secret: false
+    - name: _APP_DB_PORT
+      value: "3306"
+      secret: false
+    - name: _APP_DB_USER
+      value: "appwrite"
+      secret: false
+    - name: _APP_DB_PASS
+      value: "{{ vault_appwrite_db_password }}"
+      secret: true
+    - name: _APP_DB_SCHEMA
+      value: "appwrite"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /v1/health
+      port: 80

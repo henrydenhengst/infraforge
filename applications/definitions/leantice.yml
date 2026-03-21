@@ -1,0 +1,93 @@
+---
+# =============================================================================
+# ETHERPAD - REAL-TIME TEKSTEDITOR
+# =============================================================================
+# Beschrijving: Real-time teksteditor voor samenwerking
+# Website: https://etherpad.org
+# =============================================================================
+
+application:
+  name: etherpad
+  version: 1.9.0
+  description: "Etherpad - Real-time teksteditor"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: office-team
+    contact: office@company.local
+    slack: "#office"
+    documentation: "https://etherpad.org/doc"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/etherpad/var
+        
+  network_requirements:
+    vlans:
+      - office
+      - internal
+    ports:
+      - container: 9001
+        host: 9001
+        protocol: tcp
+        public: false
+        description: "Etherpad web interface"
+    dns:
+      - "pad.{{ domain }}"
+      - "etherpad.{{ domain }}"
+      
+  container:
+    image: etherpad/etherpad:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: ETHERPAD_TITLE
+      value: "Team Notities"
+      secret: false
+    - name: ETHERPAD_ADMIN_PASSWORD
+      value: "{{ vault_etherpad_password }}"
+      secret: true
+    - name: ETHERPAD_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: ETHERPAD_DB_USER
+      value: "etherpad"
+      secret: false
+    - name: ETHERPAD_DB_PASSWORD
+      value: "{{ vault_etherpad_db_password }}"
+      secret: true
+    - name: ETHERPAD_DB_DATABASE
+      value: "etherpad"
+      secret: false
+    - name: ETHERPAD_DB_CHARSET
+      value: "utf8mb4"
+      secret: false
+    - name: ETHERPAD_TRUST_PROXY
+      value: "true"
+      secret: false
+    - name: ETHERPAD_DEFAULT_PAD_TEXT
+      value: "Welkom bij Etherpad!\n\nDit is een gezamenlijke tekst-editor."
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 9001

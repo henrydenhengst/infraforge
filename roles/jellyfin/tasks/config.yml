@@ -1,0 +1,8 @@
+---
+- name: Configureer Jellyfin media libraries
+  ansible.builtin.template:
+    src: libraries.json.j2
+    dest: "{{ jellyfin_config_path }}/libraries.json"
+    mode: '0644'
+  when: jellyfin_libraries is defined
+  tags: [config]

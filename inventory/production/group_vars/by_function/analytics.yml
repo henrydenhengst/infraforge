@@ -1,0 +1,237 @@
+---
+# =============================================================================
+# ANALYTICS TOOLS
+# =============================================================================
+# Functie: analytics
+# Beschrijving: Tools voor web- en business analytics, statistieken en inzichten
+# =============================================================================
+
+analytics_tools:
+  # ---------------------------------------------------------------------------
+  # MARKETING ANALYTICS
+  # ---------------------------------------------------------------------------
+  - name: Matomo
+    profiel_tag: Marketing
+    functie_tag: analytics
+    beschrijving: "Privacy-vriendelijke web-statistieken (Google Analytics alternatief)"
+    categorie: web_analytics
+    docker_image: matomo:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - matomo_data:/var/www/html
+    database: mysql
+    url: "https://matomo.org"
+    
+  - name: Plausible
+    profiel_tag: Marketing
+    functie_tag: analytics
+    beschrijving: "Lichtgewicht web-analytics, GDPR compliant"
+    categorie: web_analytics
+    docker_image: plausible/analytics:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - plausible_data:/var/lib/plausible
+    database: postgresql
+    url: "https://plausible.io"
+    
+  - name: Umami
+    profiel_tag: Marketing
+    functie_tag: analytics
+    beschrijving: "Privacy-vriendelijke web-analytics, eenvoudig te installeren"
+    categorie: web_analytics
+    docker_image: ghcr.io/umami-software/umami:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - umami_data:/app/data
+    database: postgresql
+    url: "https://umami.is"
+    
+  # ---------------------------------------------------------------------------
+  # BUSINESS INTELLIGENCE
+  # ---------------------------------------------------------------------------
+  - name: Metabase
+    profiel_tag: Financiën
+    functie_tag: data
+    beschrijving: "Business Intelligence tool voor vragen en dashboards"
+    categorie: bi
+    docker_image: metabase/metabase:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - metabase_data:/metabase.db
+    database: postgresql
+    url: "https://metabase.com"
+    
+  - name: Superset
+    profiel_tag: AI-Data
+    functie_tag: data
+    beschrijving: "Moderne data exploratie en visualisatie (BI)"
+    categorie: bi
+    docker_image: apache/superset:latest
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_data:/app/superset_home
+    database: postgresql
+    url: "https://superset.apache.org"
+    
+  # ---------------------------------------------------------------------------
+  # MONITORING DASHBOARDS
+  # ---------------------------------------------------------------------------
+  - name: Grafana
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Data-visualisatie dashboards voor metrics en logs"
+    categorie: dashboards
+    docker_image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "{{ vault_grafana_password }}"
+    url: "https://grafana.com"
+    
+  - name: Kibana
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Elasticsearch visualisatie voor log data"
+    categorie: dashboards
+    docker_image: kibana:7.17.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    url: "https://www.elastic.co/kibana"
+
+  # ---------------------------------------------------------------------------
+  # PERFORMANCE MONITORING
+  # ---------------------------------------------------------------------------
+  - name: Netdata
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Real-time performance monitoring met mooie dashboards"
+    categorie: performance
+    docker_image: netdata/netdata:latest
+    ports:
+      - "19999:19999"
+    volumes:
+      - netdata_config:/etc/netdata
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    privileged: true
+    url: "https://www.netdata.cloud"
+    
+  - name: Glances
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Cross-platform systeemmonitor in terminal of web"
+    categorie: performance
+    docker_image: nicolargo/glances:latest
+    ports:
+      - "61208:61208"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      GLANCES_OPT: "-w"
+    url: "https://nicolargo.github.io/glances"
+    
+  # ---------------------------------------------------------------------------
+  # STATUS PAGES
+  # ---------------------------------------------------------------------------
+  - name: Statping
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Statuspagina voor services en websites"
+    categorie: status
+    docker_image: statping/statping:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - statping_data:/app
+    url: "https://statping.com"
+    
+  - name: Uptime-kuma
+    profiel_tag: IT
+    functie_tag: monitoring
+    beschrijving: "Self-hosted uptime monitor met notificaties"
+    categorie: status
+    docker_image: louislam/uptime-kuma:latest
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime_kuma_data:/app/data
+    url: "https://uptime.kuma.pet"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+# Deze variabelen gelden voor alle analytics tools
+
+analytics_defaults:
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Database defaults voor tools die een database nodig hebben
+  database:
+    host: "{{ groups['database_servers'][0] }}"
+    port: 5432
+    username: "{{ item.name }}"
+    password: "{{ vault_databases[item.name] }}"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+matomo_config:
+  nginx_config: |
+    server {
+      listen 80;
+      server_name matomo.{{ domain }};
+      return 301 https://$server_name$request_uri;
+    }
+    server {
+      listen 443 ssl;
+      server_name matomo.{{ domain }};
+      
+      ssl_certificate /etc/nginx/ssl/matomo.crt;
+      ssl_certificate_key /etc/nginx/ssl/matomo.key;
+      
+      location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+      }
+    }
+
+plausible_config:
+  admin_user: admin
+  admin_email: admin@{{ domain }}
+  admin_password: "{{ vault_plausible_password }}"
+  
+  clickhouse:
+    host: clickhouse
+    port: 9000
+    database: plausible
+
+grafana_config:
+  datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus:9090
+    - name: Loki
+      type: loki
+      url: http://loki:3100
+      
+  dashboards:
+    - name: "Node Exporter"
+      id: 1860
+    - name: "Docker"
+      id: 893
+    - name: "PostgreSQL"
+      id: 9628

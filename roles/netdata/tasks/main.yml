@@ -1,0 +1,32 @@
+---
+- name: '{{ ansible_os_family }} | Start Netdata container'
+  ansible.builtin.docker_container:
+    name: netdata
+    image: netdata/netdata:latest
+    restart_policy: unless-stopped
+    ports:
+      - "19999:19999"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.netdata.rule: "Host(`netdata.{{ domain }}`)"
+      traefik.http.services.netdata.loadbalancer.server.port: "19999"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Netdata actief is'
+  ansible.builtin.wait_for:
+    port: 19999
+    timeout: 60
+  tags: [validate]
+
+- name: Toon Netdata URL
+  ansible.builtin.debug:
+    msg: "Netdata: https://netdata.{{ domain }}"
+  tags: [validate]

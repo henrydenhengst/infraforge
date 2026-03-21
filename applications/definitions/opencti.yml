@@ -1,0 +1,101 @@
+---
+# =============================================================================
+# CASTOPOD - PODCAST HOSTING PLATFORM
+# =============================================================================
+# Beschrijving: Open-source hostingplatform voor podcasts met analytics
+# Website: https://castopod.org
+# =============================================================================
+
+application:
+  name: castopod
+  version: 1.4.0
+  description: "Castopod - Podcast hosting platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://docs.castopod.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+      - name: media
+        size_gb: 100
+        performance: hdd
+        backup_required: true
+        mount_path: /var/www/html/media
+        
+  network_requirements:
+    vlans:
+      - media
+      - dmz
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: true
+        description: "Castopod web interface"
+    dns:
+      - "podcast.{{ domain }}"
+      - "castopod.{{ domain }}"
+      
+  container:
+    image: castopod/castopod:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: CP_DATABASE_HOSTNAME
+      value: "mysql"
+      secret: false
+    - name: CP_DATABASE_NAME
+      value: "castopod"
+      secret: false
+    - name: CP_DATABASE_USERNAME
+      value: "castopod"
+      secret: false
+    - name: CP_DATABASE_PASSWORD
+      value: "{{ vault_castopod_password }}"
+      secret: true
+    - name: CP_BASEURL
+      value: "https://podcast.{{ domain }}"
+      secret: false
+    - name: CP_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: CP_ADMIN_USERNAME
+      value: "admin"
+      secret: false
+    - name: CP_ADMIN_PASSWORD
+      value: "{{ vault_castopod_admin_password }}"
+      secret: true
+    - name: CP_MEDIA_URL
+      value: "https://podcast.{{ domain }}/media"
+      secret: false
+    - name: CP_MEDIA_PATH
+      value: "/var/www/html/media"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

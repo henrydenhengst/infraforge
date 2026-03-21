@@ -1,0 +1,333 @@
+---
+# =============================================================================
+# REGISTRY TOOLS
+# =============================================================================
+# Functie: registry
+# Beschrijving: Tools voor container image registries en opslag
+# =============================================================================
+
+registry_tools:
+  # ---------------------------------------------------------------------------
+  # CONTAINER REGISTRIES
+  # ---------------------------------------------------------------------------
+  - name: Harbor
+    profiel_tag: IT
+    functie_tag: registry
+    beschrijving: "Enterprise container image registry met security scanning"
+    categorie: container_registry
+    docker_image: goharbor/harbor:latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "4443:4443"
+    volumes:
+      - harbor_data:/data
+      - harbor_config:/config
+      - harbor_database:/database
+      - harbor_storage:/storage
+    environment:
+      HARBOR_ADMIN_PASSWORD: "{{ vault_harbor_admin_password }}"
+      HARBOR_DB_PASSWORD: "{{ vault_harbor_db_password }}"
+      HARBOR_HOSTNAME: "registry.{{ domain }}"
+      HARBOR_PROTOCOLS: https
+      HARBOR_CERT_PATH: /data/cert
+      HARBOR_SECRET_KEY: "{{ vault_harbor_secret_key }}"
+      HARBOR_CLAIR_ENABLED: "true"
+      HARBOR_TRIVY_ENABLED: "true"
+      HARBOR_NOTARY_ENABLED: "true"
+    database: postgresql
+    url: "https://goharbor.io"
+    
+  - name: Registry
+    profiel_tag: IT
+    functie_tag: registry
+    beschrijving: "Docker container image registry"
+    categorie: container_registry
+    docker_image: registry:2
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    volumes:
+      - registry_data:/var/lib/registry
+      - registry_config:/etc/docker/registry
+      - registry_certs:/certs
+      - registry_auth:/auth
+    environment:
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HTTP_SECRET: "{{ vault_registry_secret }}"
+      REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/registry.crt
+      REGISTRY_HTTP_TLS_KEY: /certs/registry.key
+    url: "https://docs.docker.com/registry"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+registry_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Registry instellingen
+  registry:
+    hostname: "registry.{{ domain }}"
+    port: 5000
+    secure: true
+    storage_backend: filesystem
+    max_image_size: 10GB
+    
+  # Beveiliging
+  security:
+    authentication: true
+    auth_provider: htpasswd
+    ssl_enabled: true
+    ssl_cert: /certs/registry.crt
+    ssl_key: /certs/registry.key
+    rate_limit: 100/minute
+    
+  # Garbage collection
+  garbage_collection:
+    enabled: true
+    schedule: "0 2 * * *"
+    delete_untagged: true
+    delete_older_than: 30d
+    
+  # Caching
+  cache:
+    enabled: true
+    type: redis
+    redis_host: redis
+    redis_port: 6379
+    ttl: 1h
+    
+  # Proxy cache
+  proxy_cache:
+    enabled: true
+    upstreams:
+      - docker.io
+      - quay.io
+      - gcr.io
+      - ghcr.io
+    ttl: 24h
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+harbor_config:
+  # Harbor projecten
+  projects:
+    - name: library
+      public: true
+      storage_quota: 100GB
+      auto_scan: true
+      prevent_vulnerable: true
+      severity: high
+      
+    - name: production
+      public: false
+      storage_quota: 500GB
+      auto_scan: true
+      prevent_vulnerable: true
+      severity: critical
+      members:
+        - name: dev-team
+          role: developer
+        - name: ops-team
+          role: admin
+          
+    - name: staging
+      public: false
+      storage_quota: 200GB
+      auto_scan: true
+      prevent_vulnerable: false
+      
+    - name: development
+      public: true
+      storage_quota: 100GB
+      auto_scan: false
+      prevent_vulnerable: false
+      
+  # Harbor gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_harbor_admin_password }}"
+      role: system_admin
+      
+    - username: dev-user
+      email: dev@{{ domain }}
+      password: "{{ vault_harbor_dev_password }}"
+      role: developer
+      
+    - username: ci-user
+      email: ci@{{ domain }}
+      password: "{{ vault_harbor_ci_password }}"
+      role: developer
+      
+  # Harbor replicaties
+  replications:
+    - name: pull-dockerhub
+      type: pull
+      source_registry: docker.io
+      destination_project: library
+      filters:
+        - name: "nginx"
+        - name: "redis"
+        - name: "postgres"
+      schedule: "0 */6 * * *"
+      
+    - name: push-backup
+      type: push
+      source_project: production
+      destination_registry: backup-registry
+      schedule: "0 2 * * *"
+      override: false
+      
+  # Harbor scanners
+  scanners:
+    - name: trivy
+      vendor: aqua
+      version: latest
+      url: http://trivy:8080
+      auth: false
+      
+    - name: clair
+      vendor: coreos
+      version: latest
+      url: http://clair:6060
+      auth: false
+      
+  # Harbor webhooks
+  webhooks:
+    - name: slack-notify
+      targets:
+        - type: slack
+          address: "{{ vault_slack_webhook }}"
+      events:
+        - push_artifact
+        - scan_completed
+        - replication_completed
+        
+  # Harbor quotas
+  quotas:
+    - project: library
+      storage: 100GB
+    - project: production
+      storage: 500GB
+    - project: staging
+      storage: 200GB
+      
+  # Harbor retention policies
+  retention_policies:
+    - name: cleanup-old-tags
+      project: development
+      rules:
+        - tag: "latest"
+          keep: always
+        - tag: ".*"
+          keep_last: 10
+          older_than: 30d
+          
+    - name: security-hold
+      project: production
+      rules:
+        - tag: ".*"
+          keep: always
+          unless_scanned: false
+          unless_vulnerable: critical
+
+registry_config:
+  # Registry configuratie
+  config:
+    version: 0.1
+    log:
+      level: info
+      fields:
+        service: registry
+        environment: production
+        
+    storage:
+      filesystem:
+        rootdirectory: /var/lib/registry
+      delete:
+        enabled: true
+      cache:
+        blobdescriptor: redis
+      maintenance:
+        uploadpurging:
+          enabled: true
+          age: 168h
+          interval: 24h
+          
+    http:
+      addr: :5000
+      host: https://registry.{{ domain }}
+      secret: "{{ vault_registry_secret }}"
+      debug:
+        addr: :5001
+        prometheus:
+          enabled: true
+          path: /metrics
+          
+    auth:
+      htpasswd:
+        realm: Registry Realm
+        path: /auth/htpasswd
+        
+    redis:
+      addr: redis:6379
+      password: "{{ vault_redis_password }}"
+      db: 0
+      dialtimeout: 10ms
+      readtimeout: 10ms
+      writetimeout: 10ms
+      
+    health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3
+        
+    validation:
+      disabled: false
+      manifests:
+        urls:
+          allow:
+            - ^https?://
+            
+    proxy:
+      remoteurl: https://registry-1.docker.io
+      username: "{{ vault_dockerhub_username }}"
+      password: "{{ vault_dockerhub_password }}"
+      
+  # Registry gebruikers (htpasswd)
+  users:
+    - username: admin
+      password: "{{ vault_registry_admin_password }}"
+      role: admin
+    - username: deploy
+      password: "{{ vault_registry_deploy_password }}"
+      role: write
+    - username: readonly
+      password: "{{ vault_registry_readonly_password }}"
+      role: read
+      
+  # Registry garbage collection
+  garbage_collection:
+    schedule: "0 2 * * *"
+    delete_untagged: true
+    dry_run: false
+    
+  # Registry monitoring
+  monitoring:
+    metrics:
+      enabled: true
+      path: /metrics
+      port: 5001
+    health:
+      enabled: true
+      path: /health

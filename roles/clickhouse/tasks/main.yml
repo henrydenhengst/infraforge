@@ -1,0 +1,40 @@
+---
+- name: '{{ ansible_os_family }} | Installeer ClickHouse'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Configureer ClickHouse'
+  ansible.builtin.template:
+    src: config.xml.j2
+    dest: /etc/clickhouse-server/config.xml
+    mode: '0644'
+  notify: restart clickhouse
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Configureer gebruikers'
+  ansible.builtin.template:
+    src: users.xml.j2
+    dest: /etc/clickhouse-server/users.xml
+    mode: '0644'
+  notify: restart clickhouse
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Start en enable ClickHouse'
+  ansible.builtin.service:
+    name: clickhouse-server
+    state: started
+    enabled: yes
+  tags: [service]
+
+- name: '{{ ansible_os_family }} | Maak databases aan'
+  ansible.builtin.shell: |
+    clickhouse-client --query "CREATE DATABASE IF NOT EXISTS {{ item }}"
+  loop: "{{ clickhouse_databases }}"
+  when: clickhouse_databases is defined
+  tags: [databases]
+
+- name: '{{ ansible_os_family }} | Valideer ClickHouse configuratie'
+  ansible.builtin.shell: clickhouse-client --query "SELECT version()"
+  register: clickhouse_test
+  changed_when: false
+  tags: [validate]

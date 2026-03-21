@@ -1,0 +1,5 @@
+---
+- name: restart rabbitmq
+  ansible.builtin.docker_container:
+    name: rabbitmq
+    restart: yes

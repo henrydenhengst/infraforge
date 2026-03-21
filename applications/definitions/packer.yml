@@ -1,0 +1,69 @@
+---
+# =============================================================================
+# PACKER - MACHINE IMAGE BUILDER
+# =============================================================================
+# Beschrijving: Machine image builder for multiple platforms
+# Website: https://www.packer.io
+# =============================================================================
+
+application:
+  name: packer
+  version: 1.10.0
+  description: "Packer - Machine image builder"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://www.packer.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: workspace
+        size_gb: 20
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/packer
+        
+  network_requirements:
+    vlans:
+      - devops
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: hashicorp/packer:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  command: ["tail", "-f", "/dev/null"]
+  
+  environment_variables:
+    - name: PACKER_CACHE_DIR
+      value: "/opt/packer/cache"
+      secret: false
+    - name: PACKER_LOG
+      value: "1"
+      secret: false
+      
+  plugins:
+    - amazon
+    - docker
+    - googlecompute
+    - azure
+    - vmware
+    - virtualbox

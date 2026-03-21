@@ -1,0 +1,130 @@
+---
+# =============================================================================
+# OLLAMA - LLM SERVER
+# =============================================================================
+# Beschrijving: Lokale runner voor grote taalmodellen (Llama 3, Mistral, Phi)
+# Website: https://ollama.ai
+# =============================================================================
+
+application:
+  name: ollama
+  version: 0.1.30
+  description: "Ollama - Lokale LLM server voor grote taalmodellen"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ai-team
+    contact: ai@company.local
+    slack: "#ai"
+    documentation: "https://github.com/ollama/ollama"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      gpu_required: true
+      gpu_memory_gb: 8
+      
+    storage:
+      - name: models
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /root/.ollama
+        description: "Gedownloade LLM modellen"
+        
+  network_requirements:
+    vlans:
+      - ai
+      - internal
+    ports:
+      - container: 11434
+        host: 11434
+        protocol: tcp
+        public: false
+        description: "Ollama API"
+    dns:
+      - "ollama.ai.{{ domain }}"
+      
+  container:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    gpu_support: true
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility]
+              
+  environment_variables:
+    - name: OLLAMA_HOST
+      value: "0.0.0.0"
+      secret: false
+    - name: OLLAMA_ORIGINS
+      value: "*"
+      secret: false
+    - name: OLLAMA_MODELS
+      value: "/root/.ollama/models"
+      secret: false
+    - name: OLLAMA_KEEP_ALIVE
+      value: "5m"
+      secret: false
+    - name: OLLAMA_NUM_PARALLEL
+      value: "1"
+      secret: false
+    - name: OLLAMA_MAX_LOADED_MODELS
+      value: "1"
+      secret: false
+      
+  models:
+    - name: llama3
+      description: "Meta Llama 3 8B"
+      parameters: 8B
+      context_length: 8192
+      auto_pull: true
+    - name: mistral
+      description: "Mistral 7B"
+      parameters: 7B
+      context_length: 8192
+      auto_pull: true
+    - name: phi
+      description: "Microsoft Phi-2"
+      parameters: 2.7B
+      context_length: 2048
+      auto_pull: true
+    - name: codellama
+      description: "Code Llama 7B"
+      parameters: 7B
+      context_length: 16384
+      auto_pull: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/tags
+      port: 11434
+      initial_delay: 30
+      period: 30
+      
+  monitoring:
+    metrics:
+      enabled: true
+      port: 11434
+      path: /metrics
+    alerts:
+      - name: ollama_down
+        condition: up{app="ollama"} == 0
+        severity: critical

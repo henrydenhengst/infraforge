@@ -1,0 +1,368 @@
+---
+# =============================================================================
+# POS TOOLS (POINT OF SALE)
+# =============================================================================
+# Functie: pos
+# Beschrijving: Tools voor kassasystemen, verkooppunten en retail
+# =============================================================================
+
+pos_tools:
+  # ---------------------------------------------------------------------------
+  # KASSASYSTEMEN
+  # ---------------------------------------------------------------------------
+  - name: OpenSourcePOS
+    profiel_tag: Retail
+    functie_tag: pos
+    beschrijving: "Web-gebaseerd kassasysteem met barcode ondersteuning"
+    categorie: pos_system
+    docker_image: opensourcepos/opensourcepos:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - opensourcepos_data:/var/www/html
+      - opensourcepos_config:/var/www/html/application/config
+      - opensourcepos_uploads:/var/www/html/uploads
+    environment:
+      OSPOS_DB_HOST: mysql
+      OSPOS_DB_PORT: 3306
+      OSPOS_DB_NAME: opensourcepos
+      OSPOS_DB_USER: opensourcepos
+      OSPOS_DB_PASSWORD: "{{ vault_opensourcepos_password }}"
+      OSPOS_ENCRYPTION_KEY: "{{ vault_opensourcepos_encryption_key }}"
+      OSPOS_TIMEZONE: Europe/Amsterdam
+      OSPOS_CURRENCY: EUR
+      OSPOS_CURRENCY_SYMBOL: €
+      OSPOS_LANGUAGE: nl
+      OSPOS_COMPANY_NAME: "{{ company_name }}"
+      OSPOS_COMPANY_ADDRESS: "{{ company_address }}"
+      OSPOS_COMPANY_PHONE: "{{ company_phone }}"
+      OSPOS_COMPANY_EMAIL: info@{{ domain }}
+    database: mysql
+    url: "https://opensourcepos.org"
+    
+  # ---------------------------------------------------------------------------
+  # POS INTEGRATIES
+  # ---------------------------------------------------------------------------
+  - name: Dolibarr_POS
+    profiel_tag: Retail
+    functie_tag: pos
+    beschrijving: "Kassa-interface gekoppeld aan Dolibarr ERP"
+    categorie: erp_pos
+    docker_image: dolibarr/dolibarr:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - dolibarr_pos_documents:/var/www/documents
+      - dolibarr_pos_scripts:/var/www/scripts
+    environment:
+      DOLI_DB_HOST: mysql
+      DOLI_DB_NAME: dolibarr_pos
+      DOLI_DB_USER: dolibarr_pos
+      DOLI_DB_PASSWORD: "{{ vault_dolibarr_pos_password }}"
+      DOLI_ADMIN_LOGIN: admin
+      DOLI_ADMIN_PASSWORD: "{{ vault_dolibarr_pos_admin_password }}"
+      DOLI_URL_ROOT: "https://pos.{{ domain }}"
+      PHP_INI_DATE_TIMEZONE: Europe/Amsterdam
+      DOLI_MODULES: "pos,facture,propal,commande,stock,produit"
+      DOLI_POS_ENABLE: "1"
+      DOLI_POS_DEFAULT_DISCOUNT: 0
+      DOLI_POS_DEFAULT_VAT: 21
+    database: mysql
+    url: "https://www.dolibarr.org"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+pos_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Winkel instellingen
+  store:
+    name: "{{ company_name }}"
+    address: "{{ company_address }}"
+    phone: "{{ company_phone }}"
+    email: info@{{ domain }}
+    vat_number: "{{ company_vat }}"
+    kvk_number: "{{ company_kvk }}"
+    
+  # POS instellingen
+  pos:
+    currency: EUR
+    currency_symbol: €
+    language: nl
+    timezone: Europe/Amsterdam
+    date_format: d-m-Y
+    time_format: H:i
+    receipt_header: "{{ company_name }}"
+    receipt_footer: "Bedankt voor uw aankoop!"
+    
+  # BTW instellingen
+  vat:
+    rates:
+      - name: Hoog
+        rate: 21
+        default: true
+      - name: Laag
+        rate: 9
+      - name: Nultarief
+        rate: 0
+    include_in_price: true
+    
+  # Kassa instellingen
+  cash_register:
+    default_cash_float: 100.00
+    max_cash_in_drawer: 500.00
+    auto_safe_drop: true
+    safe_drop_threshold: 300.00
+    
+  # Betalingsmethoden
+  payment_methods:
+    - name: Contant
+      type: cash
+      enabled: true
+      change_possible: true
+    - name: PIN
+      type: card
+      enabled: true
+      change_possible: false
+      fee_percentage: 0.25
+    - name: Creditcard
+      type: card
+      enabled: true
+      change_possible: false
+      fee_percentage: 1.5
+    - name: Ideal
+      type: online
+      enabled: true
+      change_possible: false
+    - name: Bancontact
+      type: online
+      enabled: true
+      change_possible: false
+      
+  # Kortingen
+  discounts:
+    - name: Staffelkorting
+      type: percentage
+      value: 10
+      min_quantity: 5
+    - name: Klantenkaart
+      type: percentage
+      value: 5
+      requires_membership: true
+    - name: Aanbieding
+      type: fixed
+      value: 2.50
+      
+  # Printers
+  printers:
+    - name: Bonnenprinter
+      type: thermal
+      interface: usb
+      paper_width: 80
+      characters_per_line: 42
+    - name: Kassalade
+      type: cash_drawer
+      interface: serial
+      port: /dev/ttyUSB0
+      
+  # Barcodes
+  barcodes:
+    enabled: true
+    symbology: CODE128
+    width: 300
+    height: 75
+    text_position: bottom
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+opensourcepos_config:
+  # OpenSourcePOS modules
+  modules:
+    - sales
+    - returns
+    - customers
+    - suppliers
+    - inventory
+    - reports
+    - receipts
+    - gift_cards
+    - layaway
+    - suspended_sales
+    
+  # OpenSourcePOS gebruikers
+  users:
+    - username: admin
+      password: "{{ vault_opensourcepos_admin_password }}"
+      role: admin
+      employee:
+        first_name: Admin
+        last_name: User
+        email: admin@{{ domain }}
+        phone: "{{ company_phone }}"
+    - username: cashier1
+      password: "{{ vault_opensourcepos_cashier1_password }}"
+      role: cashier
+      employee:
+        first_name: Jan
+        last_name: Jansen
+        email: jan@{{ domain }}
+    - username: cashier2
+      password: "{{ vault_opensourcepos_cashier2_password }}"
+      role: cashier
+      employee:
+        first_name: Piet
+        last_name: Pietersen
+        email: piet@{{ domain }}
+        
+  # OpenSourcePOS rollen
+  roles:
+    - name: admin
+      permissions:
+        - all
+    - name: manager
+      permissions:
+        - sales: view,create,edit
+        - returns: view,create,edit
+        - customers: view,edit
+        - inventory: view,edit
+        - reports: view
+    - name: cashier
+      permissions:
+        - sales: view,create
+        - returns: view,create
+        - customers: view
+        - inventory: view
+        
+  # OpenSourcePOS productcategorieën
+  categories:
+    - name: Dranken
+      description: "Frisdrank, bier, wijn"
+    - name: Voeding
+      description: "Eten en snacks"
+    - name: Kleding
+      description: "Kleding en accessoires"
+    - name: Elektronica
+      description: "Elektronische apparaten"
+      
+  # OpenSourcePOS producten
+  products:
+    - name: Cola
+      category: Dranken
+      price: 2.50
+      cost: 1.00
+      tax: 21
+      barcode: "8711234567890"
+      quantity: 100
+      reorder_level: 20
+    - name: Bier
+      category: Dranken
+      price: 3.00
+      cost: 1.20
+      tax: 21
+      barcode: "8711234567891"
+      quantity: 150
+      reorder_level: 30
+    - name: Chips
+      category: Voeding
+      price: 2.00
+      cost: 0.80
+      tax: 9
+      barcode: "8711234567892"
+      quantity: 80
+      reorder_level: 15
+      
+  # OpenSourcePOS klanten
+  customers:
+    - first_name: Jan
+      last_name: Jansen
+      email: jan@example.com
+      phone: "0612345678"
+      address: "Straat 1, Amsterdam"
+      discount: 5
+      tax_exempt: false
+    - first_name: Marie
+      last_name: De Vries
+      email: marie@example.com
+      phone: "0687654321"
+      address: "Laan 2, Rotterdam"
+      discount: 0
+      tax_exempt: false
+      
+  # OpenSourcePOS leveranciers
+  suppliers:
+    - name: Groothandel BV
+      contact: Piet Pietersen
+      phone: "020-1234567"
+      email: info@groothandel.nl
+      address: "Handelsweg 10, Amsterdam"
+    - name: Drankencentrale
+      contact: Klaas de Vries
+      phone: "010-7654321"
+      email: info@drankencentrale.nl
+      address: "Drankenlaan 5, Rotterdam"
+      
+  # OpenSourcePOS rapporten
+  reports:
+    - name: dagverkoop
+      type: sales
+      period: daily
+      format: pdf
+    - name: weekverkoop
+      type: sales
+      period: weekly
+      format: pdf
+    - name: maandverkoop
+      type: sales
+      period: monthly
+      format: pdf
+    - name: voorraad
+      type: inventory
+      period: weekly
+      format: excel
+
+dolibarr_pos_config:
+  # Dolibarr POS modules
+  modules:
+    - pos
+    - facture
+    - propal
+    - commande
+    - stock
+    - produit
+    - societe
+    - contact
+    - banque
+    - compte
+    
+  # Dolibarr POS instellingen
+  pos_settings:
+    terminal_name: "Kassa 1"
+    receipt_printer: "Bonnenprinter"
+    cash_drawer: "Kassalade"
+    barcode_scanner: "/dev/ttyUSB0"
+    customer_display: "/dev/ttyUSB1"
+    
+  # Dolibarr POS producten
+  pos_products:
+    - ref: "COLA-001"
+      label: "Cola 33cl"
+      price: 2.50
+      vat_rate: 21
+      stock: 100
+    - ref: "BIER-001"
+      label: "Bier 33cl"
+      price: 3.00
+      vat_rate: 21
+      stock: 150
+    - ref: "CHIPS-001"
+      label: "Chips Naturel"
+      price: 2.00
+      vat_rate: 9
+      stock: 80

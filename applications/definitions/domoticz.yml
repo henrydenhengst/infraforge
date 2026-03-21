@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# CLAMAV - ANTIVIRUS SCANNER
+# =============================================================================
+# Beschrijving: Open-source antivirus scanner voor bestanden en e-mail
+# Website: https://www.clamav.net
+# =============================================================================
+
+application:
+  name: clamav
+  version: 1.0.0
+  description: "ClamAV - Open-source antivirus scanner"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://docs.clamav.net"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/clamav
+      - name: scans
+        size_gb: 100
+        performance: hdd
+        backup_required: false
+        mount_path: /scans
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 3310
+        host: 3310
+        protocol: tcp
+        public: false
+        description: "ClamAV daemon"
+    dns:
+      - "clamav.{{ domain }}"
+      
+  container:
+    image: clamav/clamav:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: CLAMAV_SIGNATURES_UPDATE
+      value: "hourly"
+      secret: false
+    - name: CLAMAV_MAX_FILE_SIZE
+      value: "100M"
+      secret: false
+    - name: CLAMAV_MAX_SCAN_SIZE
+      value: "500M"
+      secret: false
+    - name: CLAMAV_STREAM_MAX_LENGTH
+      value: "100M"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: tcp
+      port: 3310

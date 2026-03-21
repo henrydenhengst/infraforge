@@ -1,0 +1,29 @@
+# {{ ansible_managed }}
+# Alertmanager configuration
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+
+receivers:
+  - name: 'default'
+    webhook_configs:
+      - url: '{{ alertmanager_slack_webhook | default("") }}'
+        send_resolved: true
+
+  - name: 'slack'
+    slack_configs:
+      - api_url: '{{ alertmanager_slack_webhook }}'
+        channel: '#alerts'
+        title: '{{ "{{ .GroupLabels.alertname }}" }}'
+        text: '{{ "{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}" }}'
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']

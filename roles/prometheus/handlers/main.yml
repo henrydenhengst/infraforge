@@ -1,0 +1,9 @@
+---
+- name: restart prometheus
+  ansible.builtin.systemd:
+    name: prometheus
+    state: restarted
+
+- name: reload prometheus
+  ansible.builtin.shell: kill -HUP $(pidof prometheus)
+  listen: reload prometheus

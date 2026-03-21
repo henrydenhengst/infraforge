@@ -1,0 +1,22 @@
+---
+- name: '{{ ansible_os_family }} | Installeer OpenTofu'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Valideer OpenTofu installatie'
+  ansible.builtin.shell: tofu version
+  register: tofu_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon OpenTofu versie
+  ansible.builtin.debug:
+    var: tofu_test.stdout
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Maak OpenTofu workspace directory'
+  ansible.builtin.file:
+    path: "{{ opentofu_workspace }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]

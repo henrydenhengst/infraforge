@@ -1,0 +1,72 @@
+---
+# =============================================================================
+# TRILIUM - NOTITIEBEHEER
+# =============================================================================
+# Beschrijving: Notitiebeheer met hiërarchische structuur
+# Website: https://github.com/zadam/trilium
+# =============================================================================
+
+application:
+  name: trilium
+  version: 0.60.0
+  description: "Trilium - Notitiebeheer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: office-team
+    contact: office@company.local
+    slack: "#office"
+    documentation: "https://github.com/zadam/trilium"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /home/node/trilium-data
+        
+  network_requirements:
+    vlans:
+      - office
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Trilium web interface"
+    dns:
+      - "notes.{{ domain }}"
+      - "trilium.{{ domain }}"
+      
+  container:
+    image: zadam/trilium:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: TRILIUM_PORT
+      value: "8080"
+      secret: false
+    - name: TRILIUM_TRUST_PROXY
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

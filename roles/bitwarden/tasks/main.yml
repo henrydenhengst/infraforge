@@ -1,0 +1,65 @@
+---
+- name: '{{ ansible_os_family }} | Maak Bitwarden directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ bitwarden_data_path }}"
+    - "{{ bitwarden_data_path }}/data"
+    - "{{ bitwarden_data_path }}/logs"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Installeer Bitwarden via Docker'
+  ansible.builtin.include_tasks: docker.yml
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Start Bitwarden container'
+  ansible.builtin.docker_container:
+    name: bitwarden
+    image: vaultwarden/server:latest
+    restart_policy: unless-stopped
+    ports:
+      - "8080:80"
+      - "3012:3012"
+    volumes:
+      - "{{ bitwarden_data_path }}:/data"
+    env:
+      ADMIN_TOKEN: "{{ vault_bitwarden_admin_token }}"
+      SIGNUPS_ALLOWED: "{{ bitwarden_signups_allowed | lower }}"
+      INVITATIONS_ALLOWED: "{{ bitwarden_invitations_allowed | lower }}"
+      DOMAIN: "https://bitwarden.{{ domain }}"
+      SMTP_HOST: "smtp.{{ domain }}"
+      SMTP_PORT: "587"
+      SMTP_SSL: "true"
+      SMTP_USERNAME: "bitwarden@{{ domain }}"
+      SMTP_PASSWORD: "{{ vault_smtp_password }}"
+      SMTP_FROM: "bitwarden@{{ domain }}"
+      WEBSOCKET_ENABLED: "true"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.bitwarden.rule: "Host(`bitwarden.{{ domain }}`)"
+      traefik.http.services.bitwarden.loadbalancer.server.port: "80"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Bitwarden actief is'
+  ansible.builtin.wait_for:
+    port: 8080
+    timeout: 60
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Valideer Bitwarden installatie'
+  ansible.builtin.uri:
+    url: "https://bitwarden.{{ domain }}/alive"
+    status_code: 200
+  register: bw_test
+  until: bw_test.status == 200
+  retries: 30
+  delay: 5
+  ignore_errors: yes
+  tags: [validate]
+
+- name: Toon Bitwarden admin URL
+  ansible.builtin.debug:
+    msg: "Bitwarden admin: https://bitwarden.{{ domain }}/admin"
+  tags: [validate]

@@ -1,0 +1,100 @@
+---
+# =============================================================================
+# TRANSMISSION - LICHTGEWICHT TORRENT-CLIËNT
+# =============================================================================
+# Beschrijving: Lichtgewicht torrent-cliënt
+# Website: https://transmissionbt.com
+# =============================================================================
+
+application:
+  name: transmission
+  version: 4.0.0
+  description: "Transmission - Lichtgewicht torrent-cliënt"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://transmissionbt.com/help"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: downloads
+        size_gb: 500
+        performance: hdd
+        backup_required: false
+        mount_path: /downloads
+      - name: watch
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /watch
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 9091
+        host: 9091
+        protocol: tcp
+        public: false
+        description: "Transmission web interface"
+      - container: 51413
+        host: 51413
+        protocol: tcp
+        public: true
+        description: "Torrent peer port"
+      - container: 51413
+        host: 51413
+        protocol: udp
+        public: true
+        description: "Torrent peer port (UDP)"
+    dns:
+      - "transmission.{{ domain }}"
+      
+  container:
+    image: linuxserver/transmission:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: USER
+      value: "admin"
+      secret: false
+    - name: PASS
+      value: "{{ vault_transmission_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /transmission/web/
+      port: 9091

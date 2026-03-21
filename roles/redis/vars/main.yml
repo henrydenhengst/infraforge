@@ -1,0 +1,21 @@
+---
+redis_packages:
+  Debian: [redis-server, redis-tools]
+  RedHat: [redis, redis-tools]
+  Suse: [redis, redis-tools]
+  Archlinux: [redis, redis-tools]
+  Alpine: [redis, redis-tools]
+
+redis_service:
+  Debian: redis-server
+  RedHat: redis
+  Suse: redis
+  Archlinux: redis
+  Alpine: redis
+
+redis_config_path:
+  Debian: /etc/redis
+  RedHat: /etc
+  Suse: /etc
+  Archlinux: /etc/redis
+  Alpine: /etc

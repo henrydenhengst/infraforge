@@ -1,0 +1,16 @@
+[Unit]
+Description=Promtail
+Documentation=https://grafana.com/docs/loki/
+After=network.target
+
+[Service]
+Type=simple
+User={{ monitoring_user }}
+Group={{ monitoring_group }}
+ExecStart=/usr/local/bin/promtail -config.file=/etc/loki/promtail.yml
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

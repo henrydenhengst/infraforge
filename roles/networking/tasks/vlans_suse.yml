@@ -1,0 +1,8 @@
+---
+- name: Configureer VLAN interfaces
+  ansible.builtin.template:
+    src: vlan_suse.j2
+    dest: "/etc/sysconfig/network/ifcfg-{{ item.parent }}.{{ item.vlan_id }}"
+    mode: '0644'
+  loop: "{{ network_vlans }}"
+  notify: restart networking

@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# REDIS COMMANDER - REDIS MANAGEMENT
+# =============================================================================
+# Beschrijving: Web-based Redis management tool
+# Website: https://github.com/joeferner/redis-commander
+# =============================================================================
+
+application:
+  name: redis-commander
+  version: 0.8.0
+  description: "Redis Commander - Redis management tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: dba-team
+    contact: dba@company.local
+    slack: "#database"
+    documentation: "https://github.com/joeferner/redis-commander"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - database
+      - internal
+    ports:
+      - container: 8081
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Redis Commander UI"
+    dns:
+      - "redis-admin.{{ domain }}"
+      - "redis-commander.{{ domain }}"
+      
+  container:
+    image: rediscommander/redis-commander:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: REDIS_HOSTS
+      value: "redis:6379"
+      secret: false
+    - name: REDIS_PASSWORD
+      value: "{{ vault_redis_password }}"
+      secret: true
+    - name: HTTP_USER
+      value: "admin"
+      secret: false
+    - name: HTTP_PASSWORD
+      value: "{{ vault_redis_commander_password }}"
+      secret: true
+    - name: PORT
+      value: "8081"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8081

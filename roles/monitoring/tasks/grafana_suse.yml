@@ -1,0 +1,11 @@
+---
+- name: Add Grafana repository
+  ansible.builtin.zypper_repository:
+    name: grafana
+    repo: 'https://packages.grafana.com/oss/suse/'
+    auto_import_keys: yes
+
+- name: Install Grafana
+  ansible.builtin.zypper:
+    name: grafana
+    state: present

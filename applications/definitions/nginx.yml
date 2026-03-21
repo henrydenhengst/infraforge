@@ -1,0 +1,481 @@
+---
+# =============================================================================
+# NGINX - WEBSERVER EN REVERSE PROXY
+# =============================================================================
+# Beschrijving: High-performance HTTP-server en reverse proxy
+# Website: https://nginx.org
+# =============================================================================
+
+application:
+  name: nginx
+  version: 1.25.3
+  description: "Nginx - High-performance webserver en reverse proxy"
+  environment: "{{ environment | default('production') }}"
+  
+  # ===========================================================================
+  # EIGENAAR & CONTACT
+  # ===========================================================================
+  owner:
+    team: web-team
+    contact: web@company.local
+    slack: "#web"
+    documentation: "https://nginx.org/en/docs/"
+    
+  # ===========================================================================
+  # HARDWARE VEREISTEN
+  # ===========================================================================
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      cpu_architecture: any
+      gpu_required: false
+      
+    storage:
+      - name: html
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /usr/share/nginx/html
+        description: "Statische website bestanden"
+        
+      - name: cache
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/cache/nginx
+        description: "Cache voor geproxyde content"
+        
+      - name: logs
+        size_gb: 5
+        performance: any
+        backup_required: false
+        mount_path: /var/log/nginx
+        description: "Access en error logs"
+        
+      - name: certs
+        size_gb: 1
+        performance: any
+        backup_required: true
+        mount_path: /etc/nginx/ssl
+        description: "SSL certificaten"
+        
+  # ===========================================================================
+  # NETWERK VEREISTEN
+  # ===========================================================================
+  network_requirements:
+    vlans:
+      - dmz
+      - internal
+      
+    ports:
+      - container: 80
+        host: 80
+        protocol: tcp
+        public: true
+        description: "HTTP (wordt vaak omgeleid naar HTTPS)"
+        
+      - container: 443
+        host: 443
+        protocol: tcp
+        public: true
+        description: "HTTPS"
+        
+    dns:
+      - "{{ app_domain }}"
+      - "www.{{ app_domain }}"
+      - "api.{{ app_domain }}"
+      
+    load_balancer:
+      enabled: true
+      method: round_robin
+      ssl_termination: true
+      
+  # ===========================================================================
+  # CONTAINER CONFIGURATIE
+  # ===========================================================================
+  container:
+    image: nginx:1.25.3-alpine
+    replicas: 3
+    restart: unless-stopped
+    
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+    security_context:
+      run_as_user: 101
+      run_as_group: 101
+      read_only_root_filesystem: true
+      allow_privilege_escalation: false
+      capabilities:
+        drop:
+          - ALL
+        add:
+          - NET_BIND_SERVICE
+          
+  # ===========================================================================
+  # OMGEVINGSVARIABELEN
+  # ===========================================================================
+  environment_variables:
+    - name: NGINX_HOST
+      value: "{{ app_domain }}"
+      secret: false
+      description: "Server hostname"
+      
+    - name: NGINX_PORT
+      value: "80"
+      secret: false
+      description: "HTTP poort"
+      
+    - name: NGINX_HTTPS_PORT
+      value: "443"
+      secret: false
+      description: "HTTPS poort"
+      
+    - name: NGINX_WORKER_PROCESSES
+      value: "auto"
+      secret: false
+      description: "Aantal worker processes"
+      
+    - name: NGINX_WORKER_CONNECTIONS
+      value: "1024"
+      secret: false
+      description: "Max verbindingen per worker"
+      
+    - name: CLIENT_MAX_BODY_SIZE
+      value: "100M"
+      secret: false
+      description: "Maximale upload grootte"
+      
+  # ===========================================================================
+  # CONFIGURATIEBESTANDEN
+  # ===========================================================================
+  config_files:
+    - path: /etc/nginx/nginx.conf
+      template: nginx/nginx.conf.j2
+      mode: "0644"
+      owner: "root:root"
+      
+    - path: /etc/nginx/conf.d/default.conf
+      template: nginx/default.conf.j2
+      mode: "0644"
+      owner: "root:root"
+      
+    - path: /etc/nginx/conf.d/ssl.conf
+      template: nginx/ssl.conf.j2
+      mode: "0644"
+      owner: "root:root"
+      
+    - path: /etc/nginx/conf.d/security.conf
+      template: nginx/security.conf.j2
+      mode: "0644"
+      owner: "root:root"
+      
+    - path: /etc/nginx/conf.d/gzip.conf
+      template: nginx/gzip.conf.j2
+      mode: "0644"
+      owner: "root:root"
+      
+  # ===========================================================================
+  # SSL CERTIFICATEN
+  # ===========================================================================
+  ssl:
+    enabled: true
+    provider: letsencrypt
+    email: admin@{{ domain }}
+    domains:
+      - "{{ app_domain }}"
+      - "www.{{ app_domain }}"
+      - "api.{{ app_domain }}"
+    auto_renew: true
+    renewal_days: 30
+    cert_path: /etc/nginx/ssl
+    dhparam_bits: 2048
+    
+  # ===========================================================================
+  # UPSTREAM SERVERS (BACKENDS)
+  # ===========================================================================
+  upstreams:
+    - name: backend
+      servers:
+        - backend1:8080 weight=3
+        - backend2:8080 weight=2
+        - backend3:8080 backup
+      keepalive: 32
+      
+    - name: api
+      servers:
+        - api1:3000
+        - api2:3000
+      keepalive: 16
+      
+    - name: php
+      servers:
+        - php-fpm:9000
+      keepalive: 32
+      
+  # ===========================================================================
+  # VIRTUAL HOSTS (SERVER BLOCKS)
+  # ===========================================================================
+  vhosts:
+    - name: default
+      listen: 80
+      server_name: _
+      return: 301 https://$host$request_uri
+      
+    - name: main
+      listen: 443 ssl http2
+      server_name: "{{ app_domain }} www.{{ app_domain }}"
+      
+      ssl_certificate: /etc/nginx/ssl/{{ app_domain }}/fullchain.pem
+      ssl_certificate_key: /etc/nginx/ssl/{{ app_domain }}/privkey.pem
+      
+      root: /usr/share/nginx/html
+      index: index.html index.htm
+      
+      locations:
+        - path: /
+          try_files: $uri $uri/ =404
+          
+        - path: /api/
+          proxy_pass: http://api
+          proxy_headers:
+            - Host $host
+            - X-Real-IP $remote_addr
+            - X-Forwarded-For $proxy_add_x_forwarded_for
+            - X-Forwarded-Proto $scheme
+            
+        - path: /backend/
+          proxy_pass: http://backend
+          proxy_headers:
+            - Host $host
+            - X-Real-IP $remote_addr
+            
+        - path: /status
+          stub_status: on
+          access_log: off
+          allow: 127.0.0.1
+          deny: all
+          
+      access_log: /var/log/nginx/{{ app_domain }}_access.log
+      error_log: /var/log/nginx/{{ app_domain }}_error.log
+      
+    - name: api
+      listen: 443 ssl http2
+      server_name: "api.{{ app_domain }}"
+      
+      ssl_certificate: /etc/nginx/ssl/api.{{ app_domain }}/fullchain.pem
+      ssl_certificate_key: /etc/nginx/ssl/api.{{ app_domain }}/privkey.pem
+      
+      locations:
+        - path: /
+          proxy_pass: http://api
+          proxy_headers:
+            - Host $host
+            - X-Real-IP $remote_addr
+            - X-Forwarded-For $proxy_add_x_forwarded_for
+            - X-Forwarded-Proto $scheme
+            
+      access_log: /var/log/nginx/api_{{ app_domain }}_access.log
+      error_log: /var/log/nginx/api_{{ app_domain }}_error.log
+      
+  # ===========================================================================
+  # LOCATIE CONFIGURATIES
+  # ===========================================================================
+  locations:
+    - path: /health
+      return: 200 "healthy\n"
+      add_header: Content-Type text/plain
+      access_log: off
+      
+    - path: /robots.txt
+      return: 200 "User-agent: *\nDisallow:"
+      add_header: Content-Type text/plain
+      
+    - path: ~ \.php$
+      fastcgi_pass: php
+      fastcgi_index: index.php
+      fastcgi_param: SCRIPT_FILENAME $document_root$fastcgi_script_name
+      include: fastcgi_params
+      
+  # ===========================================================================
+  # HEALTH CHECKS
+  # ===========================================================================
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 80
+      initial_delay: 10
+      period: 10
+      timeout: 5
+      retries: 3
+      
+    readiness:
+      type: http
+      path: /health
+      port: 80
+      initial_delay: 5
+      period: 5
+      timeout: 3
+      retries: 5
+      
+  # ===========================================================================
+  # MONITORING
+  # ===========================================================================
+  monitoring:
+    metrics:
+      enabled: true
+      exporter: nginx_exporter
+      port: 9113
+      path: /metrics
+      scrape_interval: 30s
+      
+    logs:
+      enabled: true
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+      format: combined
+      locations:
+        - /var/log/nginx/access.log
+        - /var/log/nginx/error.log
+        
+    alerts:
+      - name: nginx_down
+        condition: nginx_up{app="nginx"} == 0
+        duration: 1m
+        severity: critical
+        action: pagerduty
+        description: "Nginx is niet bereikbaar"
+        
+      - name: high_5xx_rate
+        condition: rate(nginx_http_requests_total{status=~"5.."}[5m]) > 10
+        duration: 5m
+        severity: critical
+        action: pagerduty
+        description: "Hoog aantal 5xx fouten"
+        
+      - name: high_4xx_rate
+        condition: rate(nginx_http_requests_total{status=~"4.."}[5m]) > 100
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Hoog aantal 4xx fouten"
+        
+      - name: high_response_time
+        condition: nginx_http_request_duration_seconds > 5
+        duration: 5m
+        severity: warning
+        action: email
+        description: "Hoge responstijd gedetecteerd"
+        
+      - name: backend_unhealthy
+        condition: nginx_upstream_server_up{upstream="backend"} == 0
+        duration: 1m
+        severity: critical
+        action: pagerduty
+        description: "Backend server is niet beschikbaar"
+        
+  # ===========================================================================
+  # BACKUP
+  # ===========================================================================
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention_days: 30
+    volumes:
+      - certs
+      - logs
+    pre_backup:
+      - command: "nginx -t"
+        when: backup_type == "full"
+        
+  # ===========================================================================
+  # SECURITY HEADERS
+  # ===========================================================================
+  security_headers:
+    enabled: true
+    headers:
+      - name: X-Frame-Options
+        value: DENY
+      - name: X-Content-Type-Options
+        value: nosniff
+      - name: X-XSS-Protection
+        value: "1; mode=block"
+      - name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+      - name: Permissions-Policy
+        value: "geolocation=(), microphone=(), camera=()"
+      - name: Strict-Transport-Security
+        value: "max-age=31536000; includeSubDomains; preload"
+        
+  # ===========================================================================
+  # COMPRESSIE
+  # ===========================================================================
+  compression:
+    enabled: true
+    gzip: true
+    gzip_types:
+      - text/html
+      - text/css
+      - text/javascript
+      - application/javascript
+      - application/json
+      - application/xml
+      - image/svg+xml
+      - font/ttf
+      - font/otf
+    gzip_min_length: 1000
+    gzip_comp_level: 6
+    gzip_vary: on
+    
+  # ===========================================================================
+  # CACHING
+  # ===========================================================================
+  caching:
+    enabled: true
+    proxy_cache_path:
+      path: /var/cache/nginx
+      levels: 1:2
+      keys_zone: my_cache:10m
+      max_size: 1g
+      inactive: 60m
+      use_temp_path: off
+    proxy_cache_valid:
+      - code: 200 302
+        time: 10m
+      - code: 404
+        time: 1m
+    proxy_cache_key: "$scheme$request_method$host$request_uri"
+    
+  # ===========================================================================
+  # RATE LIMITING
+  # ===========================================================================
+  rate_limiting:
+    enabled: true
+    zones:
+      - name: one
+        size: 10m
+        rate: 10r/s
+      - name: api
+        size: 10m
+        rate: 100r/m
+    limits:
+      - path: /api/
+        zone: api
+        burst: 20
+        nodelay: true
+      - path: /
+        zone: one
+        burst: 10

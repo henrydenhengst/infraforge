@@ -1,0 +1,18 @@
+---
+- name: Configureer MinIO client alias
+  ansible.builtin.shell: |
+    mc alias set myminio http://localhost:9000 {{ minio_root_user }} {{ minio_root_password }}
+  tags: [buckets]
+
+- name: Creëer MinIO buckets
+  ansible.builtin.shell: |
+    mc mb myminio/{{ item.name }} --ignore-existing
+  loop: "{{ minio_buckets }}"
+  tags: [buckets]
+
+- name: Stel bucket policies in
+  ansible.builtin.shell: |
+    mc policy set {{ item.policy | default('private') }} myminio/{{ item.name }}
+  loop: "{{ minio_buckets }}"
+  when: item.policy is defined
+  tags: [buckets]

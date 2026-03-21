@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# BIGCAPITAL - BOEKHOUDING VOOR RETAIL
+# =============================================================================
+# Beschrijving: Boekhouding met focus op retail-inventaris
+# Website: https://bigcapital.com
+# =============================================================================
+
+application:
+  name: bigcapital
+  version: 1.0.0
+  description: "BigCapital - Boekhouding voor retail"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: finance-team
+    contact: finance@company.local
+    slack: "#finance"
+    documentation: "https://bigcapital.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+        
+  network_requirements:
+    vlans:
+      - finance
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "BigCapital web interface"
+    dns:
+      - "bigcapital.{{ domain }}"
+      - "books.{{ domain }}"
+      
+  container:
+    image: bigcapital/bigcapital:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: BIGCAPITAL_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: BIGCAPITAL_DB_NAME
+      value: "bigcapital"
+      secret: false
+    - name: BIGCAPITAL_DB_USER
+      value: "bigcapital"
+      secret: false
+    - name: BIGCAPITAL_DB_PASSWORD
+      value: "{{ vault_bigcapital_password }}"
+      secret: true
+    - name: BIGCAPITAL_SECRET_KEY
+      value: "{{ vault_bigcapital_secret }}"
+      secret: true
+    - name: BIGCAPITAL_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: BIGCAPITAL_ADMIN_PASSWORD
+      value: "{{ vault_bigcapital_admin_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 80

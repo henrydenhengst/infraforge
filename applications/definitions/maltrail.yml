@@ -1,0 +1,82 @@
+---
+# =============================================================================
+# DOMOTICZ - LICHTGEWICHT HOME AUTOMATION
+# =============================================================================
+# Beschrijving: Lichtgewicht home automation system
+# Website: https://www.domoticz.com
+# =============================================================================
+
+application:
+  name: domoticz
+  version: 2024.4
+  description: "Domoticz - Lichtgewicht home automation"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: iot-team
+    contact: iot@company.local
+    slack: "#iot"
+    documentation: "https://www.domoticz.com/wiki"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/domoticz/userdata
+        
+  network_requirements:
+    vlans:
+      - iot
+      - internal
+    ports:
+      - container: 8084
+        host: 8084
+        protocol: tcp
+        public: false
+        description: "Domoticz web interface"
+      - container: 8444
+        host: 8444
+        protocol: tcp
+        public: false
+        description: "Domoticz HTTPS"
+    dns:
+      - "domoticz.{{ domain }}"
+      
+  container:
+    image: domoticz/domoticz:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/ttyACM0:/dev/ttyACM0"
+        
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: WWW_PORT
+      value: "8084"
+      secret: false
+    - name: SSL_PORT
+      value: "8444"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /json.htm?type=command&param=getversion
+      port: 8084

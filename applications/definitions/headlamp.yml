@@ -1,0 +1,69 @@
+---
+# =============================================================================
+# KUBERNETES DASHBOARD - OFFICIAL K8S UI
+# =============================================================================
+# Beschrijving: Official Kubernetes web UI
+# Website: https://github.com/kubernetes/dashboard
+# =============================================================================
+
+application:
+  name: kubernetes-dashboard
+  version: 2.7.0
+  description: "Kubernetes Dashboard - Official K8s UI"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://github.com/kubernetes/dashboard"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports:
+      - container: 9090
+        host: 9090
+        protocol: tcp
+        public: false
+        description: "Kubernetes Dashboard"
+    dns:
+      - "dashboard.{{ domain }}"
+      - "k8s-dashboard.{{ domain }}"
+      
+  container:
+    image: kubernetesui/dashboard:v2.7.0
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: METRICS_SERVER_HOST
+      value: "metrics-server"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 9090

@@ -1,0 +1,5 @@
+---
+- name: Ensure Docker is installed
+  ansible.builtin.include_role:
+    name: docker
+  tags: [docker]

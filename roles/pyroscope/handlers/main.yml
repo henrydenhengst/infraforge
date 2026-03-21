@@ -1,0 +1,5 @@
+---
+- name: restart pyroscope
+  ansible.builtin.docker_container:
+    name: pyroscope
+    restart: yes

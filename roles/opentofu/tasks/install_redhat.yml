@@ -1,0 +1,14 @@
+---
+- name: Voeg OpenTofu repository toe
+  ansible.builtin.yum_repository:
+    name: opentofu
+    description: OpenTofu
+    baseurl: https://packages.opentofu.org/opentofu/opentofu/rpm/any/
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://packages.opentofu.org/opentofu/opentofu/gpgkey
+
+- name: Installeer OpenTofu
+  ansible.builtin.dnf:
+    name: tofu
+    state: present

@@ -1,0 +1,126 @@
+---
+# =============================================================================
+# LOCALAI - OPENAI-COMPATIBILE LLM API
+# =============================================================================
+# Beschrijving: Open-source OpenAI-compatibele API voor lokale modellen
+# Website: https://localai.io
+# =============================================================================
+
+application:
+  name: localai
+  version: 2.8.0
+  description: "LocalAI - OpenAI-compatibele API voor lokale LLM's"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ai-team
+    contact: ai@company.local
+    slack: "#ai"
+    documentation: "https://localai.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      gpu_required: true
+      
+    storage:
+      - name: models
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /models
+      - name: images
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /tmp/generated/images
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+        
+  network_requirements:
+    vlans:
+      - ai
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "LocalAI API"
+    dns:
+      - "localai.{{ domain }}"
+      - "llm.{{ domain }}"
+      
+  container:
+    image: quay.io/go-skynet/local-ai:latest
+    restart: unless-stopped
+    gpu_support: true
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility]
+              
+  environment_variables:
+    - name: THREADS
+      value: "{{ ansible_processor_cores }}"
+      secret: false
+    - name: CONTEXT_SIZE
+      value: "512"
+      secret: false
+    - name: DEBUG
+      value: "false"
+      secret: false
+    - name: MODELS_PATH
+      value: "/models"
+      secret: false
+    - name: IMAGE_PATH
+      value: "/tmp/generated/images"
+      secret: false
+      
+  models:
+    - name: llama-3-8b-instruct
+      description: "Llama 3 8B Instruct"
+      backend: llama
+      file: "llama-3-8b-instruct.Q4_K_M.gguf"
+      context_size: 8192
+    - name: mistral-7b-instruct
+      description: "Mistral 7B Instruct"
+      backend: llama
+      file: "mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+      context_size: 8192
+    - name: phi-2
+      description: "Phi-2"
+      backend: llama
+      file: "phi-2.Q4_K_M.gguf"
+      context_size: 2048
+      
+  api_endpoints:
+    - path: /v1/completions
+      model: llama-3-8b-instruct
+    - path: /v1/chat/completions
+      model: mistral-7b-instruct
+    - path: /v1/embeddings
+      model: all-MiniLM-L6-v2
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /readyz
+      port: 8080
+      initial_delay: 30

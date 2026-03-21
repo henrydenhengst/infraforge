@@ -1,0 +1,51 @@
+---
+- name: '{{ ansible_os_family }} | Installeer remote backup tools'
+  ansible.builtin.package:
+    name: "{{ remote_tools[ansible_os_family] }}"
+    state: present
+  vars:
+    remote_tools:
+      Debian:
+        - s3cmd
+        - awscli
+        - rclone
+      RedHat:
+        - s3cmd
+        - awscli
+        - rclone
+      Suse:
+        - s3cmd
+        - aws-cli
+        - rclone
+      Archlinux:
+        - s3cmd
+        - aws-cli
+        - rclone
+      Alpine:
+        - s3cmd
+        - aws-cli
+        - rclone
+  tags: [remote]
+
+- name: Configureer remote backup sync script
+  ansible.builtin.template:
+    src: backup_sync.sh.j2
+    dest: /backup/scripts/backup_sync.sh
+    mode: '0750'
+  tags: [remote]
+
+- name: Voeg remote sync cron job toe
+  ansible.builtin.cron:
+    name: "backup-sync"
+    minute: "0"
+    hour: "5"
+    job: "/backup/scripts/backup_sync.sh >> /var/log/backup/sync.log 2>&1"
+  tags: [remote, cron]
+
+- name: Configureer S3/MinIO credentials
+  ansible.builtin.template:
+    src: s3cfg.j2
+    dest: /root/.s3cfg
+    mode: '0600'
+  when: backup_remote_type == 's3'
+  tags: [remote]

@@ -1,0 +1,5 @@
+---
+- name: restart vector
+  ansible.builtin.docker_container:
+    name: vector
+    restart: yes

@@ -1,0 +1,88 @@
+---
+# =============================================================================
+# MLFLOW - MACHINE LEARNING LIFECYCLE
+# =============================================================================
+# Beschrijving: Platform voor het beheren van de Machine Learning lifecycle
+# Website: https://mlflow.org
+# =============================================================================
+
+application:
+  name: mlflow
+  version: 2.10.0
+  description: "MLflow - Machine Learning lifecycle"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://mlflow.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: artifacts
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /mlflow/artifacts
+      - name: models
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /mlflow/models
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 5000
+        host: 5000
+        protocol: tcp
+        public: false
+        description: "MLflow UI"
+    dns:
+      - "mlflow.{{ domain }}"
+      
+  container:
+    image: mlflow/mlflow:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: MLFLOW_TRACKING_URI
+      value: "postgresql://mlflow:{{ vault_mlflow_password }}@postgres:5432/mlflow"
+      secret: true
+    - name: MLFLOW_ARTIFACT_ROOT
+      value: "/mlflow/artifacts"
+      secret: false
+    - name: MLFLOW_S3_ENDPOINT_URL
+      value: "http://minio:9000"
+      secret: false
+    - name: AWS_ACCESS_KEY_ID
+      value: "minioadmin"
+      secret: false
+    - name: AWS_SECRET_ACCESS_KEY
+      value: "{{ vault_minio_password }}"
+      secret: true
+    - name: MLFLOW_BACKEND_STORE_URI
+      value: "postgresql://mlflow:{{ vault_mlflow_password }}@postgres:5432/mlflow"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 5000

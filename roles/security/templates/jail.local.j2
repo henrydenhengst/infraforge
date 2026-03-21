@@ -1,0 +1,49 @@
+# {{ ansible_managed }}
+# Fail2ban configuration
+
+[DEFAULT]
+bantime = {{ fail2ban_bantime }}
+findtime = {{ fail2ban_findtime }}
+maxretry = {{ fail2ban_max_retry }}
+
+# Ignore IPs
+ignoreip = {{ fail2ban_ignore_ip | join(' ') }}
+
+# Backend
+backend = auto
+
+[sshd]
+enabled = true
+port = ssh
+logpath = %(sshd_log)s
+maxretry = {{ fail2ban_max_retry }}
+bantime = {{ fail2ban_bantime }}
+
+[sshd-ddos]
+enabled = true
+port = ssh
+logpath = %(sshd_log)s
+maxretry = {{ fail2ban_max_retry }}
+bantime = {{ fail2ban_bantime }}
+
+{% if ansible_os_family in ['Debian', 'RedHat', 'Suse'] %}
+[nginx-http-auth]
+enabled = true
+port = http,https
+logpath = %(nginx_error_log)s
+maxretry = 10
+bantime = 3600
+
+[nginx-badbots]
+enabled = true
+port = http,https
+logpath = %(nginx_access_log)s
+maxretry = 5
+bantime = 86400
+
+[proftpd]
+enabled = true
+port = ftp,ftp-data,ftps,ftps-data
+logpath = %(proftpd_log)s
+maxretry = 6
+{% endif %}

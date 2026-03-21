@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+# Network interfaces
+
+auto lo
+iface lo inet loopback
+
+{% for iface in network_interfaces %}
+auto {{ iface.name }}
+iface {{ iface.name }} inet {{ iface.family | default('static') }}
+{% if iface.family == 'static' %}
+    address {{ iface.address }}
+    netmask {{ iface.netmask | default('255.255.255.0') }}
+    gateway {{ iface.gateway | default('') }}
+{% endif %}
+{% if iface.mtu is defined %}
+    mtu {{ iface.mtu }}
+{% endif %}
+{% if iface.dns_servers is defined %}
+    dns-nameservers {{ iface.dns_servers | join(' ') }}
+{% endif %}
+{% endfor %}

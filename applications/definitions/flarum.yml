@@ -1,0 +1,85 @@
+---
+# =============================================================================
+# RADARR - FILM DOWNLOADMANAGER
+# =============================================================================
+# Beschrijving: Film downloadmanager voor geautomatiseerde downloads
+# Website: https://radarr.video
+# =============================================================================
+
+application:
+  name: radarr
+  version: 5.3.0
+  description: "Radarr - Film downloadmanager"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://wiki.servarr.com/Radarr"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: movies
+        size_gb: 1000
+        performance: hdd
+        backup_required: false
+        mount_path: /movies
+      - name: downloads
+        size_gb: 500
+        performance: hdd
+        backup_required: false
+        mount_path: /downloads
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 7878
+        host: 7878
+        protocol: tcp
+        public: false
+        description: "Radarr web interface"
+    dns:
+      - "radarr.{{ domain }}"
+      - "movies.{{ domain }}"
+      
+  container:
+    image: linuxserver/radarr:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 7878

@@ -1,0 +1,85 @@
+---
+# =============================================================================
+# CLAIR - CONTAINER SECURITY SCANNER
+# =============================================================================
+# Beschrijving: Container vulnerability scanner
+# Website: https://github.com/quay/clair
+# =============================================================================
+
+application:
+  name: clair
+  version: 4.7.0
+  description: "Clair - Container security scanner"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://quay.github.io/clair"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 6060
+        host: 6060
+        protocol: tcp
+        public: false
+        description: "Clair API"
+      - container: 6061
+        host: 6061
+        protocol: tcp
+        public: false
+        description: "Clair health"
+    dns:
+      - "clair.{{ domain }}"
+      
+  container:
+    image: quay.io/projectquay/clair:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: CLAIR_DATABASE_SOURCE
+      value: "postgresql://clair:{{ vault_clair_password }}@postgres:5432/clair?sslmode=disable"
+      secret: true
+    - name: CLAIR_HTTP_LISTEN_ADDR
+      value: ":6060"
+      secret: false
+    - name: CLAIR_HEALTH_LISTEN_ADDR
+      value: ":6061"
+      secret: false
+    - name: CLAIR_INDEXER_STATE
+      value: "1"
+      secret: false
+    - name: CLAIR_UPDATER_INTERVAL
+      value: "24h"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /healthz
+      port: 6061

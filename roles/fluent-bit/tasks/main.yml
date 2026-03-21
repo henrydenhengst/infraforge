@@ -1,0 +1,46 @@
+---
+- name: '{{ ansible_os_family }} | Maak Fluent Bit directories'
+  ansible.builtin.file:
+    path: "{{ fluent_bit_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Fluent Bit container'
+  ansible.builtin.docker_container:
+    name: fluent-bit
+    image: fluent/fluent-bit:latest
+    restart_policy: unless-stopped
+    ports:
+      - "2020:2020"
+    volumes:
+      - "{{ fluent_bit_data_path }}:/var/lib/fluent-bit"
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    environment:
+      FLUENTBIT_HTTP_SERVER: "On"
+      FLUENTBIT_HTTP_PORT: "2020"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.fluent-bit.rule: "Host(`fluent-bit.{{ domain }}`)"
+      traefik.http.services.fluent-bit.loadbalancer.server.port: "2020"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Configureer Fluent Bit'
+  ansible.builtin.template:
+    src: fluent-bit.conf.j2
+    dest: /etc/fluent-bit/fluent-bit.conf
+    mode: '0644'
+  notify: restart fluent-bit
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Wacht tot Fluent Bit actief is'
+  ansible.builtin.wait_for:
+    port: 2020
+    timeout: 60
+  tags: [validate]
+
+- name: Toon Fluent Bit URL
+  ansible.builtin.debug:
+    msg: "Fluent Bit: https://fluent-bit.{{ domain }}"
+  tags: [validate]

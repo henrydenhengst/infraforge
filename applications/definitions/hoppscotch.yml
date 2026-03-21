@@ -1,0 +1,97 @@
+---
+# =============================================================================
+# SELENIUM - BROWSER AUTOMATION TESTING
+# =============================================================================
+# Beschrijving: Selenium Grid voor browser automatisch testen
+# Website: https://www.selenium.dev
+# =============================================================================
+
+application:
+  name: selenium
+  version: 4
+  description: "Selenium Grid - Browser automation testing"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: qa-team
+    contact: qa@company.local
+    slack: "#qa"
+    documentation: "https://www.selenium.dev/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - testing
+      - internal
+    ports:
+      - container: 4444
+        host: 4444
+        protocol: tcp
+        public: false
+        description: "Selenium Grid Hub"
+      - container: 4442
+        host: 4442
+        protocol: tcp
+        public: false
+        description: "Selenium Event Bus"
+      - container: 4443
+        host: 4443
+        protocol: tcp
+        public: false
+        description: "Selenium Event Bus"
+    dns:
+      - "selenium.{{ domain }}"
+      
+  container:
+    image: selenium/hub:latest
+    container_name: selenium-hub
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  sidecars:
+    - name: chrome
+      image: selenium/node-chrome:latest
+      environment:
+        SE_EVENT_BUS_HOST: selenium-hub
+        SE_EVENT_BUS_PUBLISH_PORT: 4442
+        SE_EVENT_BUS_SUBSCRIBE_PORT: 4443
+      resources:
+        limits:
+          cpu: "2"
+          memory: 2Gi
+          
+    - name: firefox
+      image: selenium/node-firefox:latest
+      environment:
+        SE_EVENT_BUS_HOST: selenium-hub
+        SE_EVENT_BUS_PUBLISH_PORT: 4442
+        SE_EVENT_BUS_SUBSCRIBE_PORT: 4443
+      resources:
+        limits:
+          cpu: "2"
+          memory: 2Gi
+          
+  health_checks:
+    liveness:
+      type: http
+      path: /wd/hub/status
+      port: 4444

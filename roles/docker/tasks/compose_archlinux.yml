@@ -1,0 +1,4 @@
+---
+- name: Docker Compose is al geïnstalleerd met docker-compose package
+  ansible.builtin.debug:
+    msg: "Docker Compose is al geïnstalleerd met docker-compose package"

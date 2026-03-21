@@ -1,0 +1,112 @@
+---
+# =============================================================================
+# RESOURCESPACE - DIGITAL ASSET MANAGEMENT
+# =============================================================================
+# Beschrijving: Digital Asset Management voor media en marketingbureaus
+# Website: https://www.resourcespace.com
+# =============================================================================
+
+application:
+  name: resourcespace
+  version: 10.0.0
+  description: "ResourceSpace - Digital Asset Management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: creative-team
+    contact: creative@company.local
+    slack: "#creative"
+    documentation: "https://www.resourcespace.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+      - name: filestore
+        size_gb: 500
+        performance: hdd
+        backup_required: true
+        mount_path: /var/www/html/filestore
+      - name: plugins
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/plugins
+        
+  network_requirements:
+    vlans:
+      - creative
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "ResourceSpace web interface"
+    dns:
+      - "assets.{{ domain }}"
+      - "resourcespace.{{ domain }}"
+      
+  container:
+    image: resourcespace/resourcespace:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: RESOURCESPACE_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: RESOURCESPACE_DB_NAME
+      value: "resourcespace"
+      secret: false
+    - name: RESOURCESPACE_DB_USER
+      value: "resourcespace"
+      secret: false
+    - name: RESOURCESPACE_DB_PASSWORD
+      value: "{{ vault_resourcespace_password }}"
+      secret: true
+    - name: RESOURCESPACE_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: RESOURCESPACE_ADMIN_PASSWORD
+      value: "{{ vault_resourcespace_admin_password }}"
+      secret: true
+    - name: RESOURCESPACE_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: RESOURCESPACE_BASE_URL
+      value: "https://assets.{{ domain }}"
+      secret: false
+    - name: RESOURCESPACE_SMTP_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: RESOURCESPACE_SMTP_PORT
+      value: "587"
+      secret: false
+    - name: RESOURCESPACE_SMTP_USER
+      value: "resourcespace@{{ domain }}"
+      secret: false
+    - name: RESOURCESPACE_SMTP_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

@@ -1,0 +1,108 @@
+---
+# =============================================================================
+# VIKUNJA - TAKENLIJST EN PROJECTMANAGEMENT
+# =============================================================================
+# Beschrijving: Takenlijst en projectmanagement tool
+# Website: https://vikunja.io
+# =============================================================================
+
+application:
+  name: vikunja
+  version: 0.23.0
+  description: "Vikunja - Takenlijst en projectmanagement"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: collaboration-team
+    contact: collaboration@company.local
+    slack: "#collaboration"
+    documentation: "https://vikunja.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: files
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/vikunja/files
+        
+  network_requirements:
+    vlans:
+      - collaboration
+      - internal
+    ports:
+      - container: 3456
+        host: 3456
+        protocol: tcp
+        public: false
+        description: "Vikunja web interface"
+    dns:
+      - "tasks.{{ domain }}"
+      - "vikunja.{{ domain }}"
+      
+  container:
+    image: vikunja/vikunja:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: VIKUNJA_DATABASE_TYPE
+      value: "postgres"
+      secret: false
+    - name: VIKUNJA_DATABASE_HOST
+      value: "postgres"
+      secret: false
+    - name: VIKUNJA_DATABASE_PORT
+      value: "5432"
+      secret: false
+    - name: VIKUNJA_DATABASE_USER
+      value: "vikunja"
+      secret: false
+    - name: VIKUNJA_DATABASE_PASSWORD
+      value: "{{ vault_vikunja_password }}"
+      secret: true
+    - name: VIKUNJA_DATABASE_DATABASE
+      value: "vikunja"
+      secret: false
+    - name: VIKUNJA_SERVICE_JWTSECRET
+      value: "{{ vault_vikunja_jwt }}"
+      secret: true
+    - name: VIKUNJA_SERVICE_ENABLEREGISTRATION
+      value: "false"
+      secret: false
+    - name: VIKUNJA_SERVICE_TIMEZONE
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: VIKUNJA_MAILER_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: VIKUNJA_MAILER_PORT
+      value: "587"
+      secret: false
+    - name: VIKUNJA_MAILER_USERNAME
+      value: "vikunja@{{ domain }}"
+      secret: false
+    - name: VIKUNJA_MAILER_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: VIKUNJA_MAILER_FROMEMAIL
+      value: "vikunja@{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v1/info
+      port: 3456

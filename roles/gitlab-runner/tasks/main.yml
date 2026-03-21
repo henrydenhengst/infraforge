@@ -1,0 +1,50 @@
+---
+- name: '{{ ansible_os_family }} | Maak GitLab Runner directories'
+  ansible.builtin.file:
+    path: "{{ gitlab_runner_config_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start GitLab Runner container'
+  ansible.builtin.docker_container:
+    name: gitlab-runner
+    image: gitlab/gitlab-runner:latest
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ gitlab_runner_config_path }}:/etc/gitlab-runner"
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: register
+    environment:
+      CI_SERVER_URL: "https://gitlab.{{ domain }}"
+      REGISTRATION_TOKEN: "{{ gitlab_runner_token }}"
+      RUNNER_NAME: "{{ gitlab_runner_name }}"
+      RUNNER_EXECUTOR: docker
+      DOCKER_IMAGE: alpine:latest
+      RUNNER_TAG_LIST: "docker,linux"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Start GitLab Runner service'
+  ansible.builtin.docker_container:
+    name: gitlab-runner-service
+    image: gitlab/gitlab-runner:latest
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ gitlab_runner_config_path }}:/etc/gitlab-runner"
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: run
+    depends_on:
+      - gitlab-runner
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Valideer GitLab Runner'
+  ansible.builtin.shell: |
+    docker exec gitlab-runner gitlab-runner list
+  register: runner_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Runner status
+  ansible.builtin.debug:
+    var: runner_test.stdout
+  tags: [validate]

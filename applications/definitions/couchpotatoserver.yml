@@ -1,0 +1,91 @@
+---
+# =============================================================================
+# PLEX - MEDIA SERVER
+# =============================================================================
+# Beschrijving: Mediaserver met client-ondersteuning voor alle apparaten
+# Website: https://www.plex.tv
+# =============================================================================
+
+application:
+  name: plex
+  version: 1.40.0
+  description: "Plex - Media server"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://support.plex.tv"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: config
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: transcode
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /transcode
+      - name: media
+        size_gb: 1000
+        performance: hdd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - media
+      - dmz
+    ports:
+      - container: 32400
+        host: 32400
+        protocol: tcp
+        public: true
+        description: "Plex web interface"
+    dns:
+      - "plex.{{ domain }}"
+      - "media.{{ domain }}"
+      
+  container:
+    image: plexinc/pms-docker:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: PLEX_CLAIM
+      value: "{{ vault_plex_claim }}"
+      secret: true
+    - name: PLEX_UID
+      value: "1000"
+      secret: false
+    - name: PLEX_GID
+      value: "1000"
+      secret: false
+    - name: ADVERTISE_IP
+      value: "https://plex.{{ domain }}:32400"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /identity
+      port: 32400

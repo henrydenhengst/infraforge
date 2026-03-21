@@ -1,0 +1,21 @@
+---
+mysql_packages:
+  Debian: [mysql-server, mysql-client, python3-mysqldb]
+  RedHat: [mysql-server, mysql, python3-mysqlclient]
+  Suse: [mysql-server, mysql-client, python3-mysqlclient]
+  Archlinux: [mysql, python-mysqlclient]
+  Alpine: [mysql, mysql-client, py3-mysqlclient]
+
+mysql_service:
+  Debian: mysql
+  RedHat: mysqld
+  Suse: mysql
+  Archlinux: mysqld
+  Alpine: mariadb
+
+mysql_config_path:
+  Debian: /etc/mysql
+  RedHat: /etc
+  Suse: /etc
+  Archlinux: /etc/mysql
+  Alpine: /etc/mysql

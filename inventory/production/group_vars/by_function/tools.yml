@@ -1,0 +1,425 @@
+---
+# =============================================================================
+# ALGEMENE TOOLS
+# =============================================================================
+# Functie: tools
+# Beschrijving: Diverse tools voor specifieke functionaliteiten
+# =============================================================================
+
+tools_tools:
+  # ---------------------------------------------------------------------------
+  # AFFILIATE TOOLS
+  # ---------------------------------------------------------------------------
+  - name: AffiliateEngine
+    profiel_tag: Affiliate
+    functie_tag: tools
+    beschrijving: "AI-gestuurde content generator voor niche websites"
+    categorie: content_generation
+    docker_image: affiliate/engine:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - affiliate_engine_data:/app/data
+      - affiliate_engine_config:/app/config
+    environment:
+      AFFILIATE_ENGINE_DB_HOST: postgres
+      AFFILIATE_ENGINE_DB_NAME: affiliate_engine
+      AFFILIATE_ENGINE_DB_USER: affiliate_engine
+      AFFILIATE_ENGINE_DB_PASSWORD: "{{ vault_affiliate_engine_password }}"
+      AFFILIATE_ENGINE_OPENAI_KEY: "{{ vault_openai_key }}"
+      AFFILIATE_ENGINE_MODEL: gpt-4
+      AFFILIATE_ENGINE_TEMPERATURE: 0.7
+      AFFILIATE_ENGINE_MAX_TOKENS: 2000
+    database: postgresql
+    url: "https://affiliateengine.com"
+    
+  - name: Amoeba
+    profiel_tag: Affiliate
+    functie_tag: tools
+    beschrijving: "Automatische prijsvergelijker met AI-matching"
+    categorie: price_comparison
+    docker_image: amoeba/amoeba:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - amoeba_data:/app/data
+      - amoeba_cache:/app/cache
+    environment:
+      AMOEBA_DB_HOST: postgres
+      AMOEBA_DB_NAME: amoeba
+      AMOEBA_DB_USER: amoeba
+      AMOEBA_DB_PASSWORD: "{{ vault_amoeba_password }}"
+      AMOEBA_REDIS_HOST: redis
+      AMOEBA_REDIS_PORT: 6379
+      AMOEBA_CRAWL_INTERVAL: 3600
+      AMOEBA_MATCH_THRESHOLD: 0.85
+    database: postgresql
+    queue: redis
+    url: "https://amoeba.com"
+    
+  # ---------------------------------------------------------------------------
+  # BOEKMARK BEHEER
+  # ---------------------------------------------------------------------------
+  - name: Linkding
+    profiel_tag: Algemeen
+    functie_tag: tools
+    beschrijving: "Bookmark manager voor het opslaan en organiseren van links"
+    categorie: bookmarks
+    docker_image: sissbruecker/linkding:latest
+    ports:
+      - "8082:9090"
+    volumes:
+      - linkding_data:/etc/linkding/data
+    environment:
+      LD_SUPERUSER_NAME: admin
+      LD_SUPERUSER_PASSWORD: "{{ vault_linkding_password }}"
+      LD_DB_ENGINE: postgres
+      LD_DB_HOST: postgres
+      LD_DB_PORT: 5432
+      LD_DB_NAME: linkding
+      LD_DB_USER: linkding
+      LD_DB_PASSWORD: "{{ vault_linkding_db_password }}"
+      LD_ENABLE_HTTPS: "true"
+      LD_DISABLE_BACKGROUND_TASKS: "false"
+    database: postgresql
+    url: "https://github.com/sissbruecker/linkding"
+    
+  - name: Hoarder
+    profiel_tag: Algemeen
+    functie_tag: tools
+    beschrijving: "Zelfgehoste bladwijzer-app met AI-tagging"
+    categorie: bookmarks
+    docker_image: hoarder/hoarder:latest
+    ports:
+      - "8083:3000"
+    volumes:
+      - hoarder_data:/app/data
+      - hoarder_uploads:/app/uploads
+    environment:
+      DATABASE_URL: "postgresql://hoarder:{{ vault_hoarder_password }}@postgres:5432/hoarder"
+      REDIS_URL: "redis://redis:6379"
+      NEXTAUTH_SECRET: "{{ vault_hoarder_nextauth_secret }}"
+      NEXTAUTH_URL: "https://hoarder.{{ domain }}"
+      OPENAI_API_KEY: "{{ vault_openai_key }}"
+      OPENAI_MODEL: "gpt-3.5-turbo"
+      AI_TAGGING_ENABLED: "true"
+      AI_SUMMARY_ENABLED: "true"
+    database: postgresql
+    queue: redis
+    url: "https://hoarder.app"
+    
+  # ---------------------------------------------------------------------------
+  # AGENDA & PLANNING
+  # ---------------------------------------------------------------------------
+  - name: Cal.com
+    profiel_tag: Algemeen
+    functie_tag: tools
+    beschrijving: "Open-source alternatief voor Calendly (afspraken plannen)"
+    categorie: scheduling
+    docker_image: calcom/cal.com:latest
+    ports:
+      - "8084:3000"
+    volumes:
+      - calcom_data:/app/data
+    environment:
+      DATABASE_URL: "postgresql://calcom:{{ vault_calcom_password }}@postgres:5432/calcom"
+      NEXT_PUBLIC_WEBAPP_URL: "https://cal.{{ domain }}"
+      NEXTAUTH_SECRET: "{{ vault_calcom_nextauth_secret }}"
+      NEXTAUTH_URL: "https://cal.{{ domain }}"
+      CALENDSO_ENCRYPTION_KEY: "{{ vault_calcom_encryption_key }}"
+      EMAIL_FROM: calcom@{{ domain }}
+      EMAIL_SERVER_HOST: smtp.{{ domain }}
+      EMAIL_SERVER_PORT: 587
+      EMAIL_SERVER_USER: calcom@{{ domain }}
+      EMAIL_SERVER_PASSWORD: "{{ vault_smtp_password }}"
+      SMTP_SECURE: "true"
+      GOOGLE_CLIENT_ID: "{{ vault_google_client_id }}"
+      GOOGLE_CLIENT_SECRET: "{{ vault_google_client_secret }}"
+    database: postgresql
+    url: "https://cal.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+tools_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # AI instellingen voor tools die AI gebruiken
+  ai:
+    enabled: true
+    default_model: gpt-3.5-turbo
+    fallback_model: llama3
+    local_ai_url: http://ollama:11434
+    temperature: 0.7
+    max_tokens: 2000
+    
+  # Crawler instellingen
+  crawler:
+    user_agent: "Mozilla/5.0 (compatible; CompanyBot/1.0; +https://{{ domain }}/bot)"
+    rate_limit: 10
+    timeout: 30
+    respect_robots: true
+    
+  # Bookmark instellingen
+  bookmarks:
+    default_tags:
+      - important
+      - to-read
+      - reference
+    auto_tagging: true
+    auto_summary: true
+    snapshot_enabled: true
+    
+  # Agenda instellingen
+  scheduling:
+    timezone: Europe/Amsterdam
+    week_start: monday
+    working_hours:
+      start: "09:00"
+      end: "17:00"
+    slot_duration: 30
+    buffer_before: 15
+    buffer_after: 15
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+affiliate_engine_config:
+  # AffiliateEngine content templates
+  content_templates:
+    - name: product_review
+      structure:
+        - intro
+        - features
+        - pros
+        - cons
+        - verdict
+        - faq
+      word_count: 1500
+      seo_keywords: 5
+      
+    - name: comparison
+      structure:
+        - intro
+        - comparison_table
+        - detailed_review
+        - winner
+        - conclusion
+      word_count: 2000
+      seo_keywords: 8
+      
+    - name: buying_guide
+      structure:
+        - intro
+        - what_to_look_for
+        - top_picks
+        - budget_options
+        - premium_options
+        - conclusion
+      word_count: 2500
+      seo_keywords: 10
+      
+  # AffiliateEngine niche sites
+  niche_sites:
+    - name: bestlaptops.nl
+      primary_keyword: laptops
+      secondary_keywords:
+        - gaming laptops
+        - budget laptops
+        - student laptops
+      target_audience: consumers
+      content_frequency: weekly
+      
+    - name: top10keukenapparatuur.nl
+      primary_keyword: keukenapparatuur
+      secondary_keywords:
+        - keukenmachines
+        - blenders
+        - koffiezetapparaten
+      target_audience: home cooks
+      content_frequency: biweekly
+
+amoeba_config:
+  # Amoeba price comparison sources
+  sources:
+    - name: bol.com
+      type: webshop
+      url: https://www.bol.com
+      api_key: "{{ vault_amoeba_bol_key }}"
+      categories:
+        - electronics
+        - books
+        - home
+        
+    - name: amazon.nl
+      type: webshop
+      url: https://www.amazon.nl
+      api_key: "{{ vault_amoeba_amazon_key }}"
+      associate_tag: "{{ amazon_associate_tag }}"
+      categories:
+        - electronics
+        - books
+        - toys
+        
+    - name: coolblue.nl
+      type: webshop
+      url: https://www.coolblue.nl
+      scraper: custom
+      categories:
+        - electronics
+        - appliances
+        
+  # Amoeba matching rules
+  matching_rules:
+    - name: exact_match
+      threshold: 0.95
+      fields:
+        - ean
+        - sku
+        - mpn
+    - name: fuzzy_match
+      threshold: 0.85
+      fields:
+        - name
+        - brand
+        - model
+    - name: ai_match
+      threshold: 0.90
+      use_embeddings: true
+      embedding_model: all-MiniLM-L6-v2
+      
+  # Amoeba pricing rules
+  pricing:
+    update_interval: 3600
+    include_vat: true
+    include_shipping: true
+    currency: EUR
+    round_to: 0.05
+
+linkding_config:
+  # Linkding tags
+  tags:
+    - name: to-read
+      color: "#ff0000"
+    - name: important
+      color: "#00ff00"
+    - name: reference
+      color: "#0000ff"
+    - name: work
+      color: "#ffff00"
+    - name: personal
+      color: "#ff00ff"
+    - name: tech
+      color: "#00ffff"
+      
+  # Linkding archiving
+  archiving:
+    enabled: true
+    method: snapshot
+    storage: local
+    path: /etc/linkding/data/archive
+    retention_days: 365
+
+hoarder_config:
+  # Hoarder AI tagging rules
+  ai_tagging:
+    enabled: true
+    model: gpt-3.5-turbo
+    prompt: "Tag this bookmark with relevant categories"
+    min_confidence: 0.7
+    max_tags: 5
+    
+  # Hoarder summaries
+  summaries:
+    enabled: true
+    max_length: 200
+    model: gpt-3.5-turbo
+    
+  # Hoarder lists
+  lists:
+    - name: Reading List
+      description: "Artikelen om te lezen"
+    - name: Watch Later
+      description: "Video's om te bekijken"
+    - name: Resources
+      description: "Handige resources"
+    - name: Recipes
+      description: "Recepten"
+
+calcom_config:
+  # Cal.com event types
+  event_types:
+    - title: "30 Min Meeting"
+      slug: 30min
+      length: 30
+      description: "Korte meeting van 30 minuten"
+      locations:
+        - type: integrations:google:meet
+        - type: phone
+      scheduling_type: roundRobin
+      price: 0
+      currency: EUR
+      
+    - title: "Consultation"
+      slug: consultation
+      length: 60
+      description: "Uur durende consultatie"
+      locations:
+        - type: integrations:google:meet
+        - type: inPerson
+      scheduling_type: collective
+      price: 150
+      currency: EUR
+      requires_confirmation: true
+      
+    - title: "Quick Chat"
+      slug: quick-chat
+      length: 15
+      description: "Snelle check-in"
+      locations:
+        - type: phone
+        - type: integrations:google:meet
+      scheduling_type: roundRobin
+      price: 0
+      currency: EUR
+      
+  # Cal.com availability
+  availability:
+    - name: Default
+      timezone: Europe/Amsterdam
+      schedules:
+        - days: [monday, tuesday, wednesday, thursday, friday]
+          startTime: "09:00"
+          endTime: "17:00"
+          
+    - name: Extended
+      timezone: Europe/Amsterdam
+      schedules:
+        - days: [monday, tuesday, wednesday, thursday]
+          startTime: "08:00"
+          endTime: "18:00"
+        - days: [friday]
+          startTime: "08:00"
+          endTime: "16:00"
+          
+  # Cal.com teams
+  teams:
+    - name: Sales Team
+      slug: sales
+      members:
+        - user@{{ domain }}
+      event_types:
+        - 30min
+        - consultation
+        
+    - name: Support Team
+      slug: support
+      members:
+        - support@{{ domain }}
+      event_types:
+        - quick-chat

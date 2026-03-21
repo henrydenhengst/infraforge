@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# LOGTO - AUTHENTICATION AND AUTHORIZATION
+# =============================================================================
+# Beschrijving: Modern identity and access management platform
+# Website: https://logto.io
+# =============================================================================
+
+application:
+  name: logto
+  version: 1.0.0
+  description: "Logto - Identity and access management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://docs.logto.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 3001
+        host: 3001
+        protocol: tcp
+        public: false
+        description: "Logto web UI"
+      - container: 3002
+        host: 3002
+        protocol: tcp
+        public: false
+        description: "Logto API"
+    dns:
+      - "logto.{{ domain }}"
+      - "login.{{ domain }}"
+      
+  container:
+    image: svhd/logto:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DB_URL
+      value: "postgresql://logto:{{ vault_logto_password }}@postgres:5432/logto"
+      secret: true
+    - name: PORT
+      value: "3001"
+      secret: false
+    - name: ADMIN_PORT
+      value: "3002"
+      secret: false
+    - name: ENDPOINT
+      value: "https://logto.{{ domain }}"
+      secret: false
+    - name: ADMIN_ENDPOINT
+      value: "https://logto.{{ domain }}/admin"
+      secret: false
+    - name: TRUST_PROXY
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/status
+      port: 3001

@@ -1,0 +1,5 @@
+---
+- name: restart mimir
+  ansible.builtin.docker_container:
+    name: mimir
+    restart: yes

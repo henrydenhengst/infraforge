@@ -1,0 +1,95 @@
+---
+# =============================================================================
+# AMOEBA - AUTOMATISCHE PRIJSVERGELIJKER
+# =============================================================================
+# Beschrijving: Automatische prijsvergelijker met AI-matching
+# Website: https://amoeba.com
+# =============================================================================
+
+application:
+  name: amoeba
+  version: 1.0.0
+  description: "Amoeba - Automatische prijsvergelijker"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: affiliate-team
+    contact: affiliate@company.local
+    slack: "#affiliate"
+    documentation: "https://amoeba.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /app/data
+      - name: cache
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /app/cache
+        
+  network_requirements:
+    vlans:
+      - affiliate
+      - internal
+    ports:
+      - container: 8081
+        host: 8081
+        protocol: tcp
+        public: false
+        description: "Amoeba API"
+    dns:
+      - "price.{{ domain }}"
+      - "amoeba.{{ domain }}"
+      
+  container:
+    image: amoeba/amoeba:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: AMOEBA_DB_HOST
+      value: "postgres"
+      secret: false
+    - name: AMOEBA_DB_NAME
+      value: "amoeba"
+      secret: false
+    - name: AMOEBA_DB_USER
+      value: "amoeba"
+      secret: false
+    - name: AMOEBA_DB_PASSWORD
+      value: "{{ vault_amoeba_password }}"
+      secret: true
+    - name: AMOEBA_REDIS_HOST
+      value: "redis"
+      secret: false
+    - name: AMOEBA_REDIS_PORT
+      value: "6379"
+      secret: false
+    - name: AMOEBA_CRAWL_INTERVAL
+      value: "3600"
+      secret: false
+    - name: AMOEBA_MATCH_THRESHOLD
+      value: "0.85"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8081

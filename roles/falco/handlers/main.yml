@@ -1,0 +1,5 @@
+---
+- name: restart falco
+  ansible.builtin.docker_container:
+    name: falco
+    restart: yes

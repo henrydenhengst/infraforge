@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# ARTILLERY - MODERN LOAD TESTING
+# =============================================================================
+# Beschrijving: Modern, powerful load testing toolkit
+# Website: https://www.artillery.io
+# =============================================================================
+
+application:
+  name: artillery
+  version: 2.0.0
+  description: "Artillery - Modern load testing toolkit"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://www.artillery.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: scripts
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /scripts
+      - name: results
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /results
+        
+  network_requirements:
+    vlans:
+      - testing
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Artillery report server"
+    dns:
+      - "artillery.{{ domain }}"
+      
+  container:
+    image: artilleryio/artillery:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: ARTILLERY_REPORT_PORT
+      value: "8080"
+      secret: false
+    - name: ARTILLERY_OUTPUT
+      value: "/results/report.json"
+      secret: false
+    - name: ARTILLERY_HTML
+      value: "/results/report.html"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8080

@@ -1,0 +1,82 @@
+---
+# =============================================================================
+# FORTIO - LOAD TESTING LIBRARY
+# =============================================================================
+# Beschrijving: Load testing library en tool voor HTTP, gRPC, TCP
+# Website: https://fortio.org
+# =============================================================================
+
+application:
+  name: fortio
+  version: 1.60.0
+  description: "Fortio - Load testing library"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://fortio.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: results
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /results
+        
+  network_requirements:
+    vlans:
+      - testing
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Fortio server"
+      - container: 8079
+        host: 8079
+        protocol: tcp
+        public: false
+        description: "Fortio UI"
+    dns:
+      - "fortio.{{ domain }}"
+      
+  container:
+    image: fortio/fortio:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: FORTIO_HTTP_PORT
+      value: "8080"
+      secret: false
+    - name: FORTIO_GRPC_PORT
+      value: "8079"
+      secret: false
+    - name: FORTIO_UI_PATH
+      value: "/fortio"
+      secret: false
+    - name: FORTIO_DATA_DIR
+      value: "/results"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /fortio/health
+      port: 8080

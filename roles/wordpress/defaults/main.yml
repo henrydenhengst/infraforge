@@ -1,0 +1,16 @@
+---
+wordpress_install_path: /var/www/wordpress
+wordpress_db_name: wordpress
+wordpress_db_user: wordpress
+wordpress_db_password: "{{ vault_wordpress_db_password }}"
+wordpress_db_host: localhost
+wordpress_table_prefix: wp_
+wordpress_debug: false
+wordpress_domain: "{{ domain }}"
+wordpress_user: www-data
+wordpress_group: www-data
+wordpress_site_title: "{{ company_name }}"
+wordpress_admin_user: admin
+wordpress_admin_password: "{{ vault_wordpress_admin_password }}"
+wordpress_admin_email: admin@{{ domain }}
+configure_nginx: true

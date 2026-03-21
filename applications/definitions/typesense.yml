@@ -1,0 +1,86 @@
+---
+# =============================================================================
+# GLITCHTIP - OPEN-SOURCE ERROR TRACKING
+# =============================================================================
+# Beschrijving: Open-source error tracking (Sentry alternatief)
+# Website: https://glitchtip.com
+# =============================================================================
+
+application:
+  name: glitchtip
+  version: 2.0.0
+  description: "GlitchTip - Open-source error tracking"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://glitchtip.com/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+      - name: media
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /media
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 8000
+        host: 8000
+        protocol: tcp
+        public: false
+        description: "GlitchTip API"
+    dns:
+      - "errors.{{ domain }}"
+      - "glitchtip.{{ domain }}"
+      
+  container:
+    image: glitchtip/glitchtip:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DATABASE_URL
+      value: "postgresql://glitchtip:{{ vault_glitchtip_password }}@postgres:5432/glitchtip"
+      secret: true
+    - name: SECRET_KEY
+      value: "{{ vault_glitchtip_secret }}"
+      secret: true
+    - name: EMAIL_URL
+      value: "smtp://glitchtip@{{ domain }}:{{ vault_smtp_password }}@smtp.{{ domain }}:587/?tls=True"
+      secret: true
+    - name: SITE_URL
+      value: "https://errors.{{ domain }}"
+      secret: false
+    - name: GLITCHTIP_DOMAIN
+      value: "errors.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8000

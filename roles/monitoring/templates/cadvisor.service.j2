@@ -1,0 +1,17 @@
+[Unit]
+Description=cAdvisor
+Documentation=https://github.com/google/cadvisor
+After=network.target docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cadvisor \
+  --port={{ cadvisor_listen_port }} \
+  --docker_only={{ cadvisor_docker_only | lower }} \
+  --housekeeping_interval={{ cadvisor_housekeeping_interval }}
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

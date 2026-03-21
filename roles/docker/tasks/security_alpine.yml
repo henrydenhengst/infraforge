@@ -1,0 +1,8 @@
+---
+- name: Docker security configuratie (Alpine)
+  ansible.builtin.lineinfile:
+    path: /etc/conf.d/docker
+    regexp: '^docker_opts='
+    line: 'docker_opts="--seccomp-profile=/etc/docker/seccomp.json"'
+    create: yes
+  notify: restart docker

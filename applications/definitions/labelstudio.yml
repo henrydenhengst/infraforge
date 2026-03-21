@@ -1,0 +1,113 @@
+---
+# =============================================================================
+# OPENSOURCEPOS - KASSASYSTEEM
+# =============================================================================
+# Beschrijving: Web-gebaseerd kassasysteem met barcode ondersteuning
+# Website: https://opensourcepos.org
+# =============================================================================
+
+application:
+  name: opensourcepos
+  version: 3.5.0
+  description: "OpenSourcePOS - Kassasysteem"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: retail-team
+    contact: retail@company.local
+    slack: "#retail"
+    documentation: "https://opensourcepos.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+      - name: uploads
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/uploads
+        
+  network_requirements:
+    vlans:
+      - retail
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "OpenSourcePOS web interface"
+    dns:
+      - "pos.{{ domain }}"
+      - "kassa.{{ domain }}"
+      
+  container:
+    image: opensourcepos/opensourcepos:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: OSPOS_DB_HOST
+      value: "mysql"
+      secret: false
+    - name: OSPOS_DB_PORT
+      value: "3306"
+      secret: false
+    - name: OSPOS_DB_NAME
+      value: "opensourcepos"
+      secret: false
+    - name: OSPOS_DB_USER
+      value: "opensourcepos"
+      secret: false
+    - name: OSPOS_DB_PASSWORD
+      value: "{{ vault_opensourcepos_password }}"
+      secret: true
+    - name: OSPOS_ENCRYPTION_KEY
+      value: "{{ vault_opensourcepos_encryption_key }}"
+      secret: true
+    - name: OSPOS_TIMEZONE
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: OSPOS_CURRENCY
+      value: "EUR"
+      secret: false
+    - name: OSPOS_CURRENCY_SYMBOL
+      value: "€"
+      secret: false
+    - name: OSPOS_LANGUAGE
+      value: "nl"
+      secret: false
+    - name: OSPOS_COMPANY_NAME
+      value: "{{ company_name }}"
+      secret: false
+    - name: OSPOS_COMPANY_ADDRESS
+      value: "{{ company_address }}"
+      secret: false
+    - name: OSPOS_COMPANY_PHONE
+      value: "{{ company_phone }}"
+      secret: false
+    - name: OSPOS_COMPANY_EMAIL
+      value: "info@{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

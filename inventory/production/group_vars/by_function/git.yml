@@ -1,0 +1,424 @@
+---
+# =============================================================================
+# GIT TOOLS
+# =============================================================================
+# Functie: git
+# Beschrijving: Tools voor Git-repository hosting, codebeheer en CI/CD
+# =============================================================================
+
+git_tools:
+  # ---------------------------------------------------------------------------
+  # GIT SERVERS (VOLLEDIG)
+  # ---------------------------------------------------------------------------
+  - name: GitLab
+    profiel_tag: IT
+    functie_tag: git
+    beschrijving: "DevOps en CI/CD platform met Git-repository hosting"
+    categorie: git_server
+    docker_image: gitlab/gitlab-ce:latest
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "2222:22"
+    volumes:
+      - gitlab_config:/etc/gitlab
+      - gitlab_logs:/var/log/gitlab
+      - gitlab_data:/var/opt/gitlab
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.{{ domain }}'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        gitlab_rails['initial_root_password'] = '{{ vault_gitlab_root_password }}'
+        gitlab_rails['time_zone'] = 'Europe/Amsterdam'
+        gitlab_rails['gitlab_email_enabled'] = true
+        gitlab_rails['gitlab_email_from'] = 'gitlab@{{ domain }}'
+        gitlab_rails['gitlab_email_display_name'] = 'GitLab'
+        gitlab_rails['smtp_enable'] = true
+        gitlab_rails['smtp_address'] = 'smtp.{{ domain }}'
+        gitlab_rails['smtp_port'] = 587
+        gitlab_rails['smtp_user_name'] = 'gitlab@{{ domain }}'
+        gitlab_rails['smtp_password'] = '{{ vault_smtp_password }}'
+        gitlab_rails['smtp_domain'] = '{{ domain }}'
+        gitlab_rails['smtp_authentication'] = 'login'
+        gitlab_rails['smtp_enable_starttls_auto'] = true
+        gitlab_rails['registry_enabled'] = true
+        gitlab_rails['registry_host'] = 'registry.{{ domain }}'
+        gitlab_rails['registry_port'] = 5005
+        gitlab_rails['pages_enabled'] = true
+        gitlab_rails['pages_external_url'] = 'https://pages.{{ domain }}'
+    url: "https://about.gitlab.com"
+    
+  # ---------------------------------------------------------------------------
+  # LICHTGEWICHT GIT SERVERS
+  # ---------------------------------------------------------------------------
+  - name: Gitea
+    profiel_tag: IT
+    functie_tag: git
+    beschrijving: "Lichtgewicht Git-service met lage resource voetafdruk"
+    categorie: lightweight_git
+    docker_image: gitea/gitea:latest
+    ports:
+      - "3000:3000"
+      - "222:22"
+    volumes:
+      - gitea_data:/data
+      - gitea_config:/etc/gitea
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      USER_UID: 1000
+      USER_GID: 1000
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: postgres:5432
+      GITEA__database__NAME: gitea
+      GITEA__database__USER: gitea
+      GITEA__database__PASSWD: "{{ vault_gitea_password }}"
+      GITEA__server__DOMAIN: "git.{{ domain }}"
+      GITEA__server__SSH_DOMAIN: "git.{{ domain }}"
+      GITEA__server__ROOT_URL: "https://git.{{ domain }}"
+      GITEA__server__HTTP_PORT: 3000
+      GITEA__server__SSH_PORT: 222
+      GITEA__mailer__ENABLED: true
+      GITEA__mailer__HOST: "smtp.{{ domain }}:587"
+      GITEA__mailer__FROM: "gitea@{{ domain }}"
+      GITEA__mailer__USER: "gitea@{{ domain }}"
+      GITEA__mailer__PASSWD: "{{ vault_smtp_password }}"
+    database: postgresql
+    url: "https://gitea.io"
+    
+  - name: Gogs
+    profiel_tag: IT
+    functie_tag: git
+    beschrijving: "Eenvoudige Git-service, minimalistisch en snel"
+    categorie: lightweight_git
+    docker_image: gogs/gogs:latest
+    ports:
+      - "3001:3000"
+      - "10022:22"
+    volumes:
+      - gogs_data:/data
+    environment:
+      GOGS_DOMAIN: "gogs.{{ domain }}"
+      GOGS_SSH_PORT: 10022
+      GOGS_HTTP_PORT: 3000
+      GOGS_DB_TYPE: postgres
+      GOGS_DB_HOST: postgres:5432
+      GOGS_DB_NAME: gogs
+      GOGS_DB_USER: gogs
+      GOGS_DB_PASSWD: "{{ vault_gogs_password }}"
+      GOGS_RUN_USER: git
+      GOGS_APP_NAME: "Gogs Git Service"
+    database: postgresql
+    url: "https://gogs.io"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+git_defaults:
+  # Algemene Git instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Repository instellingen
+  repositories:
+    default_branch: main
+    protected_branches:
+      - main
+      - master
+      - develop
+      - release/*
+    max_file_size: 100MB
+    max_repo_size: 5GB
+    enable_lfs: true
+    lfs_file_size: 200MB
+    
+  # Authenticatie
+  auth:
+    enable_registration: false
+    enable_ldap: false
+    enable_oauth: true
+    oauth_providers:
+      - google
+      - github
+      - gitlab
+    session_timeout: 7200
+    two_factor_auth: true
+    
+  # Gebruikers
+  users:
+    allow_signup: false
+    default_role: developer
+    admin_creators: true
+    
+  # Teams en rechten
+  teams:
+    - name: Owners
+      permission: admin
+    - name: Developers
+      permission: write
+    - name: Viewers
+      permission: read
+      
+  # Webhooks
+  webhooks:
+    slack_enabled: true
+    slack_channel: "#git"
+    discord_enabled: false
+    mattermost_enabled: true
+    
+  # CI/CD
+  ci_cd:
+    enabled: true
+    runners: 3
+    concurrent_jobs: 10
+    job_timeout: 3600
+    
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: git@{{ domain }}
+    email_prefix: "[Git]"
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+gitlab_config:
+  # GitLab instellingen
+  settings:
+    application_name: "{{ company_name }} GitLab"
+    default_projects_limit: 100
+    default_branch_protection: 2
+    gravatar_enabled: false
+    signup_enabled: false
+    signin_enabled: true
+    require_two_factor_authentication: true
+    two_factor_grace_period: 48
+    
+  # GitLab OAuth
+  oauth:
+    google:
+      enabled: true
+      app_id: "{{ vault_google_client_id }}"
+      app_secret: "{{ vault_google_client_secret }}"
+    github:
+      enabled: true
+      app_id: "{{ vault_github_client_id }}"
+      app_secret: "{{ vault_github_client_secret }}"
+      
+  # GitLab gebruikers
+  users:
+    - name: Admin User
+      username: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_gitlab_admin_password }}"
+      admin: true
+      
+  # GitLab groepen
+  groups:
+    - name: Development
+      path: dev
+      visibility: internal
+    - name: Operations
+      path: ops
+      visibility: internal
+    - name: Data
+      path: data
+      visibility: internal
+      
+  # GitLab projecten
+  projects:
+    - name: backend-api
+      group: Development
+      visibility: internal
+      description: "Backend API services"
+      initialize_with_readme: true
+    - name: frontend-app
+      group: Development
+      visibility: internal
+      description: "Frontend web applicatie"
+    - name: infrastructure
+      group: Operations
+      visibility: private
+      description: "Infrastructure as Code"
+      
+  # GitLab runners
+  runners:
+    - name: docker-runner
+      executor: docker
+      docker_image: alpine:latest
+      tags:
+        - docker
+        - linux
+    - name: shell-runner
+      executor: shell
+      tags:
+        - shell
+        - local
+        
+  # GitLab CI/CD variabelen
+  ci_variables:
+    - key: DOCKER_REGISTRY
+      value: "registry.{{ domain }}"
+    - key: DEPLOY_USER
+      value: "{{ vault_deploy_user }}"
+    - key: DEPLOY_PASSWORD
+      value: "{{ vault_deploy_password }}"
+      protected: true
+      
+  # GitLab registry
+  registry:
+    enabled: true
+    port: 5005
+    container_registry: true
+    cleanup_policy:
+      enabled: true
+      cadence: "1d"
+      older_than: "30d"
+      keep_n: 10
+
+gitea_config:
+  # Gitea instellingen
+  settings:
+    app_name: "{{ company_name }} Gitea"
+    run_mode: prod
+    domain: "git.{{ domain }}"
+    root_url: "https://git.{{ domain }}"
+    http_port: 3000
+    ssh_port: 222
+    start_ssh_server: true
+    offline_mode: false
+    
+  # Gitea database
+  database:
+    type: postgres
+    host: postgres:5432
+    name: gitea
+    user: gitea
+    password: "{{ vault_gitea_password }}"
+    ssl_mode: disable
+    
+  # Gitea indexeren
+  indexer:
+    repo_indexer_enabled: true
+    repo_indexer_path: /data/indexers/repos
+    max_indexer_file_size: 1048576
+    
+  # Gitea mail
+  mailer:
+    enabled: true
+    protocol: smtp
+    smtp_addr: "smtp.{{ domain }}"
+    smtp_port: 587
+    user: "gitea@{{ domain }}"
+    password: "{{ vault_smtp_password }}"
+    from: "gitea@{{ domain }}"
+    
+  # Gitea gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_gitea_admin_password }}"
+      admin: true
+    - username: developer
+      email: developer@{{ domain }}
+      password: "{{ vault_gitea_developer_password }}"
+      
+  # Gitea organisaties
+  organizations:
+    - name: development
+      full_name: "Development Team"
+      description: "Development organisatie"
+    - name: operations
+      full_name: "Operations Team"
+      description: "Operations organisatie"
+      
+  # Gitea teams
+  teams:
+    - name: Owners
+      organization: development
+      permission: owner
+    - name: Developers
+      organization: development
+      permission: write
+    - name: Viewers
+      organization: development
+      permission: read
+      
+  # Gitea repositories
+  repositories:
+    - name: api-service
+      owner: development
+      description: "API Service repository"
+      private: false
+    - name: web-app
+      owner: development
+      description: "Web applicatie"
+      private: false
+      
+  # Gitea hooks
+  hooks:
+    - type: slack
+      url: "{{ vault_slack_webhook }}"
+      channel: "#git"
+      events:
+        - push
+        - pull_request
+        - issues
+        
+  # Gitea LFS
+  lfs:
+    enabled: true
+    content_path: /data/lfs
+    jwt_secret: "{{ vault_gitea_lfs_secret }}"
+
+gogs_config:
+  # Gogs instellingen
+  settings:
+    app_name: "{{ company_name }} Gogs"
+    domain: "gogs.{{ domain }}"
+    http_port: 3000
+    root_url: "https://gogs.{{ domain }}"
+    http_addr: 0.0.0.0
+    ssh_port: 10022
+    start_ssh_server: true
+    offline_mode: false
+    
+  # Gogs database
+  database:
+    type: postgres
+    host: postgres:5432
+    name: gogs
+    user: gogs
+    password: "{{ vault_gogs_password }}"
+    ssl_mode: disable
+    
+  # Gogs mailer
+  mailer:
+    enabled: true
+    host: "smtp.{{ domain }}:587"
+    from: "gogs@{{ domain }}"
+    user: "gogs@{{ domain }}"
+    passwd: "{{ vault_smtp_password }}"
+    
+  # Gogs gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      password: "{{ vault_gogs_admin_password }}"
+      admin: true
+      
+  # Gogs repositories
+  repositories:
+    - name: my-first-repo
+      owner: admin
+      description: "Mijn eerste repository"
+      private: false
+      
+  # Gogs hooks
+  hooks:
+    - type: slack
+      url: "{{ vault_slack_webhook }}"
+      channel: "#git"

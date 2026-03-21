@@ -1,0 +1,61 @@
+---
+# =============================================================================
+# KUBESCAPE - KUBERNETES SECURITY
+# =============================================================================
+# Beschrijving: Kubernetes security and compliance scanning
+# Website: https://kubescape.io
+# =============================================================================
+
+application:
+  name: kubescape
+  version: 3.0.0
+  description: "Kubescape - Kubernetes security scanning"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://kubescape.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports: []
+    dns: []
+    
+  container:
+    image: kubescape/kubescape:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: KUBESCAPE_ENABLE_SUBMISSION
+      value: "false"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["kubescape", "version"]

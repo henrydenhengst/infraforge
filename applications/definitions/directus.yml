@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# PAYLOAD CMS - NODE.JS HEADLESS CMS
+# =============================================================================
+# Beschrijving: Node.js headless CMS met React admin panel
+# Website: https://payloadcms.com
+# =============================================================================
+
+application:
+  name: payload
+  version: 2.0.0
+  description: "Payload CMS - Node.js headless CMS"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://payloadcms.com/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/media
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Payload API"
+    dns:
+      - "payload.{{ domain }}"
+      - "cms.{{ domain }}"
+      
+  container:
+    image: payloadcms/payload:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DATABASE_URI
+      value: "postgresql://payload:{{ vault_payload_password }}@postgres:5432/payload"
+      secret: true
+    - name: PAYLOAD_SECRET
+      value: "{{ vault_payload_secret }}"
+      secret: true
+    - name: PAYLOAD_PUBLIC_SERVER_URL
+      value: "https://payload.{{ domain }}"
+      secret: false
+    - name: PAYLOAD_PUBLIC_SITE_URL
+      value: "https://{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/health
+      port: 3000

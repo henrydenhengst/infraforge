@@ -1,0 +1,3 @@
+---
+elasticsearch_data_path: /opt/elasticsearch
+elasticsearch_heap_size: "1g"

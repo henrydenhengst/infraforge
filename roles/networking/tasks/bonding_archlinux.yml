@@ -1,0 +1,19 @@
+---
+- name: Laad bonding kernel module
+  ansible.builtin.modprobe:
+    name: bonding
+    state: present
+
+- name: Configureer bond netdev
+  ansible.builtin.template:
+    src: bond_arch_netdev.j2
+    dest: "/etc/systemd/network/bond0.netdev"
+    mode: '0644'
+  notify: restart systemd-networkd
+
+- name: Configureer bond network
+  ansible.builtin.template:
+    src: bond_arch_network.j2
+    dest: "/etc/systemd/network/bond0.network"
+    mode: '0644'
+  notify: restart systemd-networkd

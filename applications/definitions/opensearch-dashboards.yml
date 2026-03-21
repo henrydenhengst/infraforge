@@ -1,0 +1,88 @@
+---
+# =============================================================================
+# CORTEX - HORIZONTALLY SCALABLE PROMETHEUS
+# =============================================================================
+# Beschrijving: Horizontally scalable Prometheus implementation
+# Website: https://cortexmetrics.io
+# =============================================================================
+
+application:
+  name: cortex
+  version: 1.15.0
+  description: "Cortex - Horizontally scalable Prometheus"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://cortexmetrics.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 9009
+        host: 9009
+        protocol: tcp
+        public: false
+        description: "Cortex distributor"
+      - container: 9090
+        host: 9090
+        protocol: tcp
+        public: false
+        description: "Cortex querier"
+    dns:
+      - "cortex.{{ domain }}"
+      
+  container:
+    image: cortexproject/cortex:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: CORTEX_AUTH_ENABLED
+      value: "false"
+      secret: false
+    - name: CORTEX_STORAGE_ENGINE
+      value: "chunks"
+      secret: false
+    - name: CORTEX_STORAGE_CASSANDRA_ADDRESSES
+      value: "cassandra:9042"
+      secret: false
+    - name: CORTEX_STORAGE_CASSANDRA_KEYSAPCE
+      value: "cortex"
+      secret: false
+    - name: CORTEX_INGESTER_LIFECYCLER_RING_STORE
+      value: "memberlist"
+      secret: false
+    - name: CORTEX_QUERIER_FRONTEND_ADDRESS
+      value: "cortex-query-frontend:9095"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /ready
+      port: 9090

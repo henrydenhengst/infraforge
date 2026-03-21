@@ -1,0 +1,122 @@
+---
+# =============================================================================
+# OPENCTI - CYBER THREAT INTELLIGENCE
+# =============================================================================
+# Beschrijving: Cyber Threat Intelligence platform voor dreigingsanalyse
+# Website: https://www.opencti.io
+# =============================================================================
+
+application:
+  name: opencti
+  version: 6.0.0
+  description: "OpenCTI - Cyber Threat Intelligence"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://docs.opencti.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 4
+      min_ram_gb: 8
+      recommended_cpu_cores: 8
+      recommended_ram_gb: 16
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /opt/opencti/data
+      - name: logs
+        size_gb: 50
+        performance: ssd
+        backup_required: false
+        mount_path: /opt/opencti/logs
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "OpenCTI web interface"
+    dns:
+      - "threat.{{ domain }}"
+      - "opencti.{{ domain }}"
+      
+  container:
+    image: opencti/platform:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        
+  environment_variables:
+    - name: APP__PORT
+      value: "8080"
+      secret: false
+    - name: APP__BASE_URL
+      value: "https://opencti.{{ domain }}"
+      secret: false
+    - name: APP__ADMIN__EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: APP__ADMIN__PASSWORD
+      value: "{{ vault_opencti_admin_password }}"
+      secret: true
+    - name: APP__ADMIN__TOKEN
+      value: "{{ vault_opencti_admin_token }}"
+      secret: true
+    - name: ELASTICSEARCH__URL
+      value: "http://elasticsearch:9200"
+      secret: false
+    - name: MINIO__ENDPOINT
+      value: "minio"
+      secret: false
+    - name: MINIO__PORT
+      value: "9000"
+      secret: false
+    - name: MINIO__USE_SSL
+      value: "false"
+      secret: false
+    - name: MINIO__ACCESS_KEY
+      value: "minioadmin"
+      secret: false
+    - name: MINIO__SECRET_KEY
+      value: "{{ vault_minio_password }}"
+      secret: true
+    - name: RABBITMQ__HOSTNAME
+      value: "rabbitmq"
+      secret: false
+    - name: RABBITMQ__PORT
+      value: "5672"
+      secret: false
+    - name: RABBITMQ__USER
+      value: "opencti"
+      secret: false
+    - name: RABBITMQ__PASSWORD
+      value: "{{ vault_rabbitmq_password }}"
+      secret: true
+    - name: REDIS__HOSTNAME
+      value: "redis"
+      secret: false
+    - name: REDIS__PORT
+      value: "6379"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8080

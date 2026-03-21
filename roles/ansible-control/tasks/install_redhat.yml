@@ -1,0 +1,10 @@
+---
+- name: Installeer EPEL repository
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+
+- name: Installeer Ansible via DNF
+  ansible.builtin.dnf:
+    name: ansible
+    state: present

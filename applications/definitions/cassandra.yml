@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# APACHE - HTTP WEBSERVER
+# =============================================================================
+# Beschrijving: Populaire HTTP-webserver
+# Website: https://httpd.apache.org
+# =============================================================================
+
+application:
+  name: apache
+  version: 2.4
+  description: "Apache - HTTP-webserver"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: web-team
+    contact: web@company.local
+    slack: "#web"
+    documentation: "https://httpd.apache.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: html
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/local/apache2/htdocs
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/local/apache2/conf
+      - name: logs
+        size_gb: 5
+        performance: ssd
+        backup_required: false
+        mount_path: /usr/local/apache2/logs
+        
+  network_requirements:
+    vlans:
+      - dmz
+      - internal
+    ports:
+      - container: 80
+        host: 80
+        protocol: tcp
+        public: true
+        description: "HTTP"
+      - container: 443
+        host: 443
+        protocol: tcp
+        public: true
+        description: "HTTPS"
+    dns:
+      - "apache.{{ domain }}"
+      
+  container:
+    image: httpd:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: APACHE_SERVER_NAME
+      value: "{{ domain }}"
+      secret: false
+    - name: APACHE_SERVER_ADMIN
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: APACHE_DOCUMENT_ROOT
+      value: "/usr/local/apache2/htdocs"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

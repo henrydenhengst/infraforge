@@ -1,0 +1,38 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Redis'
+  ansible.builtin.package:
+    name: "{{ redis_packages[ansible_os_family] }}"
+    state: present
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Configureer Redis'
+  ansible.builtin.template:
+    src: redis.conf.j2
+    dest: "{{ redis_config_path[ansible_os_family] }}/redis.conf"
+    mode: '0644'
+  notify: restart redis
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Start en enable Redis'
+  ansible.builtin.service:
+    name: "{{ redis_service[ansible_os_family] }}"
+    state: started
+    enabled: yes
+  tags: [service]
+
+- name: '{{ ansible_os_family }} | Configureer Redis monitoring'
+  ansible.builtin.include_tasks: monitoring.yml
+  when: redis_monitoring_enabled | default(true)
+  tags: [monitoring]
+
+- name: '{{ ansible_os_family }} | Valideer Redis configuratie'
+  ansible.builtin.shell: redis-cli ping
+  register: redis_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Redis status
+  ansible.builtin.debug:
+    msg: "Redis: {{ redis_test.stdout }}"
+  when: redis_test.stdout is defined
+  tags: [validate]

@@ -1,0 +1,64 @@
+---
+# =============================================================================
+# HOPPSCOTCH - API DEVELOPMENT TOOL
+# =============================================================================
+# Beschrijving: Open-source API development tool (Postman alternatief)
+# Website: https://hoppscotch.io
+# =============================================================================
+
+application:
+  name: hoppscotch
+  version: latest
+  description: "Hoppscotch - API development tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: devops-team
+    contact: devops@company.local
+    slack: "#devops"
+    documentation: "https://docs.hoppscotch.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: false
+        mount_path: /app/data
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: false
+        description: "Hoppscotch web interface"
+    dns:
+      - "api.{{ domain }}"
+      - "hoppscotch.{{ domain }}"
+      
+  container:
+    image: hoppscotch/hoppscotch:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 3000

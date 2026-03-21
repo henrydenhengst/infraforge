@@ -1,0 +1,16 @@
+---
+- name: Configureer firewalld (RedHat)
+  ansible.builtin.firewalld:
+    port: "{{ item.port }}/{{ item.proto | default('tcp') }}"
+    permanent: yes
+    immediate: yes
+    state: enabled
+  loop: "{{ firewall_allowed_ports }}"
+  when: firewall_enabled | default(true)
+
+- name: Start en enable firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: yes
+  when: firewall_enabled | default(true)

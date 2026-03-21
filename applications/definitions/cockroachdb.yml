@@ -1,0 +1,95 @@
+---
+# =============================================================================
+# APACHE KAFKA - EVENT-STREAMING PLATFORM
+# =============================================================================
+# Beschrijving: Event-streaming platform voor real-time data pipelines
+# Website: https://kafka.apache.org
+# =============================================================================
+
+application:
+  name: apachekafka
+  version: 3.6.0
+  description: "Apache Kafka - Event-streaming platform"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://kafka.apache.org/documentation"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/kafka/data
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/lib/kafka/logs
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 9092
+        host: 9092
+        protocol: tcp
+        public: false
+        description: "Kafka broker"
+      - container: 9093
+        host: 9093
+        protocol: tcp
+        public: false
+        description: "Kafka controller"
+    dns:
+      - "kafka.{{ domain }}"
+      
+  container:
+    image: confluentinc/cp-kafka:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: KAFKA_BROKER_ID
+      value: "1"
+      secret: false
+    - name: KAFKA_ZOOKEEPER_CONNECT
+      value: "zookeeper:2181"
+      secret: false
+    - name: KAFKA_ADVERTISED_LISTENERS
+      value: "PLAINTEXT://kafka:9092"
+      secret: false
+    - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+      value: "1"
+      secret: false
+    - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+      value: "1"
+      secret: false
+    - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+      value: "1"
+      secret: false
+    - name: KAFKA_JMX_PORT
+      value: "9997"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: tcp
+      port: 9092

@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# PGADMIN - POSTGRESQL ADMINISTRATION
+# =============================================================================
+# Beschrijving: Web-based PostgreSQL administration tool
+# Website: https://www.pgadmin.org
+# =============================================================================
+
+application:
+  name: pgadmin
+  version: 8.5.0
+  description: "pgAdmin - PostgreSQL administration"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: dba-team
+    contact: dba@company.local
+    slack: "#database"
+    documentation: "https://www.pgadmin.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/pgadmin
+        
+  network_requirements:
+    vlans:
+      - database
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "pgAdmin web interface"
+    dns:
+      - "pgadmin.{{ domain }}"
+      - "postgres-ui.{{ domain }}"
+      
+  container:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PGADMIN_DEFAULT_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: PGADMIN_DEFAULT_PASSWORD
+      value: "{{ vault_pgadmin_password }}"
+      secret: true
+    - name: PGADMIN_CONFIG_SERVER_MODE
+      value: "False"
+      secret: false
+    - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
+      value: "False"
+      secret: false
+    - name: PGADMIN_LISTEN_PORT
+      value: "80"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /misc/ping
+      port: 80

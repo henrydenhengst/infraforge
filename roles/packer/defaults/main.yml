@@ -1,0 +1,10 @@
+---
+packer_version: "1.10.0"
+packer_workspace: /opt/packer
+packer_plugins:
+  - amazon
+  - docker
+  - googlecompute
+  - azure
+  - vmware
+  - virtualbox

@@ -1,0 +1,91 @@
+---
+# =============================================================================
+# DEFECTDOJO - VULNERABILITY MANAGEMENT
+# =============================================================================
+# Beschrijving: Vulnerability management platform
+# Website: https://defectdojo.com
+# =============================================================================
+
+application:
+  name: defectdojo
+  version: 2.32.0
+  description: "DefectDojo - Vulnerability management"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://defectdojo.github.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /app/media
+      - name: static
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /app/static
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "DefectDojo UI"
+    dns:
+      - "defectdojo.{{ domain }}"
+      
+  container:
+    image: defectdojo/defectdojo:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: DD_DATABASE_URL
+      value: "postgresql://defectdojo:{{ vault_defectdojo_password }}@postgres:5432/defectdojo"
+      secret: true
+    - name: DD_SECRET_KEY
+      value: "{{ vault_defectdojo_secret }}"
+      secret: true
+    - name: DD_CREDENTIAL_AES_256_KEY
+      value: "{{ vault_defectdojo_aes_key }}"
+      secret: true
+    - name: DD_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: DD_ADMIN_PASSWORD
+      value: "{{ vault_defectdojo_admin_password }}"
+      secret: true
+    - name: DD_ADMIN_MAIL
+      value: "admin@{{ domain }}"
+      secret: false
+    - name: DD_PORT
+      value: "8080"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/v2/health
+      port: 8080

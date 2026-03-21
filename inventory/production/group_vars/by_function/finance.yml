@@ -1,0 +1,475 @@
+---
+# =============================================================================
+# FINANCIËLE TOOLS
+# =============================================================================
+# Functie: finance
+# Beschrijving: Tools voor boekhouding, facturatie, persoonlijke financiën en urenregistratie
+# =============================================================================
+
+finance_tools:
+  # ---------------------------------------------------------------------------
+  # BOEKHOUDING & FACTURATIE
+  # ---------------------------------------------------------------------------
+  - name: Akaunting
+    profiel_tag: Financiën
+    functie_tag: finance
+    beschrijving: "Online boekhoudsoftware voor kleine bedrijven"
+    categorie: accounting
+    docker_image: akaunting/akaunting:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - akaunting_data:/var/www/html
+      - akaunting_modules:/var/www/html/modules
+      - akaunting_storage:/var/www/html/storage
+    environment:
+      AKAUNTING_DB_HOST: mysql
+      AKAUNTING_DB_PORT: 3306
+      AKAUNTING_DB_NAME: akaunting
+      AKAUNTING_DB_USER: akaunting
+      AKAUNTING_DB_PASSWORD: "{{ vault_akaunting_password }}"
+      AKAUNTING_COMPANY_NAME: "{{ company_name }}"
+      AKAUNTING_COMPANY_EMAIL: finance@{{ domain }}
+      AKAUNTING_ADMIN_EMAIL: admin@{{ domain }}
+      AKAUNTING_ADMIN_PASSWORD: "{{ vault_akaunting_admin_password }}"
+      AKAUNTING_LOCALE: nl-NL
+    database: mysql
+    url: "https://akaunting.com"
+    
+  - name: InvoicePlane
+    profiel_tag: Financiën
+    functie_tag: finance
+    beschrijving: "Zelfgehost systeem voor offertes en facturatie"
+    categorie: invoicing
+    docker_image: invoiceplane/invoiceplane:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - invoiceplane_data:/var/www/html/uploads
+    environment:
+      INVOICEPLANE_DB_HOST: mysql
+      INVOICEPLANE_DB_NAME: invoiceplane
+      INVOICEPLANE_DB_USER: invoiceplane
+      INVOICEPLANE_DB_PASSWORD: "{{ vault_invoiceplane_password }}"
+      INVOICEPLANE_URL: "https://invoice.{{ domain }}"
+      INVOICEPLANE_ADMIN_EMAIL: admin@{{ domain }}
+      INVOICEPLANE_ADMIN_PASSWORD: "{{ vault_invoiceplane_admin_password }}"
+    database: mysql
+    url: "https://invoiceplane.com"
+    
+  # ---------------------------------------------------------------------------
+  # PERSOONLIJKE FINANCIËN
+  # ---------------------------------------------------------------------------
+  - name: Firefly III
+    profiel_tag: Financiën
+    functie_tag: finance
+    beschrijving: "Persoonlijk financieel beheer en budgettering"
+    categorie: personal_finance
+    docker_image: fireflyiii/core:latest
+    ports:
+      - "8082:8080"
+    volumes:
+      - firefly_data:/var/www/html/storage
+      - firefly_export:/var/www/html/storage/export
+      - firefly_upload:/var/www/html/storage/upload
+    environment:
+      APP_KEY: "{{ vault_firefly_app_key }}"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: firefly
+      DB_USERNAME: firefly
+      DB_PASSWORD: "{{ vault_firefly_password }}"
+      APP_URL: "https://firefly.{{ domain }}"
+      TRUSTED_PROXIES: "**"
+      MAIL_MAILER: smtp
+      MAIL_HOST: smtp.{{ domain }}
+      MAIL_PORT: 587
+      MAIL_USERNAME: firefly@{{ domain }}
+      MAIL_PASSWORD: "{{ vault_smtp_password }}"
+      MAIL_ENCRYPTION: tls
+      MAIL_FROM_ADDRESS: firefly@{{ domain }}
+      MAIL_FROM_NAME: "Firefly III"
+    database: mysql
+    url: "https://firefly-iii.org"
+    
+  - name: BigCapital
+    profiel_tag: Financiën
+    functie_tag: finance
+    beschrijving: "Boekhouding met focus op retail-inventaris"
+    categorie: retail_accounting
+    docker_image: bigcapital/bigcapital:latest
+    ports:
+      - "8083:80"
+    volumes:
+      - bigcapital_data:/app/data
+    environment:
+      BIGCAPITAL_DB_HOST: postgres
+      BIGCAPITAL_DB_NAME: bigcapital
+      BIGCAPITAL_DB_USER: bigcapital
+      BIGCAPITAL_DB_PASSWORD: "{{ vault_bigcapital_password }}"
+      BIGCAPITAL_SECRET_KEY: "{{ vault_bigcapital_secret }}"
+      BIGCAPITAL_ADMIN_EMAIL: admin@{{ domain }}
+      BIGCAPITAL_ADMIN_PASSWORD: "{{ vault_bigcapital_admin_password }}"
+    database: postgresql
+    url: "https://bigcapital.com"
+    
+  # ---------------------------------------------------------------------------
+  # URENREGISTRATIE
+  # ---------------------------------------------------------------------------
+  - name: Kimai
+    profiel_tag: Financiën
+    functie_tag: time-tracking
+    beschrijving: "Professionele urenregistratie voor facturatie en projecten"
+    categorie: time_tracking
+    docker_image: kimai/kimai2:latest
+    ports:
+      - "8084:80"
+    volumes:
+      - kimai_data:/opt/kimai/var/data
+      - kimai_logs:/opt/kimai/var/log
+      - kimai_plugins:/opt/kimai/plugins
+    environment:
+      DATABASE_URL: "mysql://kimai:{{ vault_kimai_password }}@mysql:3306/kimai"
+      APP_ENV: prod
+      APP_SECRET: "{{ vault_kimai_secret }}"
+      MAILER_URL: "smtp://smtp.{{ domain }}:587?encryption=tls&auth_mode=login&username=kimai@{{ domain }}&password={{ vault_smtp_password }}"
+      MAILER_FROM: kimai@{{ domain }}
+      COMPANY_NAME: "{{ company_name }}"
+    database: mysql
+    url: "https://www.kimai.org"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+finance_defaults:
+  # Algemene financiële instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Bedrijfsgegevens
+  company:
+    name: "{{ company_name }}"
+    legal_name: "{{ company_legal_name }}"
+    address: "{{ company_address }}"
+    postal_code: "{{ company_postal }}"
+    city: "{{ company_city }}"
+    country: "Nederland"
+    phone: "{{ company_phone }}"
+    email: finance@{{ domain }}
+    website: "https://{{ domain }}"
+    vat_number: "{{ company_vat }}"
+    kvk_number: "{{ company_kvk }}"
+    iban: "{{ company_iban }}"
+    bic: "{{ company_bic }}"
+    
+  # Financiële instellingen
+  financial:
+    currency: EUR
+    currency_symbol: €
+    fiscal_year_start: "01-01"
+    fiscal_year_end: "31-12"
+    vat_rate: 21
+    vat_rates:
+      - name: High
+        rate: 21
+      - name: Low
+        rate: 9
+      - name: Zero
+        rate: 0
+    payment_terms: 30
+    invoice_prefix: "INV-{{ '%Y' | strftime }}-"
+    quote_prefix: "QTE-{{ '%Y' | strftime }}-"
+    
+  # Factuur instellingen
+  invoice:
+    default_due_days: 30
+    late_fee_percentage: 2
+    late_fee_fixed: 10
+    reminder_days: [7, 14, 21, 28]
+    send_reminders: true
+    attach_pdf: true
+    
+  # BTW instellingen
+  vat:
+    scheme: "EU VAT"
+    number: "{{ company_vat }}"
+    reverse_charge: true
+    intra_community: true
+    
+  # Bank instellingen
+  bank:
+    iban: "{{ company_iban }}"
+    bic: "{{ company_bic }}"
+    bank_name: "{{ company_bank }}"
+    
+  # Rapportage
+  reports:
+    - profit_loss
+    - balance_sheet
+    - cash_flow
+    - vat_report
+    - aging_report
+    
+  # Notificaties
+  notifications:
+    email_enabled: true
+    email_from: finance@{{ domain }}
+    email_prefix: "[Finance]"
+    sms_enabled: false
+    push_enabled: true
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+akaunting_config:
+  # Akaunting bedrijven
+  companies:
+    - name: "{{ company_name }}"
+      email: finance@{{ domain }}
+      currency: EUR
+      country: NL
+      
+  # Akaunting belastingen
+  taxes:
+    - name: BTW 21%
+      rate: 21
+      type: normal
+    - name: BTW 9%
+      rate: 9
+      type: normal
+    - name: BTW 0%
+      rate: 0
+      type: normal
+      
+  # Akaunting categorieën
+  categories:
+    - name: Inkomsten
+      type: income
+      color: "#00ff00"
+    - name: Uitgaven
+      type: expense
+      color: "#ff0000"
+    - name: Salaris
+      type: expense
+      color: "#0000ff"
+    - name: Huur
+      type: expense
+      color: "#ffff00"
+    - name: Marketing
+      type: expense
+      color: "#ff00ff"
+      
+  # Akaunting accounts
+  accounts:
+    - name: Betaalrekening
+      number: "{{ company_iban }}"
+      currency: EUR
+      bank_name: "{{ company_bank }}"
+      opening_balance: 10000
+    - name: Spaarrekening
+      number: "{{ company_savings_iban }}"
+      currency: EUR
+      bank_name: "{{ company_bank }}"
+      opening_balance: 50000
+    - name: Kas
+      number: "CASH001"
+      currency: EUR
+      opening_balance: 500
+      
+  # Akaunting gebruikers
+  users:
+    - name: Admin
+      email: admin@{{ domain }}
+      role: administrator
+    - name: Finance
+      email: finance@{{ domain }}
+      role: manager
+
+invoiceplane_config:
+  # InvoicePlane instellingen
+  settings:
+    company_name: "{{ company_name }}"
+    company_address: "{{ company_address }}"
+    company_phone: "{{ company_phone }}"
+    company_email: finance@{{ domain }}
+    company_vat: "{{ company_vat }}"
+    currency: EUR
+    currency_symbol: €
+    date_format: d-m-Y
+    
+  # InvoicePlane klanten
+  clients:
+    - name: "Voorbeeld Klant BV"
+      address: "Klantstraat 1, Amsterdam"
+      phone: "020-1234567"
+      email: info@klant.nl
+      vat_id: "NL123456789B01"
+      
+  # InvoicePlane facturen
+  invoice_templates:
+    - name: Standaard
+      template: default
+    - name: Zakelijk
+      template: business
+      
+  # InvoicePlane betalingstermijnen
+  payment_methods:
+    - name: Bankoverschrijving
+      type: bank
+    - name: Creditcard
+      type: creditcard
+    - name: PayPal
+      type: paypal
+
+firefly_config:
+  # Firefly III accounts
+  accounts:
+    - name: Betaalrekening
+      type: asset
+      currency: EUR
+      iban: "{{ company_iban }}"
+      opening_balance: 10000
+      
+    - name: Spaarrekening
+      type: asset
+      currency: EUR
+      iban: "{{ company_savings_iban }}"
+      opening_balance: 50000
+      
+    - name: Creditcard
+      type: liability
+      currency: EUR
+      opening_balance: -500
+      
+    - name: Kas
+      type: asset
+      currency: EUR
+      opening_balance: 500
+      
+  # Firefly III categorieën
+  categories:
+    - name: Boodschappen
+    - name: Huur
+    - name: Energie
+    - name: Verzekering
+    - name: Abonnementen
+    - name: Uit eten
+    - name: Vakantie
+    - name: Cadeaus
+    
+  # Firefly III budgetten
+  budgets:
+    - name: Maandelijkse lasten
+      auto_budget_type: monthly
+      auto_budget_amount: 2000
+      auto_budget_currency: EUR
+      
+    - name: Boodschappen
+      auto_budget_type: monthly
+      auto_budget_amount: 600
+      auto_budget_currency: EUR
+      
+    - name: Sparen
+      auto_budget_type: monthly
+      auto_budget_amount: 500
+      auto_budget_currency: EUR
+      
+  # Firefly III tags
+  tags:
+    - name: Belangrijk
+      tag: important
+      color: "#ff0000"
+    - name: Zakelijk
+      tag: business
+      color: "#0000ff"
+    - name: Privé
+      tag: private
+      color: "#00ff00"
+      
+  # Firefly III regels
+  rules:
+    - name: Huur
+      trigger: description
+      trigger_value: ".*Huur.*"
+      action: set_category
+      action_value: Huur
+      
+    - name: Energie
+      trigger: description
+      trigger_value: ".*Energie.*"
+      action: set_category
+      action_value: Energie
+
+kimai_config:
+  # Kimai klanten
+  customers:
+    - name: "{{ company_name }}"
+      number: CUST-001
+      currency: EUR
+    - name: "Voorbeeld Klant BV"
+      number: CUST-002
+      currency: EUR
+      address: "Klantstraat 1, Amsterdam"
+      contact: "Jan Janssen"
+      phone: "020-1234567"
+      email: "info@klant.nl"
+      
+  # Kimai projecten
+  projects:
+    - name: Website Ontwikkeling
+      customer: "Voorbeeld Klant BV"
+      order_number: PO-2024-001
+      budget: 10000
+      hourly_rate: 95
+    - name: Onderhoud
+      customer: "Voorbeeld Klant BV"
+      order_number: PO-2024-002
+      budget: 5000
+      hourly_rate: 85
+    - name: Interne Projecten
+      customer: "{{ company_name }}"
+      
+  # Kimai activiteiten
+  activities:
+    - name: Ontwikkeling
+      project: Website Ontwikkeling
+    - name: Overleg
+      project: Website Ontwikkeling
+    - name: Documentatie
+      project: Website Ontwikkeling
+    - name: Onderhoud
+      project: Onderhoud
+    - name: Administratie
+      project: Interne Projecten
+      
+  # Kimai gebruikers
+  users:
+    - username: admin
+      email: admin@{{ domain }}
+      roles: [ROLE_SUPER_ADMIN]
+    - username: finance
+      email: finance@{{ domain }}
+      roles: [ROLE_ADMIN]
+    - username: employee1
+      email: employee1@{{ domain }}
+      roles: [ROLE_USER]
+      hourly_rate: 75
+      
+  # Kimai facturatie
+  invoice_templates:
+    - name: Standaard
+      template: default.html.twig
+    - name: Uitgebreid
+      template: extended.html.twig
+      
+  # Kimai export
+  export:
+    formats:
+      - pdf
+      - csv
+      - excel
+    default_format: pdf

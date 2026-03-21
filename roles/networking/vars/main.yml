@@ -1,0 +1,131 @@
+---
+# =============================================================================
+# NETWORKING ROLE VARIABELEN
+# =============================================================================
+
+# Network packages per OS
+network_packages:
+  Debian:
+    - ifupdown
+    - vlan
+    - bridge-utils
+    - bonding
+    - ethtool
+    - nftables
+    - iptables
+    - dnsutils
+    - traceroute
+    - tcpdump
+  RedHat:
+    - NetworkManager
+    - network-scripts
+    - vlan
+    - bridge-utils
+    - bonding
+    - ethtool
+    - nftables
+    - iptables-services
+    - bind-utils
+    - traceroute
+    - tcpdump
+  Suse:
+    - wicked
+    - vlan
+    - bridge-utils
+    - bonding
+    - ethtool
+    - nftables
+    - iptables
+    - bind-utils
+    - traceroute
+    - tcpdump
+  Archlinux:
+    - systemd-networkd
+    - systemd-resolved
+    - iwd
+    - vlan
+    - bridge-utils
+    - bonding
+    - ethtool
+    - nftables
+    - iptables-nft
+    - bind-tools
+    - traceroute
+    - tcpdump
+  Alpine:
+    - network-extras
+    - vlan
+    - bridge
+    - bonding
+    - ethtool
+    - nftables
+    - iptables
+    - bind-tools
+    - traceroute
+    - tcpdump
+
+# Network service namen per OS
+network_service:
+  Debian: networking
+  RedHat: NetworkManager
+  Suse: wicked
+  Archlinux: systemd-networkd
+  Alpine: networking
+
+# Sysctl parameters voor netwerk
+network_sysctl_parameters:
+  Debian:
+    - name: net.ipv4.ip_forward
+      value: 1
+    - name: net.ipv4.conf.all.forwarding
+      value: 1
+    - name: net.ipv6.conf.all.forwarding
+      value: 1
+    - name: net.core.rmem_default
+      value: 87380
+    - name: net.core.rmem_max
+      value: 16777216
+    - name: net.core.wmem_default
+      value: 87380
+    - name: net.core.wmem_max
+      value: 16777216
+    - name: net.ipv4.tcp_rmem
+      value: "4096 87380 16777216"
+    - name: net.ipv4.tcp_wmem
+      value: "4096 87380 16777216"
+    - name: net.core.netdev_max_backlog
+      value: 5000
+    - name: net.ipv4.tcp_max_syn_backlog
+      value: 4096
+    - name: net.ipv4.tcp_slow_start_after_idle
+      value: 0
+  RedHat:
+    - name: net.ipv4.ip_forward
+      value: 1
+    - name: net.ipv4.conf.all.forwarding
+      value: 1
+    - name: net.core.rmem_default
+      value: 87380
+    - name: net.core.rmem_max
+      value: 16777216
+    - name: net.core.wmem_default
+      value: 87380
+    - name: net.core.wmem_max
+      value: 16777216
+    - name: net.ipv4.tcp_rmem
+      value: "4096 87380 16777216"
+    - name: net.ipv4.tcp_wmem
+      value: "4096 87380 16777216"
+  Suse:
+    - name: net.ipv4.ip_forward
+      value: 1
+    - name: net.ipv4.conf.all.forwarding
+      value: 1
+  Archlinux:
+    - name: net.ipv4.ip_forward
+      value: 1
+    - name: net.ipv6.conf.all.forwarding
+      value: 1
+  Alpine:
+    - name: net.ipv4.ip_forward
+      value: 1

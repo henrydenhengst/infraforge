@@ -1,0 +1,92 @@
+---
+# =============================================================================
+# TRINO - DISTRIBUTED SQL QUERY ENGINE
+# =============================================================================
+# Beschrijving: Gedistribueerde SQL query engine voor big data
+# Website: https://trino.io
+# =============================================================================
+
+application:
+  name: trino
+  version: 441
+  description: "Trino - Distributed SQL query engine"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://trino.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/trino
+      - name: logs
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /var/log/trino
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 8080
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Trino web UI"
+    dns:
+      - "trino.{{ domain }}"
+      - "sql.{{ domain }}"
+      
+  container:
+    image: trinodb/trino:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: TRINO_NODE_ID
+      value: "trino-node"
+      secret: false
+    - name: TRINO_NODE_ENVIRONMENT
+      value: "production"
+      secret: false
+    - name: TRINO_COORDINATOR
+      value: "true"
+      secret: false
+    - name: TRINO_DISCOVERY_URI
+      value: "http://trino:8080"
+      secret: false
+    - name: TRINO_HTTP_PORT
+      value: "8080"
+      secret: false
+    - name: TRINO_MAX_QUERY_MEMORY
+      value: "2GB"
+      secret: false
+    - name: TRINO_QUERY_MAX_MEMORY_PER_NODE
+      value: "1GB"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /v1/info
+      port: 8080

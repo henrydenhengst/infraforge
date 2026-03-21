@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# EMBY - MEDIA SERVER
+# =============================================================================
+# Beschrijving: Mediaserver met uitgebreide client ondersteuning
+# Website: https://emby.media
+# =============================================================================
+
+application:
+  name: emby
+  version: 4.8.0
+  description: "Emby - Media server"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://emby.media/support"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: config
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: cache
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /cache
+      - name: media
+        size_gb: 1000
+        performance: hdd
+        backup_required: false
+        mount_path: /media
+        
+  network_requirements:
+    vlans:
+      - media
+      - dmz
+    ports:
+      - container: 8096
+        host: 8096
+        protocol: tcp
+        public: true
+        description: "Emby web interface"
+      - container: 8920
+        host: 8920
+        protocol: tcp
+        public: true
+        description: "Emby HTTPS"
+    dns:
+      - "emby.{{ domain }}"
+      
+  container:
+    image: emby/embyserver:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: UID
+      value: "1000"
+      secret: false
+    - name: GID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8096

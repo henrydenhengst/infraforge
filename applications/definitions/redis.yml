@@ -1,0 +1,506 @@
+---
+# =============================================================================
+# REDIS - IN-MEMORY DATA STRUCTURE STORE
+# =============================================================================
+# Beschrijving: Snelle in-memory database voor caching, queues en real-time data
+# Website: https://redis.io
+# =============================================================================
+
+application:
+  name: redis
+  version: 7.2.4
+  description: "Redis - In-memory datastore voor caching en queues"
+  environment: "{{ environment | default('production') }}"
+  
+  # ===========================================================================
+  # EIGENAAR & CONTACT
+  # ===========================================================================
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://redis.io/docs/"
+    
+  # ===========================================================================
+  # HARDWARE VEREISTEN
+  # ===========================================================================
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 8
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 16
+      cpu_architecture: any
+      gpu_required: false
+      
+    storage:
+      - name: data
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        description: "Redis persistentie bestanden (RDB/AOF)"
+        
+      - name: logs
+        size_gb: 5
+        performance: any
+        backup_required: false
+        mount_path: /var/log/redis
+        description: "Redis log bestanden"
+        
+  # ===========================================================================
+  # NETWERK VEREISTEN
+  # ===========================================================================
+  network_requirements:
+    vlans:
+      - cache
+      - internal
+      
+    ports:
+      - container: 6379
+        protocol: tcp
+        public: false
+        description: "Redis standaard poort"
+        
+      - container: 26379
+        protocol: tcp
+        public: false
+        description: "Redis Sentinel poort (voor HA)"
+        
+    dns:
+      - "redis.cache.{{ domain }}"
+      - "redis-sentinel.cache.{{ domain }}"
+      
+  # ===========================================================================
+  # CLUSTER CONFIGURATIE
+  # ===========================================================================
+  cluster_config:
+    mode: sentinel
+    description: "Redis Sentinel voor high availability"
+    sentinel_count: 3
+    quorum: 2
+    down_after_milliseconds: 5000
+    failover_timeout: 10000
+    parallel_syncs: 1
+    
+  # ===========================================================================
+  # CONTAINER CONFIGURATIE
+  # ===========================================================================
+  container:
+    image: redis:7.2.4-alpine
+    restart: unless-stopped
+    
+    resources:
+      limits:
+        cpu: "2"
+        memory: 8Gi
+      requests:
+        cpu: "1"
+        memory: 4Gi
+        
+    security_context:
+      run_as_user: 999
+      run_as_group: 999
+      fs_group: 999
+      read_only_root_filesystem: true
+      allow_privilege_escalation: false
+      capabilities:
+        drop:
+          - ALL
+        add:
+          - SETGID
+          - SETUID
+          - CHOWN
+          
+  # ===========================================================================
+  # COMMANDO EN ARGUMENTEN
+  # ===========================================================================
+  command: redis-server
+  args:
+    - --appendonly yes
+    - --save 900 1
+    - --save 300 10
+    - --save 60 10000
+    - --maxmemory 6gb
+    - --maxmemory-policy allkeys-lru
+    - --requirepass {{ vault_redis_password }}
+    - --masterauth {{ vault_redis_password }}
+    - --bind 0.0.0.0
+    - --port 6379
+    - --tcp-backlog 511
+    - --timeout 0
+    - --tcp-keepalive 300
+    - --daemonize no
+    - --supervised no
+    - --loglevel notice
+    - --logfile /var/log/redis/redis-server.log
+    - --syslog-enabled no
+    - --databases 16
+    - --always-show-logo no
+    - --protected-mode yes
+    - --stop-writes-on-bgsave-error yes
+    - --rdbcompression yes
+    - --rdbchecksum yes
+    - --dbfilename dump.rdb
+    - --dir /data
+    - --replica-serve-stale-data yes
+    - --replica-read-only yes
+    - --repl-diskless-sync yes
+    - --repl-diskless-sync-delay 5
+    - --repl-disable-tcp-nodelay no
+    - --replica-priority 100
+    - --lazyfree-lazy-eviction no
+    - --lazyfree-lazy-expire no
+    - --lazyfree-lazy-server-del no
+    - --replica-lazy-flush no
+    - --dynamic-hz yes
+    - --aof-rewrite-incremental-fsync yes
+    - --rdb-save-incremental-fsync yes
+    - --jemalloc-bg-thread yes
+    
+  # ===========================================================================
+  # OMGEVINGSVARIABELEN
+  # ===========================================================================
+  environment_variables:
+    - name: REDIS_PASSWORD
+      value: "{{ vault_redis_password }}"
+      secret: true
+      description: "Redis authenticatie wachtwoord"
+      
+    - name: REDIS_PORT
+      value: "6379"
+      secret: false
+      description: "Redis poort"
+      
+    - name: REDIS_SENTINEL_PORT
+      value: "26379"
+      secret: false
+      description: "Redis Sentinel poort"
+      
+    - name: REDIS_MAXMEMORY
+      value: "6gb"
+      secret: false
+      description: "Maximaal geheugengebruik"
+      
+    - name: REDIS_MAXMEMORY_POLICY
+      value: "allkeys-lru"
+      secret: false
+      description: "Cache evictie policy"
+      
+    - name: REDIS_APPENDONLY
+      value: "yes"
+      secret: false
+      description: "AOF persistentie inschakelen"
+      
+    - name: REDIS_SAVE
+      value: "900 1 300 10 60 10000"
+      secret: false
+      description: "RDB save intervallen"
+      
+  # ===========================================================================
+  # CONFIGURATIEBESTANDEN
+  # ===========================================================================
+  config_files:
+    - path: /usr/local/etc/redis/redis.conf
+      template: redis/redis.conf.j2
+      mode: "0644"
+      owner: "redis:redis"
+      
+    - path: /usr/local/etc/redis/sentinel.conf
+      template: redis/sentinel.conf.j2
+      mode: "0644"
+      owner: "redis:redis"
+      
+  # ===========================================================================
+  # REDIS CONFIGURATIE
+  # ===========================================================================
+  redis_config:
+    version: 7.2
+    
+    # Memory management
+    maxmemory: 6gb
+    maxmemory_policy: allkeys-lru
+    maxmemory_samples: 5
+    
+    # Persistence
+    appendonly: yes
+    appendfilename: "appendonly.aof"
+    appendfsync: everysec
+    no_appendfsync_on_rewrite: no
+    auto_aof_rewrite_percentage: 100
+    auto_aof_rewrite_min_size: 64mb
+    aof_load_truncated: yes
+    aof_use_rdb_preamble: yes
+    
+    # RDB Snapshots
+    save:
+      - interval: 900
+        changes: 1
+      - interval: 300
+        changes: 10
+      - interval: 60
+        changes: 10000
+    stop_writes_on_bgsave_error: yes
+    rdbcompression: yes
+    rdbchecksum: yes
+    dbfilename: dump.rdb
+    rdb_del_sync_files: no
+    
+    # Replication
+    replicaof: ""
+    masterauth: "{{ vault_redis_password }}"
+    masteruser: ""
+    replica_serve_stale_data: yes
+    replica_read_only: yes
+    repl_diskless_sync: yes
+    repl_diskless_sync_delay: 5
+    repl_ping_replica_period: 10
+    repl_timeout: 60
+    repl_backlog_size: 1mb
+    repl_backlog_ttl: 3600
+    replica_priority: 100
+    min_replicas_to_write: 1
+    min_replicas_max_lag: 10
+    
+    # Security
+    requirepass: "{{ vault_redis_password }}"
+    rename_commands:
+      - command: CONFIG
+        newname: ""
+      - command: FLUSHDB
+        newname: ""
+      - command: FLUSHALL
+        newname: ""
+      - command: DEBUG
+        newname: ""
+      
+    # Networking
+    bind: 0.0.0.0
+    port: 6379
+    tcp_backlog: 511
+    timeout: 0
+    tcp_keepalive: 300
+    
+    # General
+    daemonize: no
+    supervised: no
+    pidfile: /var/run/redis/redis-server.pid
+    loglevel: notice
+    logfile: /var/log/redis/redis-server.log
+    syslog_enabled: no
+    syslog_ident: redis
+    syslog_facility: local0
+    databases: 16
+    always_show_logo: no
+    set_proc_title: yes
+    proc_title_template: "{title} {listen-addr} {server-mode}"
+    
+    # Slow log
+    slowlog_log_slower_than: 10000
+    slowlog_max_len: 128
+    
+    # Latency monitor
+    latency_monitor_threshold: 0
+    
+    # Key tracking
+    notify_keyspace_events: ""
+    
+    # Hash settings
+    hash_max_listpack_entries: 512
+    hash_max_listpack_value: 64
+    
+    # List settings
+    list_max_listpack_size: -2
+    
+    # Set settings
+    set_max_intset_entries: 512
+    
+    # Zset settings
+    zset_max_listpack_entries: 128
+    zset_max_listpack_value: 64
+    
+    # HyperLogLog
+    hll_sparse_max_bytes: 3000
+    
+    # Streams
+    stream_node_max_bytes: 4096
+    stream_node_max_entries: 100
+    
+    # Active defragmentation
+    activedefrag: no
+    active_defrag_ignore_bytes: 100mb
+    active_defrag_threshold_lower: 10
+    active_defrag_threshold_upper: 100
+    active_defrag_cycle_min: 1
+    active_defrag_cycle_max: 25
+    active_defrag_max_scan_fields: 1000
+    
+    # Jemalloc background thread
+    jemalloc_bg_thread: yes
+    
+  # ===========================================================================
+  # SENTINEL CONFIGURATIE (VOOR HIGH AVAILABILITY)
+  # ===========================================================================
+  sentinel_config:
+    enabled: true
+    sentinel_port: 26379
+    sentinel_announce_ip: "{{ ansible_default_ipv4.address }}"
+    sentinel_announce_port: 26379
+    
+    monitors:
+      - name: mymaster
+        ip: redis-primary
+        port: 6379
+        quorum: 2
+        
+    down_after_milliseconds: 5000
+    failover_timeout: 10000
+    parallel_syncs: 1
+    
+    auth_pass: "{{ vault_redis_password }}"
+    
+    notification_script: /usr/local/bin/sentinel-notify.sh
+    client_reconfig_script: /usr/local/bin/sentinel-reconfig.sh
+    
+  # ===========================================================================
+  # HEALTH CHECKS
+  # ===========================================================================
+  health_checks:
+    liveness:
+      type: exec
+      command: ["redis-cli", "-a", "{{ vault_redis_password }}", "ping"]
+      initial_delay: 30
+      period: 10
+      timeout: 5
+      retries: 3
+      
+    readiness:
+      type: exec
+      command: ["redis-cli", "-a", "{{ vault_redis_password }}", "info", "server"]
+      initial_delay: 5
+      period: 10
+      timeout: 5
+      retries: 5
+      
+  # ===========================================================================
+  # MONITORING
+  # ===========================================================================
+  monitoring:
+    metrics:
+      enabled: true
+      exporter: redis_exporter
+      port: 9121
+      path: /metrics
+      scrape_interval: 30s
+      
+    logs:
+      enabled: true
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+      locations:
+        - /var/log/redis/redis-server.log
+        
+    alerts:
+      - name: redis_down
+        condition: redis_up{app="redis"} == 0
+        duration: 1m
+        severity: critical
+        action: pagerduty
+        description: "Redis is niet bereikbaar"
+        
+      - name: high_memory
+        condition: redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Geheugengebruik > 85%"
+        
+      - name: high_connections
+        condition: redis_connected_clients > 1000
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Aantal verbindingen > 1000"
+        
+      - name: rejected_connections
+        condition: rate(redis_rejected_connections_total[5m]) > 0
+        duration: 5m
+        severity: warning
+        action: email
+        description: "Verbindingen worden geweigerd"
+        
+      - name: replication_lag
+        condition: redis_connected_slaves_lag > 5
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Replicatie achterstand > 5 seconden"
+        
+      - name: keys_evicted
+        condition: rate(redis_evicted_keys_total[5m]) > 100
+        duration: 5m
+        severity: warning
+        action: slack
+        description: "Veel keys worden geëvicteerd"
+        
+      - name: sentinel_quorum
+        condition: redis_sentinel_quorum < 2
+        duration: 1m
+        severity: critical
+        action: pagerduty
+        description: "Sentinel quorum niet bereikt"
+        
+  # ===========================================================================
+  # BACKUP
+  # ===========================================================================
+  backup:
+    enabled: true
+    type: rdb
+    schedule: "0 */6 * * *"
+    retention_days: 7
+    volumes:
+      - data
+    pre_backup:
+      - command: "redis-cli -a {{ vault_redis_password }} SAVE"
+        when: backup_type == "full"
+    post_backup:
+      - command: "redis-cli -a {{ vault_redis_password }} BGREWRITEAOF"
+        when: backup_type == "full"
+        
+  # ===========================================================================
+  # SCALING
+  # ===========================================================================
+  scaling:
+    replicas: 3
+    sentinel_replicas: 3
+    mode: replication
+    primary: redis-0
+    replicas_list:
+      - redis-1
+      - redis-2
+      
+  # ===========================================================================
+  # USE CASES (VOORBEELDEN)
+  # ===========================================================================
+  use_cases:
+    - name: session_store
+      description: "Sessie opslag voor webapplicaties"
+      maxmemory_policy: allkeys-lru
+      
+    - name: cache
+      description: "Algemene cache voor databases"
+      maxmemory_policy: volatile-lru
+      
+    - name: rate_limiter
+      description: "Rate limiting voor API's"
+      maxmemory_policy: volatile-ttl
+      
+    - name: job_queue
+      description: "Message queue voor achtergrondtaken"
+      maxmemory_policy: noeviction
+      
+    - name: realtime_leaderboard
+      description: "Realtime leaderboards met sorted sets"
+      maxmemory_policy: noeviction

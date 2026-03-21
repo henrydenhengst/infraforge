@@ -1,0 +1,11 @@
+---
+- name: restart application
+  ansible.builtin.docker_compose:
+    project_src: "/opt/applications/{{ app.name }}"
+    restarted: yes
+  listen: "restart {{ app.name }}"
+
+- name: reload nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded

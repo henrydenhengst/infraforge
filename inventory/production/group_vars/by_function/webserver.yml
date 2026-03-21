@@ -1,0 +1,343 @@
+---
+# =============================================================================
+# WEBSERVER TOOLS
+# =============================================================================
+# Functie: webserver
+# Beschrijving: Tools voor webservers, HTTP-servers en applicatieservers
+# =============================================================================
+
+webserver_tools:
+  # ---------------------------------------------------------------------------
+  # WEBSERVERS
+  # ---------------------------------------------------------------------------
+  - name: Apache
+    profiel_tag: IT
+    functie_tag: webserver
+    beschrijving: "Populaire HTTP-webserver"
+    categorie: web_server
+    docker_image: httpd:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - apache_html:/usr/local/apache2/htdocs
+      - apache_config:/usr/local/apache2/conf
+      - apache_logs:/usr/local/apache2/logs
+      - apache_certs:/usr/local/apache2/certs
+    environment:
+      APACHE_SERVER_NAME: "{{ domain }}"
+      APACHE_SERVER_ADMIN: admin@{{ domain }}
+      APACHE_DOCUMENT_ROOT: /usr/local/apache2/htdocs
+    url: "https://httpd.apache.org"
+    
+  - name: Nginx
+    profiel_tag: IT
+    functie_tag: webserver
+    beschrijving: "High-performance webserver en reverse proxy"
+    categorie: web_server
+    docker_image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginx_html:/usr/share/nginx/html
+      - nginx_config:/etc/nginx
+      - nginx_logs:/var/log/nginx
+      - nginx_certs:/etc/nginx/ssl
+    environment:
+      NGINX_HOST: "{{ domain }}"
+      NGINX_PORT: 80
+    url: "https://nginx.org"
+    
+  - name: Caddy
+    profiel_tag: IT
+    functie_tag: webserver
+    beschrijving: "Webserver met automatische HTTPS"
+    categorie: web_server
+    docker_image: caddy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2019:2019"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+      - caddy_html:/usr/share/caddy
+    environment:
+      ACME_AGREE: "true"
+      CADDY_EMAIL: admin@{{ domain }}
+    url: "https://caddyserver.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+webserver_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Server instellingen
+  server:
+    server_name: "{{ domain }}"
+    server_admin: admin@{{ domain }}
+    document_root: /var/www/html
+    index_files:
+      - index.html
+      - index.htm
+      - index.php
+      
+  # SSL/TLS
+  ssl:
+    enabled: true
+    provider: letsencrypt
+    email: admin@{{ domain }}
+    domains:
+      - "{{ domain }}"
+      - "www.{{ domain }}"
+    cert_path: /etc/nginx/ssl
+    key_path: /etc/nginx/ssl
+    
+  # Performance
+  performance:
+    worker_processes: auto
+    worker_connections: 1024
+    keepalive_timeout: 65
+    client_max_body_size: 100M
+    gzip: true
+    gzip_types:
+      - text/html
+      - text/css
+      - text/javascript
+      - application/javascript
+      - application/json
+      - application/xml
+      
+  # Security headers
+  security_headers:
+    enabled: true
+    hsts_max_age: 31536000
+    hsts_include_subdomains: true
+    hsts_preload: true
+    x_frame_options: DENY
+    x_content_type_options: nosniff
+    x_xss_protection: "1; mode=block"
+    referrer_policy: strict-origin-when-cross-origin
+    
+  # Logging
+  logging:
+    access_log: /var/log/nginx/access.log
+    error_log: /var/log/nginx/error.log
+    log_format: combined
+    log_level: warn
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+apache_config:
+  # Apache modules
+  modules:
+    - mod_rewrite
+    - mod_ssl
+    - mod_proxy
+    - mod_proxy_http
+    - mod_proxy_wstunnel
+    - mod_headers
+    - mod_expires
+    - mod_deflate
+    - mod_cache
+    - mod_cache_disk
+    - mod_info
+    - mod_status
+    - mod_php
+    
+  # Apache virtual hosts
+  vhosts:
+    - name: "{{ domain }}"
+      port: 80
+      server_name: "{{ domain }} www.{{ domain }}"
+      document_root: /usr/local/apache2/htdocs/{{ domain }}
+      redirect: https://{{ domain }}
+      
+    - name: "{{ domain }}"
+      port: 443
+      server_name: "{{ domain }} www.{{ domain }}"
+      document_root: /usr/local/apache2/htdocs/{{ domain }}
+      ssl:
+        enabled: true
+        cert_file: /usr/local/apache2/certs/{{ domain }}.crt
+        key_file: /usr/local/apache2/certs/{{ domain }}.key
+      options:
+        - Indexes
+        - FollowSymLinks
+        - MultiViews
+      allow_override: All
+      directory_index: index.html index.php
+      
+  # Apache directories
+  directories:
+    - path: /usr/local/apache2/htdocs
+      options:
+        - Indexes
+        - FollowSymLinks
+        - MultiViews
+      allow_override: All
+      require: all granted
+      
+  # Apache handlers
+  handlers:
+    - name: php-script
+      handler: application/x-httpd-php
+      extensions:
+        - .php
+        
+  # Apache status
+  status:
+    enabled: true
+    location: /server-status
+    require: localhost
+    
+  # Apache info
+  info:
+    enabled: true
+    location: /server-info
+    require: localhost
+
+nginx_config:
+  # Nginx upstreams
+  upstreams:
+    - name: backend
+      servers:
+        - backend1:8080 weight=3
+        - backend2:8080 weight=2
+        - backend3:8080 backup
+    - name: php
+      servers:
+        - php-fpm:9000
+        
+  # Nginx servers
+  servers:
+    - name: default
+      listen: 80
+      server_name: _
+      return: 301 https://$host$request_uri
+      
+    - name: "{{ domain }}"
+      listen: 443 ssl http2
+      server_name: "{{ domain }} www.{{ domain }}"
+      
+      ssl_certificate: /etc/nginx/ssl/{{ domain }}/fullchain.pem
+      ssl_certificate_key: /etc/nginx/ssl/{{ domain }}/privkey.pem
+      ssl_protocols: TLSv1.2 TLSv1.3
+      ssl_ciphers: HIGH:!aNULL:!MD5
+      
+      root: /usr/share/nginx/html/{{ domain }}
+      index: index.html index.htm index.php
+      
+      location / {
+        try_files $uri $uri/ =404
+      }
+      
+      location /api/ {
+        proxy_pass http://backend
+        proxy_set_header Host $host
+        proxy_set_header X-Real-IP $remote_addr
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
+        proxy_set_header X-Forwarded-Proto $scheme
+      }
+      
+      location ~ \.php$ {
+        fastcgi_pass php;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+      }
+      
+      location /status {
+        stub_status on;
+        access_log off;
+        allow 127.0.0.1;
+        deny all;
+      }
+      
+      access_log /var/log/nginx/{{ domain }}_access.log;
+      error_log /var/log/nginx/{{ domain }}_error.log;
+      
+  # Nginx include files
+  includes:
+    - /etc/nginx/conf.d/*.conf
+    - /etc/nginx/sites-enabled/*
+    
+  # Nginx map
+  map:
+    - name: $http_upgrade
+      variable: $connection_upgrade
+      values:
+        - value: websocket
+          result: upgrade
+        - default: close
+
+caddy_config:
+  # Caddy Caddyfile
+  caddyfile: |
+    {{ domain }} {
+        root * /usr/share/caddy/{{ domain }}
+        file_server
+        php_fastcgi php-fpm:9000
+        encode gzip zstd
+        
+        # Security headers
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            X-XSS-Protection "1; mode=block"
+            Referrer-Policy strict-origin-when-cross-origin
+        }
+        
+        # Logging
+        log {
+            output file /var/log/caddy/{{ domain }}.log
+            level INFO
+        }
+        
+        # Metrics
+        metrics /metrics
+        
+        # Health check
+        handle /health {
+            respond "OK" 200
+        }
+        
+        # API proxy
+        handle /api/* {
+            reverse_proxy backend:8080
+        }
+        
+        # Static files
+        handle {
+            root * /usr/share/caddy/{{ domain }}
+            file_server
+        }
+    }
+    
+    api.{{ domain }} {
+        reverse_proxy api:3000
+    }
+    
+  # Caddy global settings
+  global:
+    email: admin@{{ domain }}
+    admin: 0.0.0.0:2019
+    storage: file_system
+    log:
+      output: file /var/log/caddy/caddy.log
+      level: INFO
+      
+  # Caddy storage
+  storage:
+    module: file_system
+    root: /data

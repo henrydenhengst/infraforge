@@ -1,0 +1,83 @@
+---
+# =============================================================================
+# DBT - DATA BUILD TOOL
+# =============================================================================
+# Beschrijving: Data transformation tool voor analytics engineering
+# Website: https://www.getdbt.com
+# =============================================================================
+
+application:
+  name: dbt
+  version: 1.7.0
+  description: "dbt - Data transformation tool"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://docs.getdbt.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/app
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports: []
+    dns:
+      - "dbt.{{ domain }}"
+      
+  container:
+    image: ghcr.io/dbt-labs/dbt-postgres:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DBT_PROFILES_DIR
+      value: "/usr/app"
+      secret: false
+    - name: DBT_TARGET
+      value: "prod"
+      secret: false
+    - name: DBT_DATABASE
+      value: "analytics"
+      secret: false
+    - name: DBT_SCHEMA
+      value: "public"
+      secret: false
+    - name: DBT_USER
+      value: "dbt"
+      secret: false
+    - name: DBT_PASSWORD
+      value: "{{ vault_dbt_password }}"
+      secret: true
+    - name: DBT_HOST
+      value: "postgres"
+      secret: false
+    - name: DBT_PORT
+      value: "5432"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: exec
+      command: ["dbt", "--version"]

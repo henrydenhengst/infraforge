@@ -1,0 +1,16 @@
+---
+- name: Voeg OpenTofu GPG key toe
+  ansible.builtin.apt_key:
+    url: https://get.opentofu.org/opentofu.gpg
+    state: present
+
+- name: Voeg OpenTofu repository toe
+  ansible.builtin.apt_repository:
+    repo: "deb https://packages.opentofu.org/opentofu/opentofu/any/ /"
+    state: present
+    update_cache: yes
+
+- name: Installeer OpenTofu
+  ansible.builtin.apt:
+    name: tofu
+    state: present

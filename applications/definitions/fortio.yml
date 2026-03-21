@@ -1,0 +1,87 @@
+---
+# =============================================================================
+# OPENSEARCH DASHBOARDS - VISUALIZATION
+# =============================================================================
+# Beschrijving: Visualisatie dashboard voor OpenSearch
+# Website: https://opensearch.org
+# =============================================================================
+
+application:
+  name: opensearch-dashboards
+  version: 2.11.0
+  description: "OpenSearch Dashboards - Visualization"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: data-team
+    contact: data@company.local
+    slack: "#data"
+    documentation: "https://opensearch.org/docs/latest/dashboards"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 2
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/share/opensearch-dashboards/data
+        
+  network_requirements:
+    vlans:
+      - data
+      - internal
+    ports:
+      - container: 5601
+        host: 5601
+        protocol: tcp
+        public: false
+        description: "OpenSearch Dashboards UI"
+    dns:
+      - "dashboards.{{ domain }}"
+      - "opensearch-ui.{{ domain }}"
+      
+  container:
+    image: opensearchproject/opensearch-dashboards:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+        
+  environment_variables:
+    - name: OPENSEARCH_HOSTS
+      value: '["http://opensearch:9200"]'
+      secret: false
+    - name: DISABLE_SECURITY_DASHBOARDS_PLUGIN
+      value: "true"
+      secret: false
+    - name: SERVER_HOST
+      value: "0.0.0.0"
+      secret: false
+    - name: SERVER_PORT
+      value: "5601"
+      secret: false
+    - name: SERVER_NAME
+      value: "opensearch-dashboards"
+      secret: false
+    - name: OPENSEARCH_REQUEST_TIMEOUT
+      value: "30000"
+      secret: false
+    - name: OPENSEARCH_SHARD_TIMEOUT
+      value: "30000"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /status
+      port: 5601

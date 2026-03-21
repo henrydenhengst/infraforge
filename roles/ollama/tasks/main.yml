@@ -1,0 +1,31 @@
+---
+- name: '{{ ansible_os_family }} | Installeer Ollama'
+  ansible.builtin.include_tasks: "install_{{ ansible_os_family | lower }}.yml"
+  tags: [install]
+
+- name: '{{ ansible_os_family }} | Start Ollama service'
+  ansible.builtin.systemd:
+    name: ollama
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [service]
+
+- name: '{{ ansible_os_family }} | Pull LLM models'
+  ansible.builtin.shell: |
+    ollama pull {{ item }}
+  loop: "{{ ollama_models }}"
+  when: ollama_models is defined
+  tags: [models]
+
+- name: '{{ ansible_os_family }} | Valideer Ollama configuratie'
+  ansible.builtin.shell: ollama list
+  register: ollama_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon beschikbare modellen
+  ansible.builtin.debug:
+    var: ollama_test.stdout_lines
+  when: ollama_test.stdout is defined
+  tags: [validate]

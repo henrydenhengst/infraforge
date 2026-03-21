@@ -1,0 +1,7 @@
+---
+nginx_packages:
+  Debian: [nginx, nginx-common]
+  RedHat: [nginx]
+  Suse: [nginx]
+  Archlinux: [nginx]
+  Alpine: [nginx]

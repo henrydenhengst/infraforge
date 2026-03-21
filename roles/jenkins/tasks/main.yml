@@ -1,0 +1,50 @@
+---
+- name: '{{ ansible_os_family }} | Maak Jenkins directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ jenkins_home }}"
+    - "{{ jenkins_home }}/plugins"
+    - "{{ jenkins_home }}/jobs"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Jenkins container'
+  ansible.builtin.docker_container:
+    name: jenkins
+    image: jenkins/jenkins:lts
+    restart_policy: unless-stopped
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - "{{ jenkins_home }}:/var/jenkins_home"
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.jenkins.rule: "Host(`jenkins.{{ domain }}`)"
+      traefik.http.services.jenkins.loadbalancer.server.port: "8080"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Jenkins actief is'
+  ansible.builtin.wait_for:
+    port: 8080
+    timeout: 120
+  tags: [validate]
+
+- name: '{{ ansible_os_family }} | Toon Jenkins initial admin wachtwoord'
+  ansible.builtin.shell: |
+    docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+  register: jenkins_password
+  ignore_errors: yes
+  tags: [validate]
+
+- name: Toon Jenkins informatie
+  ansible.builtin.debug:
+    msg:
+      - "Jenkins: https://jenkins.{{ domain }}"
+      - "Initial admin wachtwoord: {{ jenkins_password.stdout }}"
+  tags: [validate]

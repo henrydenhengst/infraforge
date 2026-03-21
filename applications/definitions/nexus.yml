@@ -1,0 +1,64 @@
+---
+# =============================================================================
+# OPENTOFU - INFRASTRUCTURE AS CODE
+# =============================================================================
+# Beschrijving: Open-source Infrastructure as Code (Terraform fork)
+# Website: https://opentofu.org
+# =============================================================================
+
+application:
+  name: opentofu
+  version: 1.6
+  description: "OpenTofu - Infrastructure as Code"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://opentofu.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 0.5
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage:
+      - name: workspace
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /workspace
+        
+  network_requirements:
+    vlans:
+      - platform
+      - management
+    ports: []
+    dns: []
+    
+  container:
+    image: opentofu/opentofu:latest
+    restart: "no"
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  command: ["tail", "-f", "/dev/null"]
+  
+  environment_variables:
+    - name: TF_VAR_environment
+      value: "{{ environment }}"
+      secret: false
+    - name: TF_VAR_domain
+      value: "{{ domain }}"
+      secret: false
+      
+  volumes:
+    - opentofu_workspace:/workspace

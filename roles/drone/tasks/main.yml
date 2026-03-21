@@ -1,0 +1,73 @@
+---
+- name: '{{ ansible_os_family }} | Maak Drone directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ drone_data_path }}"
+    - "{{ drone_data_path }}/db"
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Drone database'
+  ansible.builtin.docker_container:
+    name: drone-db
+    image: postgres:15
+    restart_policy: unless-stopped
+    environment:
+      POSTGRES_USER: drone
+      POSTGRES_PASSWORD: "{{ drone_db_password }}"
+      POSTGRES_DB: drone
+    volumes:
+      - "{{ drone_data_path }}/db:/var/lib/postgresql/data"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Start Drone server'
+  ansible.builtin.docker_container:
+    name: drone
+    image: drone/drone:latest
+    restart_policy: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      DRONE_DATABASE_DRIVER: postgres
+      DRONE_DATABASE_DATASOURCE: "postgres://drone:{{ drone_db_password }}@drone-db:5432/drone?sslmode=disable"
+      DRONE_GITHUB_CLIENT_ID: "{{ drone_github_client_id }}"
+      DRONE_GITHUB_CLIENT_SECRET: "{{ drone_github_client_secret }}"
+      DRONE_SERVER_HOST: "drone.{{ domain }}"
+      DRONE_SERVER_PROTO: https
+      DRONE_RPC_SECRET: "{{ drone_rpc_secret }}"
+    depends_on:
+      - drone-db
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.drone.rule: "Host(`drone.{{ domain }}`)"
+      traefik.http.services.drone.loadbalancer.server.port: "80"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Start Drone runner'
+  ansible.builtin.docker_container:
+    name: drone-runner
+    image: drone/drone-runner-docker:latest
+    restart_policy: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DRONE_RPC_HOST: drone
+      DRONE_RPC_PROTO: http
+      DRONE_RPC_SECRET: "{{ drone_rpc_secret }}"
+      DRONE_RUNNER_CAPACITY: 2
+    depends_on:
+      - drone
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Drone actief is'
+  ansible.builtin.wait_for:
+    port: 8080
+    timeout: 60
+  tags: [validate]
+
+- name: Toon Drone URL
+  ansible.builtin.debug:
+    msg: "Drone CI: https://drone.{{ domain }}"
+  tags: [validate]

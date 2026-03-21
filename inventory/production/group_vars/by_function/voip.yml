@@ -1,0 +1,374 @@
+---
+# =============================================================================
+# VOIP TOOLS (VOICE OVER IP)
+# =============================================================================
+# Functie: voip
+# Beschrijving: Tools voor telefonie, VoIP-centrales en spraakcommunicatie
+# =============================================================================
+
+voip_tools:
+  # ---------------------------------------------------------------------------
+  # TELEFOONCENTRALES (PBX)
+  # ---------------------------------------------------------------------------
+  - name: Asterisk
+    profiel_tag: Support
+    functie_tag: voip
+    beschrijving: "Volledige telefooncentrale in een container"
+    categorie: pbx
+    docker_image: andrius/asterisk:latest
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "5061:5061/tcp"
+      - "10000-10100:10000-10100/udp"
+      - "5038:5038"
+    volumes:
+      - asterisk_config:/etc/asterisk
+      - asterisk_sounds:/var/lib/asterisk/sounds
+      - asterisk_moh:/var/lib/asterisk/moh
+      - asterisk_recordings:/var/spool/asterisk
+      - asterisk_logs:/var/log/asterisk
+    environment:
+      ASTERISK_SIP_PORT: 5060
+      ASTERISK_RTP_START: 10000
+      ASTERISK_RTP_END: 10100
+      ASTERISK_MAX_CALLS: 50
+      ASTERISK_LANGUAGE: nl
+      ASTERISK_CODECS: "ulaw,alaw,gsm"
+      TZ: Europe/Amsterdam
+    url: "https://www.asterisk.org"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+voip_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # VoIP instellingen
+  voip:
+    sip_port: 5060
+    sip_secure_port: 5061
+    rtp_port_start: 10000
+    rtp_port_end: 20000
+    max_calls: 50
+    language: nl
+    codecs:
+      - ulaw
+      - alaw
+      - gsm
+      - g722
+      
+  # Netwerk instellingen
+  network:
+    local_net: 10.0.0.0/8
+    external_ip: "{{ public_ip }}"
+    nat: true
+    stun_server: stun.l.google.com:19302
+    
+  # Beveiliging
+  security:
+    fail2ban_enabled: true
+    sip_tls_enabled: true
+    sip_tls_cert: /etc/asterisk/ssl/asterisk.crt
+    sip_tls_key: /etc/asterisk/ssl/asterisk.key
+    sip_tls_ca: /etc/asterisk/ssl/ca.crt
+    password_policy: strong
+    
+  # Voicemail
+  voicemail:
+    enabled: true
+    storage: /var/spool/asterisk/voicemail
+    max_message_length: 300
+    min_message_length: 3
+    max_messages: 50
+    email_notification: true
+    attachment_format: wav
+    
+  # Recordings
+  recordings:
+    enabled: true
+    path: /var/spool/asterisk/recordings
+    format: wav
+    mix_mono: true
+    retention_days: 30
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+asterisk_config:
+  # SIP gebruikers (extensions)
+  sip_users:
+    - extension: 101
+      name: "Jan Jansen"
+      secret: "{{ vault_asterisk_user101 }}"
+      context: internal
+      host: dynamic
+      type: friend
+      qualify: yes
+      nat: no
+      dtmfmode: rfc2833
+      disallow: all
+      allow:
+        - ulaw
+        - alaw
+        - gsm
+      callgroup: 1
+      pickupgroup: 1
+      
+    - extension: 102
+      name: "Piet Pietersen"
+      secret: "{{ vault_asterisk_user102 }}"
+      context: internal
+      host: dynamic
+      type: friend
+      qualify: yes
+      nat: no
+      dtmfmode: rfc2833
+      disallow: all
+      allow:
+        - ulaw
+        - alaw
+        - gsm
+        
+    - extension: 103
+      name: "Klaas de Vries"
+      secret: "{{ vault_asterisk_user103 }}"
+      context: internal
+      host: dynamic
+      type: friend
+      
+    - extension: 201
+      name: "Sales Team"
+      secret: "{{ vault_asterisk_user201 }}"
+      context: sales
+      host: dynamic
+      type: friend
+      
+  # Trunks (SIP providers)
+  sip_trunks:
+    - name: voip-provider
+      type: peer
+      host: sip.provider.nl
+      username: "{{ sip_username }}"
+      secret: "{{ vault_sip_password }}"
+      fromuser: "{{ sip_username }}"
+      fromdomain: sip.provider.nl
+      context: from-trunk
+      insecure: port,invite
+      dtmfmode: rfc2833
+      disallow: all
+      allow:
+        - ulaw
+        - alaw
+      qualify: yes
+      
+  # IAX2 trunks (voor inter-asterisk connecties)
+  iax_trunks:
+    - name: remote-office
+      host: remote.office.{{ domain }}
+      username: remote
+      secret: "{{ vault_iax_secret }}"
+      context: from-remote
+      qualify: yes
+      
+  # Queues (wachtrijen)
+  queues:
+    - name: sales
+      strategy: ringall
+      timeout: 30
+      retry: 5
+      maxlen: 10
+      joinempty: yes
+      leavewhenempty: no
+      members:
+        - SIP/101
+        - SIP/102
+        - SIP/103
+      musicclass: default
+      
+    - name: support
+      strategy: leastrecent
+      timeout: 45
+      retry: 5
+      maxlen: 5
+      members:
+        - SIP/201
+        - SIP/202
+        - SIP/203
+        
+  # IVR menus
+  ivr_menus:
+    - name: main
+      greeting: "custom/main-menu"
+      timeout: 10
+      retries: 3
+      choices:
+        - digit: 1
+          destination: queue,sales
+        - digit: 2
+          destination: queue,support
+        - digit: 3
+          destination: voicemail,main
+        - digit: 0
+          destination: extension,100
+          
+  # Voicemail settings
+  voicemail_config:
+    mailboxes:
+      - mailbox: 101
+        password: "{{ vault_voicemail_101 }}"
+        name: "Jan Jansen"
+        email: jan@{{ domain }}
+        pager: jan@{{ domain }}
+        options: "attach=yes|maxmsg=50"
+        
+      - mailbox: 102
+        password: "{{ vault_voicemail_102 }}"
+        name: "Piet Pietersen"
+        email: piet@{{ domain }}
+        pager: piet@{{ domain }}
+        
+      - mailbox: 201
+        password: "{{ vault_voicemail_201 }}"
+        name: "Sales Team"
+        email: sales@{{ domain }}
+        pager: sales@{{ domain }}
+        
+  # Call routing (extensions.conf)
+  dialplan:
+    # Inkomende calls via trunk
+    - context: from-trunk
+      extensions:
+        - extension: _X.
+          priority: 1
+          application: NoOp
+          data: "Inkomende call van ${CALLERID(all)}"
+        - extension: _X.
+          priority: 2
+          application: Goto
+          data: "ivr-main,s,1"
+          
+    # Interne extensions
+    - context: internal
+      extensions:
+        - extension: _XXX
+          priority: 1
+          application: Dial
+          data: "SIP/${EXTEN},30"
+        - extension: _XXX
+          priority: 2
+          application: Voicemail
+          data: "${EXTEN}@default,u"
+          
+    # Sales queue
+    - context: sales
+      extensions:
+        - extension: s
+          priority: 1
+          application: Queue
+          data: "sales"
+          
+    # Support queue
+    - context: support
+      extensions:
+        - extension: s
+          priority: 1
+          application: Queue
+          data: "support"
+          
+    # IVR menu
+    - context: ivr-main
+      extensions:
+        - extension: s
+          priority: 1
+          application: Background
+          data: "custom/main-menu"
+        - extension: s
+          priority: 2
+          application: WaitExten
+          data: "10"
+        - extension: 1
+          priority: 1
+          application: Goto
+          data: "sales,s,1"
+        - extension: 2
+          priority: 1
+          application: Goto
+          data: "support,s,1"
+        - extension: 0
+          priority: 1
+          application: Dial
+          data: "SIP/100"
+          
+  # Music on hold
+  music_on_hold:
+    classes:
+      - name: default
+        directory: /var/lib/asterisk/moh/default
+        random: yes
+        application: /usr/bin/sox
+      - name: classical
+        directory: /var/lib/asterisk/moh/classical
+        random: yes
+        
+  # Conference rooms
+  conference_rooms:
+    - number: 300
+      pin: "{{ vault_conf_300 }}"
+      admin_pin: "{{ vault_conf_300_admin }}"
+      max_participants: 10
+      record: yes
+      
+    - number: 301
+      pin: "{{ vault_conf_301 }}"
+      admin_pin: "{{ vault_conf_301_admin }}"
+      max_participants: 20
+      record: yes
+      
+  # Call detail records
+  cdr:
+    enabled: true
+    backend: mysql
+    host: mysql
+    user: asterisk
+    password: "{{ vault_asterisk_cdr_password }}"
+    database: asterisk_cdr
+    table: cdr
+    
+  # AMI (Asterisk Manager Interface)
+  ami:
+    enabled: true
+    port: 5038
+    users:
+      - name: admin
+        secret: "{{ vault_ami_admin }}"
+        read: system,call,log,verbose,command,agent,user,config
+        write: system,call,log,verbose,command,agent,user,config
+        
+  # ARI (Asterisk REST Interface)
+  ari:
+    enabled: true
+    port: 8088
+    users:
+      - name: admin
+        password: "{{ vault_ari_admin }}"
+        
+  # Functies
+  features:
+    - feature: pickup
+      code: "*8"
+    - feature: blindxfer
+      code: "#"
+    - feature: atxfer
+      code: "*2"
+    - feature: pickup
+      code: "*8"
+    - feature: park
+      code: "*7"
+    - feature: unpark
+      code: "*8"

@@ -1,0 +1,413 @@
+---
+# =============================================================================
+# INVENTORY & ASSET MANAGEMENT TOOLS
+# =============================================================================
+# Functie: inventory
+# Beschrijving: Tools voor voorraadbeheer, asset tracking en inventarisatie
+# =============================================================================
+
+inventory_tools:
+  # ---------------------------------------------------------------------------
+  # VOLLEDIG VOORRAADBEHEER
+  # ---------------------------------------------------------------------------
+  - name: InvenTree
+    profiel_tag: Retail
+    functie_tag: inventory
+    beschrijving: "Krachtig voorraadbeheer voor fysieke producten"
+    categorie: full_inventory
+    docker_image: inventree/inventree:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - inventree_data:/home/inventree/data
+      - inventree_media:/home/inventree/media
+      - inventree_backup:/home/inventree/backup
+    environment:
+      INVENTREE_DB_HOST: postgres
+      INVENTREE_DB_PORT: 5432
+      INVENTREE_DB_NAME: inventree
+      INVENTREE_DB_USER: inventree
+      INVENTREE_DB_PASSWORD: "{{ vault_inventree_password }}"
+      INVENTREE_ADMIN_USER: admin
+      INVENTREE_ADMIN_PASSWORD: "{{ vault_inventree_admin_password }}"
+      INVENTREE_ADMIN_EMAIL: admin@{{ domain }}
+      INVENTREE_SITE_URL: "https://inventree.{{ domain }}"
+      INVENTREE_SITE_TITLE: "Voorraadbeheer"
+      INVENTREE_CURRENCY: EUR
+      INVENTREE_LANGUAGE: nl
+      INVENTREE_TIMEZONE: Europe/Amsterdam
+      INVENTREE_EMAIL_HOST: smtp.{{ domain }}
+      INVENTREE_EMAIL_PORT: 587
+      INVENTREE_EMAIL_USER: inventree@{{ domain }}
+      INVENTREE_EMAIL_PASSWORD: "{{ vault_smtp_password }}"
+      INVENTREE_EMAIL_SENDER: inventree@{{ domain }}
+    database: postgresql
+    url: "https://inventree.org"
+    
+  # ---------------------------------------------------------------------------
+  # LICHTGEWICHT INVENTARIS
+  # ---------------------------------------------------------------------------
+  - name: Homebox
+    profiel_tag: Retail
+    functie_tag: inventory
+    beschrijving: "Snelle inventaris-tool voor kleine magazijnen"
+    categorie: lightweight_inventory
+    docker_image: homebox/homebox:latest
+    ports:
+      - "8081:80"
+    volumes:
+      - homebox_data:/data
+    environment:
+      HOMEBOX_DB_TYPE: sqlite
+      HOMEBOX_DB_PATH: /data/homebox.db
+      HOMEBOX_ADMIN_USER: admin
+      HOMEBOX_ADMIN_PASSWORD: "{{ vault_homebox_admin_password }}"
+      HOMEBOX_SITE_TITLE: "Voorraadbeheer"
+      HOMEBOX_CURRENCY: EUR
+    database: sqlite
+    url: "https://homebox.com"
+    
+  # ---------------------------------------------------------------------------
+  # FACILITAIR BEHEER
+  # ---------------------------------------------------------------------------
+  - name: Trantor
+    profiel_tag: Proptech
+    functie_tag: inventory
+    beschrijving: "Asset tracking voor facilitaire diensten"
+    categorie: facility_management
+    docker_image: trantor/trantor:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - trantor_data:/data
+    environment:
+      TRANTOR_DB_HOST: postgres
+      TRANTOR_DB_NAME: trantor
+      TRANTOR_DB_USER: trantor
+      TRANTOR_DB_PASSWORD: "{{ vault_trantor_password }}"
+      TRANTOR_ADMIN_USER: admin
+      TRANTOR_ADMIN_PASSWORD: "{{ vault_trantor_admin_password }}"
+      TRANTOR_COMPANY_NAME: "{{ company_name }}"
+      TRANTOR_TIMEZONE: Europe/Amsterdam
+    database: postgresql
+    url: "https://trantor.com"
+    
+  # ---------------------------------------------------------------------------
+  # WMS / LOGISTIEK
+  # ---------------------------------------------------------------------------
+  - name: Trantor
+    profiel_tag: Proptech
+    functie_tag: inventory
+    beschrijving: "Asset tracking voor facilitaire diensten"
+    categorie: facility_management
+    docker_image: trantor/trantor:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - trantor_data:/data
+    environment:
+      TRANTOR_DB_HOST: postgres
+      TRANTOR_DB_NAME: trantor
+      TRANTOR_DB_USER: trantor
+      TRANTOR_DB_PASSWORD: "{{ vault_trantor_password }}"
+    database: postgresql
+    url: "https://trantor.com"
+
+# =============================================================================
+# GROEP VARIABELEN
+# =============================================================================
+inventory_defaults:
+  # Algemene instellingen
+  backup_enabled: true
+  backup_schedule: "0 1 * * *"
+  monitoring_enabled: true
+  log_level: info
+  
+  # Bedrijfsgegevens
+  company:
+    name: "{{ company_name }}"
+    address: "{{ company_address }}"
+    phone: "{{ company_phone }}"
+    email: inventory@{{ domain }}
+    
+  # Voorraad instellingen
+  inventory:
+    currency: EUR
+    low_stock_threshold: 10
+    critical_stock_threshold: 5
+    auto_reorder: true
+    reorder_point: 20
+    reorder_quantity: 100
+    enable_barcodes: true
+    enable_serial_numbers: true
+    enable_batch_tracking: true
+    enable_expiry_dates: true
+    
+  # Locaties
+  locations:
+    - name: Hoofdmagazijn
+      type: warehouse
+      address: "{{ company_address }}"
+    - name: Winkel
+      type: store
+      address: "{{ company_address }}"
+    - name: Webshop
+      type: fulfillment
+      address: "{{ company_address }}"
+      
+  # Categorieën
+  categories:
+    - name: Grondstoffen
+      description: "Ruwe materialen voor productie"
+    - name: Halffabricaten
+      description: "Producten in bewerking"
+    - name: Eindproducten
+      description: "Afgewerkte producten"
+    - name: Verpakkingsmateriaal
+      description: "Materialen voor verpakking"
+    - name: Gereedschap
+      description: "Tools en apparatuur"
+      
+  # Eenheden
+  units:
+    - name: Stuks
+      abbreviation: st
+    - name: Kilogram
+      abbreviation: kg
+    - name: Liter
+      abbreviation: l
+    - name: Meter
+      abbreviation: m
+    - name: Doos
+      abbreviation: doos
+      
+  # Leveranciers
+  suppliers:
+    - name: "Hoofdleverancier BV"
+      contact: "Jan Janssen"
+      phone: "020-1234567"
+      email: "info@hoofdleverancier.nl"
+      payment_terms: 30
+      
+  # Rapporten
+  reports:
+    - stock_level
+    - stock_movement
+    - stock_value
+    - reorder_list
+    - expired_items
+    - slow_moving
+    - fast_moving
+
+# =============================================================================
+# TOOL-SPECIFIEKE CONFIGURATIES
+# =============================================================================
+
+inventree_config:
+  # InvenTree categorieën
+  categories:
+    - name: Elektronica
+      description: "Elektronische componenten"
+      parent: null
+    - name: Weerstanden
+      description: "Weerstanden en potentiometers"
+      parent: Elektronica
+    - name: Condensatoren
+      description: "Condensatoren"
+      parent: Elektronica
+    - name: IC's
+      description: "Geïntegreerde schakelingen"
+      parent: Elektronica
+      
+  # InvenTree producten
+  parts:
+    - name: Weerstand 1kΩ
+      description: "1kΩ koolweerstand"
+      category: Weerstanden
+      units: st
+      keywords: weerstand,1k,1kΩ
+      minimum_stock: 100
+      maximum_stock: 1000
+      lead_time: 7
+      suppliers:
+        - name: Farnell
+          sku: 123456
+          price: 0.05
+        - name: RS Components
+          sku: 789012
+          price: 0.06
+          
+    - name: Arduino Uno
+      description: "Arduino Uno microcontroller board"
+      category: Elektronica
+      units: st
+      keywords: arduino,microcontroller
+      minimum_stock: 5
+      maximum_stock: 20
+      lead_time: 3
+      suppliers:
+        - name: Arduino Store
+          sku: A000066
+          price: 20.00
+          
+    - name: Servo Motor
+      description: "Micro servo 9g"
+      category: Elektronica
+      units: st
+      keywords: servo,motor
+      minimum_stock: 10
+      maximum_stock: 50
+      lead_time: 5
+      
+  # InvenTree voorraad
+  stock:
+    - part: Weerstand 1kΩ
+      quantity: 500
+      location: Hoofdmagazijn
+      batch: BATCH001
+      expiry_date: 2026-01-01
+    - part: Arduino Uno
+      quantity: 15
+      location: Hoofdmagazijn
+      serial_numbers: ARD001-ARD015
+      
+  # InvenTree builds
+  builds:
+    - name: Sensor Kit
+      parts:
+        - part: Arduino Uno
+          quantity: 1
+        - part: Servo Motor
+          quantity: 2
+        - part: Weerstand 1kΩ
+          quantity: 10
+      quantity: 5
+      status: planned
+      
+  # InvenTree orders
+  orders:
+    - type: purchase
+      supplier: Hoofdleverancier BV
+      parts:
+        - part: Weerstand 1kΩ
+          quantity: 1000
+          price: 0.04
+      status: pending
+      order_date: "{{ current_date }}"
+      expected_date: "{{ future_date(7) }}"
+
+homebox_config:
+  # Homebox items
+  items:
+    - name: Laptop Dell XPS
+      description: "Dell XPS 15 laptop"
+      location: Kantoor
+      quantity: 3
+      value: 1200.00
+      category: Elektronica
+      tags:
+        - laptop
+        - dell
+    - name: Monitor 27"
+      description: "LG 27" monitor"
+      location: Kantoor
+      quantity: 5
+      value: 300.00
+      category: Elektronica
+      tags:
+        - monitor
+        - lg
+    - name: Bureau
+      description: "Sta-zit bureau"
+      location: Kantoor
+      quantity: 10
+      value: 450.00
+      category: Meubilair
+      
+  # Homebox locaties
+  locations:
+    - name: Kantoor
+      description: "Hoofdkantoor"
+    - name: Magazijn
+      description: "Opslagruimte"
+    - name: Keuken
+      description: "Keuken benodigdheden"
+      
+  # Homebox categorieën
+  categories:
+    - name: Elektronica
+      description: "Elektronische apparaten"
+    - name: Meubilair
+      description: "Kantoor meubilair"
+    - name: Kantoorartikelen
+      description: "Kantoor benodigdheden"
+    - name: Keuken
+      description: "Keuken artikelen"
+
+trantor_config:
+  # Trantor assets
+  assets:
+    - name: Printer
+      type: equipment
+      manufacturer: HP
+      model: LaserJet Pro
+      serial_number: HP123456
+      location: Kantoor
+      purchase_date: "2023-01-15"
+      purchase_price: 450.00
+      warranty_until: "2025-01-15"
+      status: active
+      
+    - name: Airco
+      type: equipment
+      manufacturer: Mitsubishi
+      model: MSZ-LN25
+      serial_number: MIT789012
+      location: Kantoor
+      purchase_date: "2022-06-20"
+      purchase_price: 1200.00
+      warranty_until: "2027-06-20"
+      status: active
+      
+    - name: Server Rack
+      type: infrastructure
+      manufacturer: APC
+      model: AR3100
+      serial_number: APC345678
+      location: Serverruimte
+      purchase_date: "2023-03-10"
+      purchase_price: 2500.00
+      warranty_until: "2028-03-10"
+      status: active
+      
+  # Trantor onderhoud
+  maintenance:
+    - asset: Airco
+      type: preventive
+      frequency: yearly
+      last_maintenance: "2023-06-20"
+      next_maintenance: "2024-06-20"
+      responsible: Facility Manager
+      
+    - asset: Printer
+      type: preventive
+      frequency: quarterly
+      last_maintenance: "2024-01-15"
+      next_maintenance: "2024-04-15"
+      responsible: IT Support
+      
+  # Trantor contracten
+  contracts:
+    - name: Schoonmaak
+      supplier: Clean BV
+      start_date: "2024-01-01"
+      end_date: "2024-12-31"
+      value: 6000.00
+      renewal_auto: true
+      
+    - name: Beveiliging
+      supplier: Security BV
+      start_date: "2024-01-01"
+      end_date: "2024-12-31"
+      value: 12000.00
+      renewal_auto: true

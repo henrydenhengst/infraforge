@@ -1,0 +1,72 @@
+---
+# =============================================================================
+# ATHEOS - WEB-GEBAZEERDE IDE
+# =============================================================================
+# Beschrijving: Web-gebaseerde IDE voor snelle ontwikkeling
+# Website: https://www.atheos.io
+# =============================================================================
+
+application:
+  name: atheos
+  version: 2.0.0
+  description: "Atheos - Web-gebaseerde IDE"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: development-team
+    contact: dev@company.local
+    slack: "#development"
+    documentation: "https://www.atheos.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: workspace
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html/workspace
+        
+  network_requirements:
+    vlans:
+      - development
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Atheos web interface"
+    dns:
+      - "ide.{{ domain }}"
+      - "atheos.{{ domain }}"
+      
+  container:
+    image: hlsiira/atheos:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: ATHEOS_PASSWORD
+      value: "{{ vault_atheos_password }}"
+      secret: true
+    - name: ATHEOS_USERNAME
+      value: "admin"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

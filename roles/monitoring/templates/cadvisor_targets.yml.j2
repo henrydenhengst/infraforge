@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+# cAdvisor targets
+- targets:
+    - localhost:{{ cadvisor_listen_port }}
+  labels:
+    instance: {{ inventory_hostname }}
+    job: cadvisor

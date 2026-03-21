@@ -1,0 +1,64 @@
+---
+# =============================================================================
+# POSTGRESQL ROLE DEFAULTS
+# =============================================================================
+
+# PostgreSQL versie
+postgresql_version: 15
+
+# PostgreSQL configuratie
+postgresql_listen_addresses: "*"
+postgresql_port: 5432
+postgresql_max_connections: 200
+postgresql_shared_buffers: "128MB"
+postgresql_effective_cache_size: "1GB"
+postgresql_maintenance_work_mem: "64MB"
+postgresql_work_mem: "4MB"
+postgresql_wal_level: "replica"
+postgresql_max_wal_senders: 10
+postgresql_max_replication_slots: 10
+postgresql_hot_standby: "on"
+
+# Authenticatie
+postgresql_admin_user: postgres
+postgresql_admin_password: "{{ vault_postgres_admin_password }}"
+
+# Databases
+postgresql_databases: []
+#  - name: app_db
+#    owner: app_user
+#    encoding: UTF8
+
+# Gebruikers
+postgresql_users: []
+#  - name: app_user
+#    password: "{{ vault_app_db_password }}"
+#    flags: LOGIN
+
+# Privileges
+postgresql_privileges: []
+#  - database: app_db
+#    user: app_user
+#    privs: ALL
+
+# Extensions
+postgresql_extensions: []
+#  - name: pgcrypto
+#    database: app_db
+#  - name: uuid-ossp
+#    database: app_db
+
+# Backups
+postgresql_backup_enabled: true
+postgresql_backup_schedule: "0 1 * * *"
+postgresql_backup_retention_days: 7
+
+# Monitoring
+postgresql_monitoring_enabled: true
+postgresql_monitoring_port: 9187
+
+# Replication (voor HA)
+postgresql_replication_enabled: false
+postgresql_replication_role: "primary"  # primary, replica
+postgresql_replication_user: replicator
+postgresql_replication_password: "{{ vault_postgres_replication_password }}"

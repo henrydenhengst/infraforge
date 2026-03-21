@@ -1,0 +1,148 @@
+---
+# =============================================================================
+# UPGRADE PLAYBOOK - Systeem en applicatie upgrades
+# =============================================================================
+# Dit playbook voert upgrades uit op alle servers.
+# Gebruik: ansible-playbook playbooks/upgrade.yml -e upgrade_type=security
+# =============================================================================
+
+- name: Upgrade systeem packages
+  hosts: all
+  gather_facts: yes
+  become: yes
+  vars:
+    upgrade_type: "{{ upgrade_type | default('security') }}"
+  tasks:
+    - name: Controleer upgrade type
+      fail:
+        msg: "upgrade_type moet security, all of apps zijn"
+      when: upgrade_type not in ['security', 'all', 'apps']
+
+    - name: Update package cache
+      ansible.builtin.package:
+        update_cache: true
+      tags: [packages]
+
+    - name: Upgrade security packages only
+      ansible.builtin.package:
+        name: "*"
+        state: latest
+      when: upgrade_type == 'security'
+      tags: [security]
+
+    - name: Upgrade all packages
+      ansible.builtin.package:
+        name: "*"
+        state: latest
+      when: upgrade_type == 'all'
+      tags: [all]
+
+    - name: Upgrade Docker containers
+      docker_compose:
+        project_src: "/opt/applications/{{ item }}"
+        pull: yes
+        restarted: yes
+      loop: "{{ applications_to_upgrade | default([]) }}"
+      when: upgrade_type == 'apps' and applications_to_upgrade is defined
+      tags: [containers]
+
+- name: Upgrade Docker images
+  hosts: docker_hosts
+  become: yes
+  tasks:
+    - name: Pull latest images
+      docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop: "{{ docker_images_to_upgrade | default([]) }}"
+      when: upgrade_type == 'apps' and docker_images_to_upgrade is defined
+      tags: [images]
+
+    - name: Restart containers with new images
+      docker_container:
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        restart: yes
+        pull: yes
+      loop: "{{ containers_to_restart | default([]) }}"
+      when: upgrade_type == 'apps' and containers_to_restart is defined
+      tags: [restart]
+
+- name: Upgrade Kubernetes
+  hosts: kubernetes_nodes
+  become: yes
+  tasks:
+    - name: Upgrade kubeadm
+      ansible.builtin.package:
+        name: kubeadm
+        state: latest
+      when: upgrade_type == 'all' and upgrade_kubernetes | default(false)
+      tags: [kubernetes]
+
+    - name: Drain node
+      shell: |
+        kubectl drain {{ inventory_hostname }} --ignore-daemonsets
+      when: upgrade_type == 'all' and upgrade_kubernetes | default(false)
+      tags: [kubernetes]
+
+    - name: Upgrade kubelet
+      ansible.builtin.package:
+        name: kubelet
+        state: latest
+      when: upgrade_type == 'all' and upgrade_kubernetes | default(false)
+      tags: [kubernetes]
+
+    - name: Uncordon node
+      shell: |
+        kubectl uncordon {{ inventory_hostname }}
+      when: upgrade_type == 'all' and upgrade_kubernetes | default(false)
+      tags: [kubernetes]
+
+- name: Valideer upgrades
+  hosts: all
+  gather_facts: yes
+  become: no
+  tasks:
+    - name: Controleer systeem versie
+      shell: |
+        cat /etc/os-release | grep VERSION_ID
+      register: version_check
+      changed_when: false
+      tags: [validate]
+
+    - name: Toon systeem versie
+      debug:
+        var: version_check.stdout
+      tags: [validate]
+
+    - name: Controleer draaiende containers
+      shell: |
+        docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+      register: docker_check
+      changed_when: false
+      when: "'docker_hosts' in group_names"
+      tags: [validate]
+
+    - name: Toon container status
+      debug:
+        var: docker_check.stdout_lines
+      when: docker_check.stdout is defined
+      tags: [validate]
+
+- name: Upgrade notificaties
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Stuur upgrade notificatie
+      uri:
+        url: "{{ vault_slack_webhook }}"
+        method: POST
+        body: |
+          {
+            "text": "Upgrade {{ upgrade_type }} voltooid op alle servers",
+            "username": "Ansible Upgrade",
+            "icon_emoji": ":arrow_up:"
+          }
+        body_format: json
+      when: upgrade_notify | default(false)
+      tags: [notify]

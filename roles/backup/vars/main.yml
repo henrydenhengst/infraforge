@@ -1,0 +1,63 @@
+---
+# =============================================================================
+# BACKUP ROLE VARIABELEN
+# =============================================================================
+
+backup_packages:
+  Debian:
+    - rsync
+    - duplicity
+    - restic
+    - borgbackup
+    - pigz
+    - pbzip2
+    - pv
+    - mailutils
+  RedHat:
+    - rsync
+    - duplicity
+    - restic
+    - borgbackup
+    - pigz
+    - pbzip2
+    - pv
+    - mailx
+  Suse:
+    - rsync
+    - duplicity
+    - restic
+    - borgbackup
+    - pigz
+    - pbzip2
+    - pv
+    - mailx
+  Archlinux:
+    - rsync
+    - duplicity
+    - restic
+    - borgbackup
+    - pigz
+    - pbzip2
+    - pv
+  Alpine:
+    - rsync
+    - duplicity
+    - restic
+    - borgbackup
+    - pigz
+    - pbzip2
+    - pv
+
+# Database backup tools
+database_backup_tools:
+  postgresql: pg_dumpall
+  mysql: mysqldump
+  mongodb: mongodump
+  redis: redis-cli SAVE
+
+# Backup retention periods
+retention:
+  daily: 7
+  weekly: 4
+  monthly: 12
+  yearly: 3

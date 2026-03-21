@@ -1,0 +1,31 @@
+---
+- name: Installeer Kubernetes Dashboard
+  ansible.builtin.shell: |
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+  when: enable_dashboard
+  tags: [dashboard]
+
+- name: Maak dashboard admin service account aan
+  ansible.builtin.shell: |
+    kubectl create serviceaccount dashboard-admin -n kubernetes-dashboard --dry-run=client -o yaml | kubectl apply -f -
+  when: enable_dashboard
+  tags: [dashboard]
+
+- name: Maak clusterrolebinding voor dashboard admin
+  ansible.builtin.shell: |
+    kubectl create clusterrolebinding dashboard-admin --clusterrole=cluster-admin --serviceaccount=kubernetes-dashboard:dashboard-admin --dry-run=client -o yaml | kubectl apply -f -
+  when: enable_dashboard
+  tags: [dashboard]
+
+- name: Genereer dashboard token
+  ansible.builtin.shell: |
+    kubectl -n kubernetes-dashboard create token dashboard-admin
+  register: dashboard_token_result
+  when: enable_dashboard
+  tags: [dashboard]
+
+- name: Sla dashboard token op
+  ansible.builtin.set_fact:
+    dashboard_token: "{{ dashboard_token_result.stdout }}"
+  when: enable_dashboard
+  tags: [dashboard]

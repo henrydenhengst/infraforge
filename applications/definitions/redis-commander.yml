@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# DOCKER REGISTRY UI - REGISTRY BROWSER
+# =============================================================================
+# Beschrijving: Web UI voor Docker registry
+# Website: https://github.com/Joxit/docker-registry-ui
+# =============================================================================
+
+application:
+  name: docker-registry-ui
+  version: 2.5.0
+  description: "Docker Registry UI - Registry browser"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: platform-team
+    contact: platform@company.local
+    slack: "#platform"
+    documentation: "https://github.com/Joxit/docker-registry-ui"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 0.5
+      min_ram_gb: 0.5
+      recommended_cpu_cores: 1
+      recommended_ram_gb: 1
+      
+    storage: []
+    
+  network_requirements:
+    vlans:
+      - platform
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Registry UI"
+    dns:
+      - "registry-ui.{{ domain }}"
+      - "docker-registry.{{ domain }}"
+      
+  container:
+    image: joxit/docker-registry-ui:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: "0.5"
+        memory: 512Mi
+        
+  environment_variables:
+    - name: REGISTRY_TITLE
+      value: "{{ company_name }} Docker Registry"
+      secret: false
+    - name: REGISTRY_URL
+      value: "http://registry:5000"
+      secret: false
+    - name: DELETE_IMAGES_ENABLED
+      value: "true"
+      secret: false
+    - name: SHOW_CONTENT_DIGEST
+      value: "true"
+      secret: false
+    - name: NGINX_PROXY_PASS_URL
+      value: "http://registry:5000"
+      secret: false
+    - name: SINGLE_REGISTRY
+      value: "true"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

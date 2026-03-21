@@ -1,0 +1,29 @@
+---
+- name: '{{ ansible_os_family }} | Start Dozzle container'
+  ansible.builtin.docker_container:
+    name: dozzle
+    image: amir20/dozzle:latest
+    restart_policy: unless-stopped
+    ports:
+      - "8888:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.dozzle.rule: "Host(`logs.{{ domain }}`)"
+      traefik.http.services.dozzle.loadbalancer.server.port: "8080"
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Wacht tot Dozzle actief is'
+  ansible.builtin.wait_for:
+    port: 8888
+    timeout: 60
+  tags: [validate]
+
+- name: Toon Dozzle URL
+  ansible.builtin.debug:
+    msg: "Dozzle: https://logs.{{ domain }}"
+  tags: [validate]

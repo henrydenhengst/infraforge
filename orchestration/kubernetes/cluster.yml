@@ -1,0 +1,6 @@
+---
+# Kubernetes cluster configuratie
+cluster_name: prod-cluster
+kubernetes_version: v1.29.0
+pod_network_cidr: 10.244.0.0/16
+service_cidr: 10.96.0.0/12

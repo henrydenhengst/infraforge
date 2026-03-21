@@ -1,0 +1,102 @@
+---
+# =============================================================================
+# INVOICENINJA - FACTURATIE EN OFFERTES
+# =============================================================================
+# Beschrijving: Zelfgehost facturatie- en offerteplatform
+# Website: https://www.invoiceninja.com
+# =============================================================================
+
+application:
+  name: invoiceninja
+  version: 5.9.0
+  description: "InvoiceNinja - Facturatie en offertes"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: finance-team
+    contact: finance@company.local
+    slack: "#finance"
+    documentation: "https://invoiceninja.github.io"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        
+  network_requirements:
+    vlans:
+      - finance
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "InvoiceNinja web interface"
+    dns:
+      - "ninja.{{ domain }}"
+      - "invoice.{{ domain }}"
+      
+  container:
+    image: invoiceninja/invoiceninja:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DB_HOST
+      value: "mysql"
+      secret: false
+    - name: DB_DATABASE
+      value: "ninja"
+      secret: false
+    - name: DB_USERNAME
+      value: "ninja"
+      secret: false
+    - name: DB_PASSWORD
+      value: "{{ vault_ninja_password }}"
+      secret: true
+    - name: APP_URL
+      value: "https://ninja.{{ domain }}"
+      secret: false
+    - name: APP_KEY
+      value: "{{ vault_ninja_app_key }}"
+      secret: true
+    - name: MAIL_HOST
+      value: "smtp.{{ domain }}"
+      secret: false
+    - name: MAIL_PORT
+      value: "587"
+      secret: false
+    - name: MAIL_USERNAME
+      value: "ninja@{{ domain }}"
+      secret: false
+    - name: MAIL_PASSWORD
+      value: "{{ vault_smtp_password }}"
+      secret: true
+    - name: MAIL_FROM_ADDRESS
+      value: "ninja@{{ domain }}"
+      secret: false
+    - name: MAIL_FROM_NAME
+      value: "InvoiceNinja"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

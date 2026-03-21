@@ -1,0 +1,120 @@
+---
+# =============================================================================
+# LOKI - LOG AGGREGATION
+# =============================================================================
+# Beschrijving: Log aggregatie systeem voor efficiënte log opslag
+# Website: https://grafana.com/oss/loki
+# =============================================================================
+
+application:
+  name: loki
+  version: 2.9.4
+  description: "Loki - Log aggregatie systeem"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: monitoring-team
+    contact: monitoring@company.local
+    slack: "#monitoring"
+    documentation: "https://grafana.com/docs/loki"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 2
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 4
+      
+    storage:
+      - name: data
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /loki
+      - name: wal
+        size_gb: 10
+        performance: ssd
+        backup_required: false
+        mount_path: /loki/wal
+      - name: index
+        size_gb: 20
+        performance: ssd
+        backup_required: true
+        mount_path: /loki/index
+        
+  network_requirements:
+    vlans:
+      - monitoring
+      - internal
+    ports:
+      - container: 3100
+        host: 3100
+        protocol: tcp
+        public: false
+        description: "Loki API"
+    dns:
+      - "loki.{{ domain }}"
+      
+  container:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "2"
+        memory: 2Gi
+        
+  config:
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    ingester:
+      lifecycler:
+        ring:
+          kvstore:
+            store: inmemory
+          replication_factor: 1
+      chunk_idle_period: 5m
+      chunk_retain_period: 30s
+      max_transfer_retries: 0
+    schema_config:
+      configs:
+        - from: 2020-01-01
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /loki/index
+        cache_location: /loki/cache
+        shared_store: filesystem
+      filesystem:
+        directory: /loki/chunks
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      max_entries_limit_per_query: 5000
+    compactor:
+      working_directory: /loki/compactor
+      shared_store: filesystem
+      compaction_interval: 10m
+      retention_enabled: true
+      retention_delete_delay: 2h
+      retention_delete_worker_count: 150
+      
+  retention:
+    days: 30
+    enabled: true
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /ready
+      port: 3100
+      initial_delay: 30

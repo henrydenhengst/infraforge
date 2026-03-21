@@ -1,0 +1,114 @@
+---
+# =============================================================================
+# BACKUP ROLE - Backup configuratie
+# =============================================================================
+# Deze role configureert backups voor databases, volumes en applicaties
+# =============================================================================
+
+- name: '{{ ansible_os_family }} | Installeer backup packages'
+  ansible.builtin.package:
+    name: "{{ backup_packages[ansible_os_family] }}"
+    state: present
+  tags: [packages]
+
+- name: '{{ ansible_os_family }} | Maak backup directories'
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ backup_user | default('root') }}"
+    group: "{{ backup_group | default('root') }}"
+    mode: '0750'
+  loop:
+    - /backup
+    - /backup/daily
+    - /backup/weekly
+    - /backup/monthly
+    - /backup/scripts
+    - /backup/logs
+    - /var/log/backup
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Configureer database backups'
+  ansible.builtin.include_tasks: "database.yml"
+  when: backup_databases | default(false)
+  tags: [database]
+
+- name: '{{ ansible_os_family }} | Configureer volume backups'
+  ansible.builtin.include_tasks: "volumes.yml"
+  when: backup_volumes | default(false)
+  tags: [volumes]
+
+- name: '{{ ansible_os_family }} | Configureer application backups'
+  ansible.builtin.include_tasks: "application.yml"
+  when: backup_applications | default(false)
+  tags: [application]
+
+- name: '{{ ansible_os_family }} | Configureer config backups'
+  ansible.builtin.include_tasks: "config.yml"
+  when: backup_config | default(false)
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Configureer backup scripts'
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/backup/scripts/{{ item.dest }}"
+    mode: '0750'
+  loop:
+    - { src: backup.sh.j2, dest: backup.sh }
+    - { src: restore.sh.j2, dest: restore.sh }
+    - { src: cleanup.sh.j2, dest: cleanup.sh }
+  tags: [scripts]
+
+- name: '{{ ansible_os_family }} | Configureer backup cron jobs'
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute | default('0') }}"
+    hour: "{{ item.hour | default('2') }}"
+    day: "{{ item.day | default('*') }}"
+    month: "{{ item.month | default('*') }}"
+    weekday: "{{ item.weekday | default('*') }}"
+    job: "{{ item.job }}"
+    user: "{{ backup_user | default('root') }}"
+  loop: "{{ backup_cron_jobs }}"
+  when: backup_cron_jobs is defined
+  tags: [cron]
+
+- name: '{{ ansible_os_family }} | Configureer backup retention'
+  ansible.builtin.template:
+    src: retention.conf.j2
+    dest: /etc/backup/retention.conf
+    mode: '0644'
+  tags: [retention]
+
+- name: '{{ ansible_os_family }} | Configureer remote backup (S3/MinIO)'
+  ansible.builtin.include_tasks: "remote.yml"
+  when: backup_remote_enabled | default(false)
+  tags: [remote]
+
+- name: '{{ ansible_os_family }} | Configureer backup monitoring'
+  ansible.builtin.template:
+    src: backup_exporter.service.j2
+    dest: /etc/systemd/system/backup-exporter.service
+    mode: '0644'
+  notify: restart backup-exporter
+  tags: [monitoring]
+
+- name: Start and enable backup-exporter
+  ansible.builtin.systemd:
+    name: backup-exporter
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [monitoring]
+
+- name: '{{ ansible_os_family }} | Valideer backup configuratie'
+  ansible.builtin.shell: /backup/scripts/backup.sh --dry-run
+  register: backup_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon backup test resultaat
+  ansible.builtin.debug:
+    var: backup_test.stdout_lines
+  when: backup_test.stdout is defined
+  tags: [validate]

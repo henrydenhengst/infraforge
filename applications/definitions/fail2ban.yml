@@ -1,0 +1,88 @@
+---
+# =============================================================================
+# CALIBRE-WEB - E-BOOK BIBLIOTHEEK
+# =============================================================================
+# Beschrijving: E-book bibliotheek voor Calibre databases
+# Website: https://github.com/janeczku/calibre-web
+# =============================================================================
+
+application:
+  name: calibre-web
+  version: 0.6.21
+  description: "Calibre-Web - E-book bibliotheek"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://github.com/janeczku/calibre-web"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: books
+        size_gb: 100
+        performance: hdd
+        backup_required: true
+        mount_path: /books
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 8083
+        host: 8083
+        protocol: tcp
+        public: false
+        description: "Calibre-Web web interface"
+    dns:
+      - "books.{{ domain }}"
+      - "calibre.{{ domain }}"
+      
+  container:
+    image: linuxserver/calibre-web:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: DOCKER_MODS
+      value: "linuxserver/calibre-web:calibre"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8083

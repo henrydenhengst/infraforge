@@ -1,0 +1,5 @@
+---
+gitlab_config_path: /srv/gitlab/config
+gitlab_logs_path: /srv/gitlab/logs
+gitlab_data_path: /srv/gitlab/data
+gitlab_root_password: "{{ vault_gitlab_root_password }}"

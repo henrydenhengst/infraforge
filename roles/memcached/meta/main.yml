@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: "{{ company_name }}"
+  description: "Memcached caching system"
+  license: "Proprietary"
+  min_ansible_version: 2.9
+  galaxy_tags: [memcached, cache, memory, key-value]
+dependencies:
+  - docker

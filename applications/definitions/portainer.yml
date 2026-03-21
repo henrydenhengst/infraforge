@@ -1,0 +1,114 @@
+---
+# =============================================================================
+# IMMICH - FOTO BACKUP MET AI
+# =============================================================================
+# Beschrijving: High-performance foto-backup met AI-gezichtsherkenning
+# Website: https://immich.app
+# =============================================================================
+
+application:
+  name: immich
+  version: 1.98.0
+  description: "Immich - Foto backup met AI-gezichtsherkenning"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://immich.app/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      gpu_required: true
+      
+    storage:
+      - name: upload
+        size_gb: 500
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/src/app/upload
+      - name: db
+        size_gb: 50
+        performance: ssd
+        backup_required: true
+        mount_path: /var/lib/postgresql/data
+      - name: thumbnails
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /usr/src/app/upload/thumbs
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 2283
+        host: 2283
+        protocol: tcp
+        public: true
+        description: "Immich web interface"
+    dns:
+      - "immich.{{ domain }}"
+      - "photos.{{ domain }}"
+      
+  container:
+    image: ghcr.io/immich-app/immich-server:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  sidecars:
+    - name: machine-learning
+      image: ghcr.io/immich-app/immich-machine-learning:latest
+      ports:
+        - container: 3003
+      resources:
+        limits:
+          cpu: "2"
+          memory: 4Gi
+          nvidia.com/gpu: 1
+    - name: redis
+      image: redis:alpine
+    - name: postgres
+      image: postgres:14-alpine
+      environment:
+        POSTGRES_DB: immich
+        POSTGRES_USER: immich
+        POSTGRES_PASSWORD: "{{ vault_immich_db_password }}"
+        
+  environment_variables:
+    - name: DB_HOSTNAME
+      value: postgres
+      secret: false
+    - name: DB_USERNAME
+      value: immich
+      secret: false
+    - name: DB_PASSWORD
+      value: "{{ vault_immich_db_password }}"
+      secret: true
+    - name: DB_DATABASE_NAME
+      value: immich
+      secret: false
+    - name: REDIS_HOSTNAME
+      value: redis
+      secret: false
+    - name: IMMICH_MACHINE_LEARNING_URL
+      value: http://machine-learning:3003
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /api/server-info/version
+      port: 2283

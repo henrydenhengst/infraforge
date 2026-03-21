@@ -1,0 +1,67 @@
+---
+# =============================================================================
+# NETWORKING ROLE - Netwerk configuratie
+# =============================================================================
+# Deze role configureert netwerk interfaces, bonding, VLANs en firewall
+# =============================================================================
+
+- name: '{{ ansible_os_family }} | Installeer netwerk packages'
+  ansible.builtin.package:
+    name: "{{ network_packages[ansible_os_family] }}"
+    state: present
+  tags: [packages]
+
+- name: '{{ ansible_os_family }} | Configureer netwerk interfaces'
+  ansible.builtin.include_tasks: "interfaces_{{ ansible_os_family | lower }}.yml"
+  tags: [interfaces]
+
+- name: '{{ ansible_os_family }} | Configureer bonding (LACP)'
+  ansible.builtin.include_tasks: "bonding_{{ ansible_os_family | lower }}.yml"
+  when: network_bonding_enabled | default(false)
+  tags: [bonding]
+
+- name: '{{ ansible_os_family }} | Configureer VLANs'
+  ansible.builtin.include_tasks: "vlans_{{ ansible_os_family | lower }}.yml"
+  when: network_vlans is defined
+  tags: [vlans]
+
+- name: '{{ ansible_os_family }} | Configureer DNS'
+  ansible.builtin.template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: '0644'
+  tags: [dns]
+
+- name: '{{ ansible_os_family }} | Configureer hostname resolutie'
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: '0644'
+  tags: [hosts]
+
+- name: '{{ ansible_os_family }} | Configureer sysctl voor netwerk'
+  ansible.builtin.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop: "{{ network_sysctl_parameters[ansible_os_family] | default([]) }}"
+  tags: [sysctl]
+
+- name: '{{ ansible_os_family }} | Start en enable netwerk services'
+  ansible.builtin.service:
+    name: "{{ network_service[ansible_os_family] }}"
+    state: started
+    enabled: yes
+  tags: [services]
+
+- name: '{{ ansible_os_family }} | Controleer netwerk connectiviteit'
+  ansible.builtin.command: ping -c 3 {{ dns_servers[0] | default('8.8.8.8') }}
+  register: ping_result
+  ignore_errors: yes
+  changed_when: false
+  tags: [validate]

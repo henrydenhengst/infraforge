@@ -1,0 +1,16 @@
+---
+- name: Voeg HashiCorp GPG key toe
+  ansible.builtin.apt_key:
+    url: https://apt.releases.hashicorp.com/gpg
+    state: present
+
+- name: Voeg HashiCorp repository toe
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    state: present
+    update_cache: yes
+
+- name: Installeer Vault
+  ansible.builtin.apt:
+    name: vault
+    state: present

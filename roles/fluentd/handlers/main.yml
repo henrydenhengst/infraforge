@@ -1,0 +1,5 @@
+---
+- name: restart fluentd
+  ansible.builtin.docker_container:
+    name: fluentd
+    restart: yes

@@ -1,0 +1,78 @@
+---
+# =============================================================================
+# OPA - OPEN POLICY AGENT
+# =============================================================================
+# Beschrijving: Policy-based control for cloud-native environments
+# Website: https://www.openpolicyagent.org
+# =============================================================================
+
+application:
+  name: opa
+  version: 0.60.0
+  description: "OPA - Open Policy Agent"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: security-team
+    contact: security@company.local
+    slack: "#security"
+    documentation: "https://www.openpolicyagent.org/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /data
+        
+  network_requirements:
+    vlans:
+      - security
+      - internal
+    ports:
+      - container: 8181
+        host: 8181
+        protocol: tcp
+        public: false
+        description: "OPA API"
+    dns:
+      - "opa.{{ domain }}"
+      - "policy.{{ domain }}"
+      
+  container:
+    image: openpolicyagent/opa:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: OPA_LOG_LEVEL
+      value: "info"
+      secret: false
+    - name: OPA_DECISION_LOG_CONSOLE
+      value: "true"
+      secret: false
+    - name: OPA_POLICY_PATH
+      value: "/data/policies"
+      secret: false
+    - name: OPA_DATA_PATH
+      value: "/data/data.json"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 8181

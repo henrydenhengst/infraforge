@@ -1,0 +1,8 @@
+---
+- name: Configureer VLAN interfaces
+  ansible.builtin.template:
+    src: vlan_debian.j2
+    dest: "/etc/network/interfaces.d/vlan{{ item.vlan_id }}"
+    mode: '0644'
+  loop: "{{ network_vlans }}"
+  notify: restart networking

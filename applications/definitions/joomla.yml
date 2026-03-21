@@ -1,0 +1,86 @@
+---
+# =============================================================================
+# GRAV - FLAT-FILE CMS
+# =============================================================================
+# Beschrijving: Flat-file CMS, geen database nodig
+# Website: https://getgrav.org
+# =============================================================================
+
+application:
+  name: grav
+  version: 1.7.43
+  description: "Grav - Flat-file CMS"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: marketing-team
+    contact: marketing@company.local
+    slack: "#marketing"
+    documentation: "https://learn.getgrav.org"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: data
+        size_gb: 5
+        performance: ssd
+        backup_required: true
+        mount_path: /var/www/html
+        description: "Grav site content"
+        
+  network_requirements:
+    vlans:
+      - marketing
+      - dmz
+    ports:
+      - container: 80
+        host: 8082
+        protocol: tcp
+        public: true
+        description: "Grav web interface"
+    dns:
+      - "grav.{{ domain }}"
+      - "site.{{ domain }}"
+      
+  container:
+    image: grav:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: GRAV_ADMIN_USER
+      value: "admin"
+      secret: false
+    - name: GRAV_ADMIN_PASSWORD
+      value: "{{ vault_grav_password }}"
+      secret: true
+    - name: GRAV_ADMIN_EMAIL
+      value: "admin@{{ domain }}"
+      secret: false
+      
+  plugins:
+    - admin
+    - email
+    - problems
+    - error
+    
+  themes:
+    - quark
+    - antimatter
+    
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

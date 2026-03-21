@@ -1,0 +1,48 @@
+---
+- name: '{{ ansible_os_family }} | Maak Falco directories'
+  ansible.builtin.file:
+    path: "{{ falco_data_path }}"
+    state: directory
+    mode: '0755'
+  tags: [directories]
+
+- name: '{{ ansible_os_family }} | Start Falco container'
+  ansible.builtin.docker_container:
+    name: falco
+    image: falcosecurity/falco:latest
+    restart_policy: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /boot:/host/boot:ro
+      - /lib/modules:/lib/modules:ro
+      - /usr:/host/usr:ro
+      - "{{ falco_data_path }}:/host/etc/falco"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - SYS_RESOURCE
+    security_opt:
+      - apparmor:unconfined
+      - label:type:spc_t
+  tags: [docker]
+
+- name: '{{ ansible_os_family }} | Configureer Falco rules'
+  ansible.builtin.template:
+    src: falco_rules.yaml.j2
+    dest: "{{ falco_data_path }}/falco_rules.local.yaml"
+    mode: '0644'
+  notify: restart falco
+  tags: [config]
+
+- name: '{{ ansible_os_family }} | Valideer Falco'
+  ansible.builtin.shell: |
+    docker exec falco falco --version
+  register: falco_test
+  changed_when: false
+  tags: [validate]
+
+- name: Toon Falco informatie
+  ansible.builtin.debug:
+    var: falco_test.stdout
+  tags: [validate]

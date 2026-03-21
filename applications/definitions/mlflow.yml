@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# LYCHEE - FOTO-BEHEER
+# =============================================================================
+# Beschrijving: Foto-beheer met albums en delen
+# Website: https://lycheeorg.github.io
+# =============================================================================
+
+application:
+  name: lychee
+  version: 5.0.0
+  description: "Lychee - Foto-beheer"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://lycheeorg.github.io/docs"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: uploads
+        size_gb: 100
+        performance: ssd
+        backup_required: true
+        mount_path: /uploads
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /conf
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 80
+        host: 8080
+        protocol: tcp
+        public: false
+        description: "Lychee web interface"
+    dns:
+      - "photos.{{ domain }}"
+      - "lychee.{{ domain }}"
+      
+  container:
+    image: lycheeorg/lychee:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: DB_CONNECTION
+      value: "mysql"
+      secret: false
+    - name: DB_HOST
+      value: "mysql"
+      secret: false
+    - name: DB_PORT
+      value: "3306"
+      secret: false
+    - name: DB_DATABASE
+      value: "lychee"
+      secret: false
+    - name: DB_USERNAME
+      value: "lychee"
+      secret: false
+    - name: DB_PASSWORD
+      value: "{{ vault_lychee_password }}"
+      secret: true
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+    - name: APP_NAME
+      value: "{{ company_name }} Photos"
+      secret: false
+    - name: APP_URL
+      value: "https://photos.{{ domain }}"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 80

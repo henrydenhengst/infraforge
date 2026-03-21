@@ -1,0 +1,6 @@
+---
+neo4j_data_path: /opt/neo4j
+neo4j_user: neo4j
+neo4j_password: "{{ vault_neo4j_password }}"
+neo4j_pagecache_size: "2G"
+neo4j_heap_size: "2G"

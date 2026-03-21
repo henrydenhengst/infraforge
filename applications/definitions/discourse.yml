@@ -1,0 +1,85 @@
+---
+# =============================================================================
+# LIDARR - MUZIEK DOWNLOADMANAGER
+# =============================================================================
+# Beschrijving: Muziek downloadmanager voor geautomatiseerde downloads
+# Website: https://lidarr.audio
+# =============================================================================
+
+application:
+  name: lidarr
+  version: 2.0.0
+  description: "Lidarr - Muziek downloadmanager"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: media-team
+    contact: media@company.local
+    slack: "#media"
+    documentation: "https://wiki.servarr.com/Lidarr"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 1
+      min_ram_gb: 1
+      recommended_cpu_cores: 2
+      recommended_ram_gb: 2
+      
+    storage:
+      - name: config
+        size_gb: 1
+        performance: ssd
+        backup_required: true
+        mount_path: /config
+      - name: music
+        size_gb: 500
+        performance: hdd
+        backup_required: false
+        mount_path: /music
+      - name: downloads
+        size_gb: 200
+        performance: hdd
+        backup_required: false
+        mount_path: /downloads
+        
+  network_requirements:
+    vlans:
+      - media
+      - internal
+    ports:
+      - container: 8686
+        host: 8686
+        protocol: tcp
+        public: false
+        description: "Lidarr web interface"
+    dns:
+      - "lidarr.{{ domain }}"
+      - "music.{{ domain }}"
+      
+  container:
+    image: linuxserver/lidarr:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+        
+  environment_variables:
+    - name: PUID
+      value: "1000"
+      secret: false
+    - name: PGID
+      value: "1000"
+      secret: false
+    - name: TZ
+      value: "Europe/Amsterdam"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /
+      port: 8686

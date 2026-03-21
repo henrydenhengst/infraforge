@@ -1,0 +1,84 @@
+---
+# =============================================================================
+# FLOWISE - VISUELE AI WORKFLOW BUILDER
+# =============================================================================
+# Beschrijving: Visuele drag-and-drop builder voor AI-workflows (LangChain)
+# Website: https://flowiseai.com
+# =============================================================================
+
+application:
+  name: flowise
+  version: 1.7.0
+  description: "Flowise - Visuele AI workflow builder"
+  environment: "{{ environment | default('production') }}"
+  
+  owner:
+    team: ai-team
+    contact: ai@company.local
+    slack: "#ai"
+    documentation: "https://docs.flowiseai.com"
+    
+  hardware_requirements:
+    compute:
+      min_cpu_cores: 2
+      min_ram_gb: 4
+      recommended_cpu_cores: 4
+      recommended_ram_gb: 8
+      
+    storage:
+      - name: data
+        size_gb: 10
+        performance: ssd
+        backup_required: true
+        mount_path: /root/.flowise
+        
+  network_requirements:
+    vlans:
+      - ai
+      - internal
+    ports:
+      - container: 3000
+        host: 3000
+        protocol: tcp
+        public: true
+        description: "Flowise web UI"
+    dns:
+      - "flowise.{{ domain }}"
+      - "workflows.{{ domain }}"
+      
+  container:
+    image: flowiseai/flowise:latest
+    restart: unless-stopped
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        
+  environment_variables:
+    - name: FLOWISE_USERNAME
+      value: admin
+      secret: false
+    - name: FLOWISE_PASSWORD
+      value: "{{ vault_flowise_password }}"
+      secret: true
+    - name: DATABASE_PATH
+      value: "/root/.flowise"
+      secret: false
+    - name: API_KEY
+      value: "{{ vault_flowise_api_key }}"
+      secret: true
+    - name: SECRETKEY
+      value: "{{ vault_flowise_secret }}"
+      secret: true
+    - name: LOG_PATH
+      value: "/root/.flowise/logs"
+      secret: false
+      
+  health_checks:
+    liveness:
+      type: http
+      path: /health
+      port: 3000
