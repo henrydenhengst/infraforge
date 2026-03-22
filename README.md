@@ -13,13 +13,59 @@ Dit is de Infrastructure-as-Code repository voor onze complete omgeving.
 | **DevOps Ready** | ![IaC](https://img.shields.io/badge/Infrastructure_as_Code-Ansible-blue?style=flat-square) ![GitOps](https://img.shields.io/badge/GitOps-Ready-blue?style=flat-square) ![CI/CD](https://img.shields.io/badge/CI/CD-Pending-orange?style=flat-square) |
 | **Status** | ![Version](https://img.shields.io/badge/Version-0.0.1-orange?style=flat-square) ![Docs](https://img.shields.io/badge/Docs-Incomplete-yellow?style=flat-square) ![Molecule](https://img.shields.io/badge/Testing-Molecule-blue?style=flat-square) |
 
-## QuickStart  
+# InfraForge – Voortgangsstatus
+
+| Component | Aantal | Status | Opmerking |
+|-----------|-------|--------|-----------|
+| **Ansible roles** | 70 | ✅ Compleet | Alle rollen aanwezig, inclusief OS-specifieke taken |
+| **Applications/definitions** | ~310 | ✅ Compleet | Alle Docker- en Kubernetes-definities |
+| **Inventory group_vars** | ~45 | ✅ Compleet | Functie-, hardware- en locatiegroepen |
+| **Playbooks** | 7 | ✅ Compleet | Belangrijkste workflows gedekt |
+| **Documentatie** | ~25 | ✅ Uitgebreid | `docs/WORKING.md`, badges, runbooks in opzet |
+| **Hardware assets** | ~10 | ✅ Basis aanwezig | Servers, switches, PDUs |
+| **Monitoring configs** | ~15 | ✅ Basis aanwezig | Prometheus, Loki, Grafana, Tempo |
+| **Security configs** | ~10 | ✅ Basis aanwezig | CIS, hardening, Vault, Trivy |
+| **Containers configs** | ~15 | ✅ Basis aanwezig | Docker, containerd, netwerken |
+| **Orchestration configs** | ~10 | ✅ Basis aanwezig | Kubernetes, Docker Swarm |
+
+## 🎯 Wat hebben we bereikt?
+
+- ✅ **70 Ansible roles** voor alle services (incl. monitoring, security, backup)
+- ✅ **~310 applicatiedefinities** (Docker Compose + Kubernetes)
+- ✅ **45 functie‑groepen** voor gestructureerde variabelen
+- ✅ **Volledige DevOps lifecycle** afgedekt (CI/CD tools als GitLab, Jenkins, ArgoCD, Terraform, Packer)
+- ✅ **Alle 5 Linux families** ondersteund (Debian, RedHat, SUSE, Arch, Alpine)
+- ✅ **Security by design** met Ansible Vault, CIS‑benchmarks, Trivy, Falco
+- ✅ **Documentatie** uitgebreid met werkinstructie voor Docker én Kubernetes
+- ✅ **Badges** toegevoegd aan README voor overzicht van technologieën en status
+
+## 🔧 Nog te doen (vóór release)
+
+1. **CI/CD pipeline toevoegen**: GitHub Actions workflow voor syntax‑check en Molecule‑tests.
+2. **Kubernetes deploy‑playbook**: `deploy-k8s-apps.yml` maken om gegenereerde manifests toe te passen.
+3. **Eerste release taggen**: bijv. `v0.1.0` na succesvolle test.
+
+---
+
+## 🎯 De Filosofie
+Waarom moeilijk doen als het efficiënt kan? Dit project volgt drie kernprincipes:
+1. **Headless by Default:** Geen schermen, geen verspilde RAM. Alles via SSH en Web-UI.
+2. **OS-Agnostisch:** Of je nu **Debian**, **Arch** of **RedHat** draait; de "standaard" wordt overal afgedwongen.
+3. **Idempotentie:** Je kunt het playbook op elk moment draaien om je systeem terug te brengen naar de perfecte staat.
+
+---
+
+
+## QuickStart Documentatie
 
 [Start hier met runbooks](docs/runbooks/start.md)
   
   
 [Documentatie startpunt](docs/README.md)
 
+---
+
+De repository is **functioneel compleet**; de rest is polish en automatisering.
 
 ```bash
 # Installeer dependencies
@@ -28,3 +74,29 @@ ansible-galaxy collection install -r requirements.yml
 # Test connectiviteit
 ansible all -m ping -i inventory/production/hosts.ini
 ```
+
+---
+
+## 📝 License
+
+Dit project valt onder de MIT License.
+
+Zie `LICENSE` voor meer informatie.
+
+---
+
+## 👤 Auteur
+
+Naam – @henrydenhengst
+
+Project Link:
+https://github.com/henrydenhengst/homeassistant
+
+---
+
+## ⭐ Support
+
+Vind je dit project handig? Geef het een ⭐ op GitHub!
+
+
+
