@@ -1,8 +1,41 @@
+# {{ ansible_managed }}
 version: '3.8'
+
 services:
   {{ app_name }}:
     image: {{ image }}
+    container_name: {{ app_name }}
+    restart: unless-stopped
     environment:
       DOMAIN: {{ domain }}
+      ENVIRONMENT: {{ environment }}
+      TIMEZONE: {{ timezone }}
+{% if item.resources is defined %}
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ item.resources.cpu }}'
+          memory: {{ item.resources.memory }}
+        reservations:
+          cpus: '{{ (item.resources.cpu | float / 2) | round(1) }}'
+          memory: {{ (item.resources.memory | regex_replace('Gi', '')) | int // 2 }}Gi
+{% endif %}
+{% if item.volumes is defined %}
+    volumes:
+{% for volume in item.volumes %}
+      - {{ volume }}
+{% endfor %}
+{% endif %}
+{% if item.network is defined %}
+    networks:
+      - {{ item.network }}
+{% endif %}
     ports:
-      - "{{ host_port }}:{{ container_port }}"
+      - "{{ item.port }}:{{ item.container_port | default(80) }}"
+
+{% if item.network is defined %}
+networks:
+  {{ item.network }}:
+    external: true
+    name: {{ item.network }}
+{% endif %}

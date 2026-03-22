@@ -1,0 +1,66 @@
+---
+applications:
+  - name: nextcloud
+    image: nextcloud:28-fpm-alpine
+    network: dmz
+    port: 8080
+    container_port: 80
+    secrets: true
+    replicas: 2
+    resources:
+      cpu: 2
+      memory: 4Gi
+      
+  - name: nginx
+    image: nginx:alpine
+    network: dmz
+    port: 80
+    replicas: 3
+    resources:
+      cpu: 0.5
+      memory: 512Mi
+      
+  - name: postgres
+    image: postgres:15
+    network: database
+    port: 5432
+    container_port: 5432
+    secrets: true
+    replicas: 1
+    resources:
+      cpu: 2
+      memory: 4Gi
+      storage: 100Gi
+      
+  - name: redis
+    image: redis:7-alpine
+    network: database
+    port: 6379
+    container_port: 6379
+    secrets: true
+    replicas: 1
+    resources:
+      cpu: 1
+      memory: 2Gi
+      
+  - name: jellyfin
+    image: jellyfin/jellyfin:latest
+    network: dmz
+    port: 8096
+    container_port: 8096
+    volumes:
+      - media:/media
+    resources:
+      cpu: 4
+      memory: 8Gi
+      
+  - name: portainer
+    image: portainer/portainer-ce:latest
+    network: management
+    port: 9443
+    container_port: 9443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    resources:
+      cpu: 1
+      memory: 1Gi

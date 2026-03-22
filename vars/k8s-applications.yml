@@ -1,0 +1,42 @@
+---
+k8s_applications:
+  - name: nextcloud
+    image: nextcloud:28-fpm-alpine
+    namespace: apps
+    container_port: 80
+    service_port: 80
+    service_type: ClusterIP
+    replicas: 2
+    secrets_required: true
+    resources:
+      cpu_request: "500m"
+      cpu_limit: "2000m"
+      memory_request: "1Gi"
+      memory_limit: "4Gi"
+      
+  - name: nginx
+    image: nginx:alpine
+    namespace: web
+    container_port: 80
+    service_port: 80
+    service_type: ClusterIP
+    replicas: 3
+    resources:
+      cpu_request: "100m"
+      cpu_limit: "500m"
+      memory_request: "128Mi"
+      memory_limit: "512Mi"
+      
+  - name: postgres
+    image: postgres:15
+    namespace: database
+    container_port: 5432
+    service_port: 5432
+    service_type: ClusterIP
+    replicas: 1
+    secrets_required: true
+    resources:
+      cpu_request: "500m"
+      cpu_limit: "2000m"
+      memory_request: "1Gi"
+      memory_limit: "4Gi"

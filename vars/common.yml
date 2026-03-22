@@ -1,4 +1,41 @@
 ---
+# Algemene variabelen
 environment: production
-domain: company.local
+domain: infraforge.local
 timezone: Europe/Amsterdam
+
+# DNS
+dns_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+  - 9.9.9.9
+
+# Monitoring
+monitoring_enabled: true
+logging_enabled: true
+metrics_retention_days: 30
+
+# Backups
+backup_enabled: true
+backup_schedule: "0 2 * * *"
+backup_retention_days: 30
+
+# Updates
+security_updates: true
+automatic_reboot: false
+
+# Gebruikers
+admin_user: admin
+ansible_user: ansible
+
+# SSH
+ssh_port: 22
+ssh_permit_root_login: false
+ssh_password_authentication: false
+
+# Firewall
+firewall_enabled: true
+firewall_allowed_ports:
+  - 22/tcp
+  - 80/tcp
+  - 443/tcp

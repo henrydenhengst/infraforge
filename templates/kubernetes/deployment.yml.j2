@@ -1,0 +1,53 @@
+# {{ ansible_managed }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ app_name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ app_name }}
+    environment: {{ environment }}
+spec:
+  replicas: {{ replicas | default(1) }}
+  selector:
+    matchLabels:
+      app: {{ app_name }}
+  template:
+    metadata:
+      labels:
+        app: {{ app_name }}
+    spec:
+      containers:
+      - name: {{ app_name }}
+        image: {{ image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: {{ container_port }}
+{% if secrets_required %}
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ app_name }}-secrets
+              key: db-password
+{% endif %}
+        resources:
+          requests:
+            memory: {{ resources.memory_request | default('256Mi') }}
+            cpu: {{ resources.cpu_request | default('250m') }}
+          limits:
+            memory: {{ resources.memory_limit | default('512Mi') }}
+            cpu: {{ resources.cpu_limit | default('500m') }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ app_name }}
+  namespace: {{ namespace | default('default') }}
+spec:
+  selector:
+    app: {{ app_name }}
+  ports:
+  - port: {{ service_port | default(container_port) }}
+    targetPort: {{ container_port }}
+  type: {{ service_type | default('ClusterIP') }}

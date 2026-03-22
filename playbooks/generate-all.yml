@@ -1,0 +1,58 @@
+---
+- name: Genereer Docker Compose voor alle applicaties
+  hosts: localhost
+  gather_facts: no
+  become: no
+  vars_files:
+    - ../vars/common.yml
+    - ../vars/network.yml
+    - ../vars/hardware.yml
+    - ../vars/monitoring.yml
+  tasks:
+    - name: Maak gegenereerde directory
+      file:
+        path: ./generated
+        state: directory
+        mode: '0755'
+        
+    - name: Laad secrets indien beschikbaar
+      include_vars:
+        file: ../vars/secrets.vault
+      ignore_errors: yes
+      no_log: true
+      
+    - name: Genereer Docker Compose voor elke app
+      template:
+        src: ../templates/docker-compose.yml.j2
+        dest: "./generated/{{ item.name }}-docker-compose.yml"
+      loop: "{{ applications | default([]) }}"
+      vars:
+        app_name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        network: "{{ item.network | default('dmz') }}"
+        host_port: "{{ item.port }}"
+        container_port: "{{ item.container_port | default(80) }}"
+        secrets_required: "{{ item.secrets | default(false) }}"
+
+- name: Genereer Kubernetes manifests
+  hosts: localhost
+  gather_facts: no
+  become: no
+  vars_files:
+    - ../vars/common.yml
+    - ../vars/network.yml
+    - ../vars/monitoring.yml
+    - ../vars/kubernetes/configmaps.yml
+    - ../vars/kubernetes/secrets.yml
+  tasks:
+    - name: Genereer ConfigMaps
+      template:
+        src: ../templates/kubernetes/configmap.yml.j2
+        dest: "./generated/k8s-configmap-{{ item.name }}.yml"
+      loop: "{{ configmaps | default([]) }}"
+      
+    - name: Genereer Secrets
+      template:
+        src: ../templates/kubernetes/secret.yml.j2
+        dest: "./generated/k8s-secret-{{ item.name }}.yml"
+      loop: "{{ secrets | default([]) }}"

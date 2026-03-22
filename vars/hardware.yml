@@ -1,0 +1,43 @@
+---
+# Hardware variabelen
+compute_nodes:
+  - name: compute-01
+    ip: 10.10.10.11
+    ipmi: 10.10.100.11
+    cpu: 32
+    ram: 512
+    role: master
+  - name: compute-02
+    ip: 10.10.10.12
+    ipmi: 10.10.100.12
+    cpu: 32
+    ram: 512
+    role: worker
+  - name: compute-03
+    ip: 10.10.10.13
+    ipmi: 10.10.100.13
+    cpu: 32
+    ram: 512
+    role: worker
+
+storage_nodes:
+  - name: storage-01
+    ip: 10.10.50.10
+    ipmi: 10.10.100.21
+    capacity_tb: 240
+    type: ceph
+  - name: storage-02
+    ip: 10.10.50.11
+    ipmi: 10.10.100.22
+    capacity_tb: 120
+    type: backup
+
+edge_nodes:
+  - name: edge-01
+    ip: 10.10.20.10
+    ipmi: 10.10.100.31
+    role: loadbalancer
+  - name: edge-02
+    ip: 10.10.20.11
+    ipmi: 10.10.100.32
+    role: gateway

@@ -5,3 +5,20 @@ configmaps:
     data:
       DOMAIN: "{{ domain }}"
       ENVIRONMENT: "{{ environment }}"
+      TIMEZONE: "{{ timezone }}"
+      LOG_LEVEL: "info"
+      
+  - name: database-config
+    namespace: default
+    data:
+      POSTGRES_HOST: "postgres-svc.database.svc.cluster.local"
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: "redis-svc.cache.svc.cluster.local"
+      REDIS_PORT: "6379"
+      
+  - name: monitoring-config
+    namespace: monitoring
+    data:
+      PROMETHEUS_RETENTION: "30d"
+      LOKI_RETENTION: "720h"
+      ALERTMANAGER_SLACK_CHANNEL: "#alerts"

@@ -1,0 +1,50 @@
+---
+- name: Genereer Kubernetes manifests
+  hosts: localhost
+  gather_facts: no
+  become: no
+  vars_files:
+    - ../vars/common.yml
+    - ../vars/network.yml
+    - ../vars/monitoring.yml
+    - ../vars/k8s-applications.yml
+  tasks:
+    - name: Maak gegenereerde directory
+      file:
+        path: ./generated/k8s
+        state: directory
+        mode: '0755'
+        
+    - name: Laad secrets indien beschikbaar
+      include_vars:
+        file: ../vars/secrets.vault
+      ignore_errors: yes
+      no_log: true
+      
+    - name: Genereer Kubernetes Deployment & Service
+      template:
+        src: ../templates/kubernetes/deployment.yml.j2
+        dest: "./generated/k8s/{{ item.name }}-deployment.yml"
+      loop: "{{ k8s_applications }}"
+      vars:
+        app_name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        namespace: "{{ item.namespace }}"
+        container_port: "{{ item.container_port }}"
+        service_port: "{{ item.service_port }}"
+        service_type: "{{ item.service_type }}"
+        replicas: "{{ item.replicas }}"
+        resources: "{{ item.resources }}"
+        secrets_required: "{{ item.secrets_required | default(false) }}"
+        
+    - name: Genereer Ingress (voor web-facing apps)
+      template:
+        src: ../templates/kubernetes/ingress.yml.j2
+        dest: "./generated/k8s/{{ item.name }}-ingress.yml"
+      loop: "{{ k8s_applications }}"
+      when: item.service_type == 'ClusterIP' and item.namespace != 'database'
+      vars:
+        app_name: "{{ item.name }}"
+        namespace: "{{ item.namespace }}"
+        container_port: "{{ item.container_port }}"
+        service_port: "{{ item.service_port }}"
