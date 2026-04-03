@@ -57,4 +57,10 @@ De business case is gebaseerd op een team van 25 developers met een gemiddelde l
 ## 7. CONCLUSIE EN ADVIES
 De investering in een eigen DeepSeek-node is vanuit strategisch (privacy) en financieel (ROI) oogpunt zeer rendabel. Geadviseerd wordt om over te gaan tot aanschaf en het trainingstraject parallel aan de levering te starten.
 
-**Goedgekeurd door:** ____________________  **Datum:** __________
+---
+
+**Goedgekeurd door:** ____________________ 
+
+---
+
+**Datum:** __________
