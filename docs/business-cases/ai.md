@@ -1,74 +1,80 @@
-# INVESTERINGSVOORSTEL: AUTONOME SOFTWARE FACTORY & STATELESS VLOOTBEHEER
-**Projectcode:** INFRAFORGE-2026-01
-**Investering:** € 100.000,- (CAPEX/OPEX Jaar 1)
-**Doelgroep:** 25 FTE Software Engineering
+# INVESTERINGSVOORSTEL: ARCHITECTUUR VOOR EEN AUTONOME SOFTWARE FACTORY
+**Betreft:** Implementatie van Stateless Desktop Provisioning (PLD), InfraForge IaC en On-Premise AI-Inference.
 
 ---
 
-## 1. STRATEGISCHE SAMENVATTING
-Dit voorstel breekt met de traditionele methode van individueel werkplekbeheer. Door de implementatie van een 'Master-Node' architectuur transformeren we de IT-infrastructuur naar een stateless model. Hierbij wordt gebruikgemaakt van de InfraForge-methodiek en on-premise AI-inference (DeepSeek-Coder-V2) om de operationele snelheid te verhogen en de beheerslast te minimaliseren naar nagenoeg nul.
+## 1. STRATEGISCHE RATIONALE
+De huidige IT-operatie kampt met 'technische schuld' op de werkplek. Individuele configuraties van developer-laptops leiden tot inconsistente build-omgevingen ("it works on my machine") en een hoge administratieve druk. Tegelijkertijd dwingt de opkomst van AI tot een keuze: data weggeven aan derden (SaaS) of investeren in eigen soevereiniteit.
+
+Dit voorstel elimineert de beheerslast door de werkplek te reduceren tot een 'commodity' en de intelligentie te centraliseren op een on-premise Master-Node.
 
 ---
 
-## 2. TECHNISCHE ARCHITECTUUR: DE "ZERO-TOUCH" METHODIEK
+## 2. DE TECHNISCHE FUNDERING: INFRAFORGE & PLD
 
-### 2.1 Stateless Provisioning Linux Desktops (PLD)
-Traditionele laptops lijden aan 'configuration drift': ze worden traag, vervuilen en vertonen onverklaarbare fouten. Onze oplossing hanteert het stateless model van Henry den Hengst:
+### 2.1 Stateless Provisioning (Provisioning Linux Desktops)
+In plaats van traditionele installaties passen wij het 'Stateless Fat Client' model toe. Dit is de kern van de Henry den Hengst-methodiek:
+* **PXE-Boot & Handshake:** Desktops starten via het netwerk. Er is geen lokaal besturingssysteem dat kan verouderen of corrupt kan raken.
+* **De Gelaagde Opbouw (L0 - Functie C):**
+    * **L0 (Base):** Een minimale, geharde kernel (Debian/NixOS) wordt ingeladen.
+    * **L1 (Hygiëne):** De 'PLD-reset' wist bij elke boot alle lokale configuratie-afwijkingen. Gebruikersrechten en security-policies worden vers afgedwongen.
+    * **L2 (Hardware):** De Master-Node detecteert de specifieke GPU (NVIDIA/AMD) en randapparatuur van de client en injecteert de exact benodigde drivers on-the-fly.
+    * **Functie C (Application):** De volledige toolchain (IDE's, Docker, compilers) wordt gepusht op basis van de projectgroep in de Ansible-inventory.
 
-* **L0 - Netwerk Bootstrapping (PXE):** Geen lokale OS-installaties. De hardware start kaal op en laadt de kernel direct van de Master-Node.
-* **L1 - De "PLD-Reset":** Bij elke herstart wordt de machine gewist en gesynchroniseerd met de 'Golden Image'. Dit garandeert een 100% schone en veilige start, elke dag opnieuw.
-* **L2 - Dynamische Hardware-Abstractie:** De Master-Node herkent de specifieke componenten (NVIDIA/AMD) van het werkstation en injecteert on-the-fly de juiste drivers en firmware.
-* **Functie C - Rolgebaseerde Applicatie-uitrol:** Via Ansible worden de benodigde toolchains (Docker, Kubernetes, compilers) gepusht op basis van de projectgroep.
-
-### 2.2 De InfraForge Engine (Infrastructure-as-Code)
-De ruggengraat van de operatie is de InfraForge-repository, die de volledige omgeving definieert als code:
-* **70 Gevalideerde Ansible Roles:** Voor o.a. CIS-benchmarking (security), monitoring (Prometheus/Grafana) en centrale logging.
-* **310 Applicatiedefinities:** Gestandaardiseerde Docker/Kubernetes stacks die direct inzetbaar zijn voor development en productie.
-* **Multi-Distro Support:** Volledige ondersteuning voor Debian, RedHat, SUSE, Arch en Alpine, waardoor we niet gebonden zijn aan één leverancier.
+### 2.2 InfraForge Infrastructure-as-Code
+De Master-Node beheert de vloot middels de InfraForge-repository, een industrie-waardige IaC-stack:
+* **70 Ansible Roles:** Gestandaardiseerde bouwstenen voor o.a. CIS-benchmarking, monitoring (Prometheus/Loki) en netwerk-security.
+* **310 Applicatiedefinities:** Vooraf geconfigureerde containers die direct inzetbaar zijn, waardoor de 'time-to-hello-world' voor nieuwe projecten wordt verkort van uren naar seconden.
+* **Idempotentie:** De garantie dat de infrastructuur altijd terugkeert naar de gedefinieerde 'Golden State', ongeacht handmatige wijzigingen door gebruikers.
 
 ---
 
-## 3. ON-PREMISE AI: DE NOODZAAK VAN DATA-SOEVEREINITEIT
-
-Het lokaal hosten van een DeepSeek-Coder-V2 model (236B parameters) op 4x RTX 6000 Ada GPU's is een strategische keuze voor IP-bescherming.
+## 3. ON-PREMISE AI-HOSTING: DE ECONOMIE VAN SOEVEREINITEIT
+Het hosten van een Large Language Model (DeepSeek-Coder-V2) op de Master-Node (4x RTX 6000 Ada) is een kritische succesfactor voor deze business case.
 
 ### 3.1 Intellectueel Eigendom & Compliance
-Het versturen van broncode naar publieke AI-cloudproviders (SaaS) is een structureel risico. 
-* **100% Privacy:** Geen enkele regel code verlaat de interne infrastructuur. Dit elimineert risico's op IP-diefstal en voldoet aan de strengste privacy-eisen (ISO 27001/AVG).
-* **Onbeperkte Context:** Door lokaal 192GB VRAM beschikbaar te hebben, kan de AI volledige interne repositories analyseren (RAG), wat bij publieke providers onbetaalbaar of technisch onmogelijk is.
+Software-ontwikkeling is de kernwaarde van de organisatie. Het verzenden van code-repositories naar OpenAI of Anthropic is een onacceptabel risico op IP-verlies en schending van de AVG. 
+* **Air-Gapped mogelijkheid:** De AI-node kan volledig afgesloten van het internet opereren, terwijl de programmeurs wel beschikken over state-of-the-art assistentie.
+* **Geen Derden-risico:** Geen afhankelijkheid van de API-uptime, datalekken bij providers of plotselinge beleidswijzigingen van Big Tech.
 
-### 3.2 Diepe Integratie met InfraForge
-De lokale AI wordt gevoed met de eigen InfraForge-documentatie en Ansible-rollen. Resultaat: de AI genereert code die *direct* werkt binnen onze specifieke infrastructuur, conform onze eigen standaarden.
+### 3.2 Diepe Integratie met de Eigen Stack
+In tegenstelling tot algemene AI-modellen, kan het lokale model worden geïntegreerd met de InfraForge-documentatie en de PLD-workflows. 
+* De AI kent de 70 specifieke Ansible-rollen binnen de organisatie.
+* De AI genereert code die direct voldoet aan de interne standaarden voor logging, security en deployment.
 
 ---
 
-## 4. FINANCIËLE ANALYSE & ROI
+## 4. FINANCIEEL KADER EN ROI
 
-### 4.1 Investeringsbegroting (Jaar 1)
+### 4.1 Investeringsbegroting (Totaal € 100.000,-)
 | Post | Omschrijving | Investering |
 | :--- | :--- | :--- |
-| **Hardware** | Master-Node (4x RTX 6000 Ada, Threadripper 32-core, 512GB RAM, 10GbE) | € 60.000 |
-| **Engineering** | Setup PXE-stack, GitOps-pipelines en InfraForge-integratie | € 10.000 |
-| **Training** | Mastery-traject voor 25 devs (Stateless workflow & AI-pairing) | € 30.000 |
-| **Totaal** | | **€ 100.000** |
+| **Hardware** | Master-Node (4x RTX 6000 Ada 48GB, Threadripper 32-core, 512GB RAM, 10GbE) | € 60.000 |
+| **Engineering** | Implementatie PXE-stack, GitOps-pipelines en Ansible-integratie | € 10.000 |
+| **Training** | Maatwerk scholing voor 25 devs (Stateless workflow & AI-pairing) | € 30.000 |
 
-### 4.2 Jaarlijkse Besparingen (Conservatieve schatting)
-1.  **Reductie Werkplekbeheer (PLD):** De 'Self-Healing' natuur van de vloot elimineert 80% van de support-tickets. Besparing: **€ 45.000,-**.
-2.  **Productiviteitswinst (AI + IaC):** Een efficiëntieverbetering van 25% op de output van 25 developers (loonsom € 2M). Waarde: **€ 500.000,-**.
-3.  **Eliminatie SaaS & Licenties:** Vervanging van AI-abonnementen en legacy beheer-software. Besparing: **€ 20.000,-**.
+### 4.2 Operationele Besparingen (Per Jaar)
+* **Reductie Support-tickets (PLD):** De 'Self-Healing' natuur van de desktops reduceert werkplekondersteuning met 80%. Besparing: **€ 45.000,-**.
+* **Productiviteitswinst (AI + IaC):** Een conservatieve winst van 25% op de totale output van 25 developers (loonsom € 2M). Waardecreatie: **€ 500.000,-**.
+* **Infrastructuur-consolidatie:** Vervanging van diverse losse servers en dure SaaS-licenties voor AI. Besparing: **€ 20.000,-**.
 
-**Totale jaarlijkse waardecreatie:** **€ 565.000,-**.
-**Terugverdientijd:** De investering is binnen **ca. 4 maanden** na volledige adoptie terugverdiend.
+**Totale jaarlijkse waarde:** **€ 565.000,-**. 
+**Terugverdientijd:** De investering is binnen **69 werkdagen** (ca. 3 maanden) na volledige implementatie terugverdiend.
 
 ---
 
 ## 5. RISICO-ANALYSE
-* **Single Point of Failure:** De Master-Node is kritiek. *Mitigatie:* Redundante voedingen, RAID-opslag en dagelijkse off-site backups via Rclone (onderdeel van InfraForge).
-* **Complexiteit:** De overstap naar Stateless/Nix-architectuur vraagt om een cultuuromslag. *Mitigatie:* De begrote € 30.000,- voor training borgt de noodzakelijke kennisoverdracht.
+* **Complexiteit:** De initiële setup vereist diepe Linux-kennis. *Mitigatie:* Gebruik van het bewezen InfraForge-framework en een gericht trainingstraject.
+* **Hardwareveroudering:** De gekozen NVIDIA Ada-architectuur is toekomstbestendig voor minimaal 3-5 jaar. De modulaire opbouw van de software maakt hardware-swaps in de toekomst eenvoudig.
+* **Continuïteit:** De Master-Node is het 'Single Point of Failure'. *Mitigatie:* Redundante hardware-componenten en dagelijkse off-site backups van de Git-repositories via Rclone.
 
 ---
 
-## 6. CONCLUSIE
-Deze business case toont aan dat de investering van € 100.000,- niet slechts een aankoop van hardware is, maar de fundamenten legt voor een **onderhoudsvrije, veilige en hyper-efficiënte software-organisatie**. Door de vloot stateless te maken en AI on-premise te halen, creëren we een uniek competitief voordeel.
+## 6. CONCLUSIE EN ADVIES
+De transitie naar een stateless omgeving ondersteund door on-premise AI is de enige manier om als moderne software-organisatie schaalbaar en veilig te blijven. De investering van € 100.000,- is niet louter een kostenpost, maar de financiering van een autonoom ecosysteem dat zichzelf op korte termijn meervoudig terugbetaalt in snelheid, veiligheid en kwaliteit.
 
-**Geautoriseerd door:** ____________________  **Datum:** __________
+**Advies:** Directe goedkeuring voor de aanschaf van de hardware-node en de start van het implementatietraject.
+
+---
+**Documentstatus:** Definitief voorstel
+**Datum:** 3 april 2026
