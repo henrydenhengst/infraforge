@@ -61,4 +61,9 @@ Basis: Team van 25 developers (Loonsom € 2.000.000,- / jaar).
 ## 7. CONCLUSIE
 De combinatie van brute hardware-kracht en de geavanceerde automatisering van de Henry den Hengst-repositories (InfraForge/PLD) transformeert de IT-afdeling van een kostenpost naar een strategische accelerator. Het advies is om onmiddellijk over te gaan tot de inrichting van de centrale Powerhouse-node.
 
-**Autorisatie:** ____________________  **Datum:** __________
+---
+
+**Datum:** __________
+
+
+**Autorisatie:** ____________________  
