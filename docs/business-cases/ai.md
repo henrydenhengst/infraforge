@@ -1,69 +1,48 @@
-# BUSINESS CASE: Implementatie AI-Native Infrastructure & Zero-Touch Desktop Provisioning
+# BUSINESS CASE: Implementatie AI-Native Infrastructure & Stateless Desktop Provisioning
 
 ## 1. EXECUTIEVE SAMENVATTING
-Dit voorstel beschrijft de transitie naar een volledig geautonomeerde ontwikkelomgeving voor 25 programmeurs. Door de synergie van on-premise AI (DeepSeek-Coder-V2) en GitOps-gedreven infrastructuur (InfraForge & PLD), realiseren wij een significante stijging in software-output, 100% data-soevereiniteit en een drastische reductie in beheerslast.
+Dit voorstel betreft de inrichting van een "Self-Healing" ontwikkelomgeving voor 25 programmeurs. Door de combinatie van een on-premise DeepSeek-AI-node en de "Zero-Touch" provisioning methodiek van Henry den Hengst, creëren we een vloot van Linux Fat Clients die 100% consistent, veilig en onderhoudsvrij zijn.
 
 ---
 
-## 2. STRATEGISCHE PILLERS
-* **Private Intelligence:** Inzet van DeepSeek-Coder-V2 (236B) op eigen hardware voor veilige code-generatie.
-* **InfraForge Ecosystem:** Gebruik van ~70 geavanceerde Ansible-rollen en ~310 applicatiedefinities voor gestandaardiseerde, OS-agnostische omgevingen.
-* **Zero-Touch Provisioning (PLD):** Stateless Linux Fat Clients die zichzelf bij elke boot herstellen en configureren via PXE/GitOps, waardoor "local drift" geëlimineerd wordt.
+## 2. DE TECHNISCHE REVOLUTIE: GELAAGDE ARCHITECTUUR
+In tegenstelling tot traditionele werkplekbeheer, maken wij gebruik van een modulaire opbouw (InfraForge/PLD) die direct vanaf de centrale 100K-node wordt gestreamd:
+
+* **L0 - De OS-Laag:** Netwerk-bootstrapping (PXE) van Debian/NixOS. Geen lokale installatie nodig.
+* **L1/L2 - Hygiëne & Hardware:** Automatische injectie van NVIDIA/AMD drivers en security-hardening bij elke boot.
+* **Functie C - Applicatie-Laag:** Directe uitrol van ~310 applicatiedefinities (Docker/K8s) op basis van de rol van de developer.
+* **Self-Healing:** Bij elke herstart wordt de machine teruggebracht naar de "Golden Image". Lokale "rommel" of configuratie-fouten worden automatisch gewist.
 
 ---
 
-## 3. TECHNISCHE ARCHITECTUUR (HET POWERHOUSE)
-De centrale node fungeert als "Intelligence Hub" en "Provisioning Master".
-
-| Component | Specificatie | Rol in het ecosysteem |
-| :--- | :--- | :--- |
-| **GPU Cluster** | 4x NVIDIA RTX 6000 Ada (192GB VRAM) | Inference engine voor DeepSeek-V2 Full |
-| **Compute** | AMD Threadripper Pro 7975WX (32-core) | Ansible execution engine & Docker/K8s host |
-| **Memory** | 512GB DDR5 ECC | Caching van OS-images & Large Context Windows |
-| **Storage** | NVMe Gen5 RAID | Lokale Binary Cache voor InfraForge & PLD-logs |
+## 3. INFRAFORGE ALS ENGINE (70+ ANSIBLE ROLES)
+De centrale node fungeert als de "Intelligence Hub" voor de gehele vloot:
+* **70 Ansible Roles:** Dekken de volledige lifecycle (Security, Backup, Monitoring).
+* **GitOps Workflow:** Wijzigingen in de centrale repository (`group_vars/all.yml`) worden onmiddellijk en automatisch doorgevoerd op alle 25 werkstations.
+* **Headless by Default:** Maximale rekenkracht van de 100K-hardware gaat naar AI-inference, niet naar server-overhead.
 
 ---
 
 ## 4. INVESTERINGSBEGROTING (JAAR 1)
-| Categorie | Post | Bedrag |
+| Categorie | Onderdeel | Bedrag |
 | :--- | :--- | :--- |
-| **CAPEX** | AI-Server & Netwerk-infra | € 60.000 |
-| **OPEX** | Beheer, Energie & Licenties (vrijgesteld via FOSS) | € 10.000 |
-| **Inablement** | Maatwerk Training (InfraForge, PLD & Prompting) | € 30.000 |
-| **TOTAAL** | | **€ 100.000** |
+| **Hardware** | 4x RTX 6000 Ada Server (Master Node) | € 60.000 |
+| **Implementatie** | Inrichting InfraForge-vloot & GitOps Pipeline | € 10.000 |
+| **Training** | Mastery van de PLD-workflow & AI-pairing | € 30.000 |
+| **TOTAAL** | (Afschrijving € 20k/jaar) | **€ 100.000** |
 
 ---
 
-## 5. OPERATIONELE EFFICIËNTIE (ROI)
-Basis: Team van 25 developers (Loonsom € 2.000.000,- / jaar).
+## 5. OPERATIONELE ROI (25 PROGRAMMEURS)
+Basis: Loonsom team € 2.000.000,- / jaar.
 
-### A. Development Winst (DeepSeek + InfraForge)
-* **Versnelling:** 30% door AI-pairing en het hergebruik van de 310 voorgedefinieerde applicatiestacks.
-* **Waarde:** € 600.000,- per jaar.
-
-### B. Ops & Provisioning Winst (PLD)
-* **Zero Maintenance:** Geen handmatige updates of reparaties van desktops meer. Besparing: 4 uur per dev/maand.
-* **Waarde:** 25 x 4u x € 75,- = € 90.000,- per jaar.
-
-### C. Totale Besparing
-* **Netto Jaarlijks Voordeel:** **€ 670.000,-** (na aftrek van jaarlijkse afschrijving en beheer).
-* **Payback Period:** De volledige investering is binnen **4 maanden** terugverdiend.
+* **Eliminatie 'Desktop Drift':** Geen handmatige reparaties of herinstallaties meer. Winst: **€ 90.000,-/jr.**
+* **AI-Acceleratie (DeepSeek):** 30% snellere code-oplevering via lokale API-integratie in de "Functie C" laag. Winst: **€ 600.000,-/jr.**
+* **Onboarding Snelheid:** Nieuwe developers zijn binnen 10 minuten up-and-running (Zero-Touch).
 
 ---
 
-## 6. RISICO-BEHEERSING
-* **Continuïteit:** De 'Headless by Default' filosofie minimaliseert downtime en aanvals-oppervlakken.
-* **Vendor Lock-in:** 0%. Alle tooling is Open Source (NixOS/Debian, Ansible, DeepSeek).
-* **Security:** "Security by Design" middels Vault-integratie en CIS-benchmarks binnen de InfraForge-rollen.
+## 6. CONCLUSIE & ADVIES
+Door af te stappen van individueel beheerde laptops en te kiezen voor een centraal aangestuurde "InfraForge" vloot, verlagen we de technische schuld naar nagenoeg nul. De 100K investering levert niet alleen AI-kracht, maar een volledig zelf-herstellend ecosysteem dat zichzelf binnen één kwartaal terugverdient.
 
----
-
-## 7. CONCLUSIE
-De combinatie van brute hardware-kracht en de geavanceerde automatisering van de Henry den Hengst-repositories (InfraForge/PLD) transformeert de IT-afdeling van een kostenpost naar een strategische accelerator. Het advies is om onmiddellijk over te gaan tot de inrichting van de centrale Powerhouse-node.
-
----
-
-**Datum:** __________
-
-
-**Autorisatie:** ____________________  
+**Autorisatie:** ____________________  **Datum:** __________
