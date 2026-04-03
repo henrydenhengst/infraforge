@@ -1,66 +1,64 @@
-# BUSINESS CASE: Implementatie On-Premise AI-Infrastructuur (DeepSeek-Coder-V2)
+# BUSINESS CASE: Implementatie AI-Native Infrastructure & Zero-Touch Desktop Provisioning
 
-## 1. SAMENVATTING
-Dit voorstel betreft de investering in een eigen, hoogwaardige AI-rekennode voor de ondersteuning van 25 software developers. Door gebruik te maken van het FOSS (Free and Open Source) model DeepSeek-Coder-V2 (236B), garanderen wij 100% data-privacy en verhogen wij de software-output met naar schatting 30%.
-
----
-
-## 2. DOELSTELLINGEN
-* **Data Souvereiniteit:** Volledige eliminatie van het risico op lekken van intellectueel eigendom (IP) naar externe AI-clouds.
-* **Productiviteitswinst:** Versnelling van development-cycli, met specifieke focus op Ansible-automatisering en unit-testing.
-* **Kostenbeheersing:** Vaste infrastructuurkosten in plaats van variabele, stijgende licentiekosten per gebruiker.
+## 1. EXECUTIEVE SAMENVATTING
+Dit voorstel beschrijft de transitie naar een volledig geautonomeerde ontwikkelomgeving voor 25 programmeurs. Door de synergie van on-premise AI (DeepSeek-Coder-V2) en GitOps-gedreven infrastructuur (InfraForge & PLD), realiseren wij een significante stijging in software-output, 100% data-soevereiniteit en een drastische reductie in beheerslast.
 
 ---
 
-## 3. TECHNISCHE SPECIFICATIES (OPEX/CAPEX)
-De gekozen configuratie is een Linux-gebaseerd workstation/server-systeem geoptimaliseerd voor Large Language Models (LLMs).
-
-| Component | Specificatie |
-| :--- | :--- |
-| **GPU** | 4x NVIDIA RTX 6000 Ada (192GB VRAM totaal) |
-| **CPU** | AMD Threadripper Pro 7975WX (32-core) |
-| **RAM** | 512GB DDR5 ECC |
-| **Software Stack** | Ubuntu Server, vLLM, Docker, Open WebUI |
+## 2. STRATEGISCHE PILLERS
+* **Private Intelligence:** Inzet van DeepSeek-Coder-V2 (236B) op eigen hardware voor veilige code-generatie.
+* **InfraForge Ecosystem:** Gebruik van ~70 geavanceerde Ansible-rollen en ~310 applicatiedefinities voor gestandaardiseerde, OS-agnostische omgevingen.
+* **Zero-Touch Provisioning (PLD):** Stateless Linux Fat Clients die zichzelf bij elke boot herstellen en configureren via PXE/GitOps, waardoor "local drift" geëlimineerd wordt.
 
 ---
 
-## 4. INVESTERINGSBEGROTING (INDICATIEF)
-De totale investering over de eerste 12 maanden bedraagt circa € 80.000,-.
+## 3. TECHNISCHE ARCHITECTUUR (HET POWERHOUSE)
+De centrale node fungeert als "Intelligence Hub" en "Provisioning Master".
 
-| Post | Kosten | Toelichting |
+| Component | Specificatie | Rol in het ecosysteem |
 | :--- | :--- | :--- |
-| **Hardware (CAPEX)** | € 55.000 | Eenmalige aanschaf hardware |
-| **Training (25 devs)** | € 30.000 | Maatwerk AI-pairing & Prompt Engineering |
-| **Beheer & Energie** | € 15.000 | Support, stroom en koeling (jaarbasis) |
-| **TOTAAL JAAR 1** | **€ 100.000** | **Afschrijving over 5 jaar: € 20k/jaar** |
+| **GPU Cluster** | 4x NVIDIA RTX 6000 Ada (192GB VRAM) | Inference engine voor DeepSeek-V2 Full |
+| **Compute** | AMD Threadripper Pro 7975WX (32-core) | Ansible execution engine & Docker/K8s host |
+| **Memory** | 512GB DDR5 ECC | Caching van OS-images & Large Context Windows |
+| **Storage** | NVMe Gen5 RAID | Lokale Binary Cache voor InfraForge & PLD-logs |
 
 ---
 
-## 5. RETURN ON INVESTMENT (ROI)
-De business case is gebaseerd op een team van 25 developers met een gemiddelde loonsom van € 80.000,- per jaar.
-
-* **Totale loonsom team:** € 2.000.000 / jaar.
-* **Gecalculeerde efficiëntiewinst (30%):** De output van het team stijgt naar een waarde van € 2.600.000.
-* **Bruto jaarlijkse besparing:** € 600.000.
-* **Netto resultaat (na kosten):** **€ 580.000 per jaar.**
-* **Terugverdientijd:** < 3 maanden na volledige adoptie.
-
----
-
-## 6. RISICO-ANALYSE
-* **Technologische veroudering:** AI-hardware ontwikkelt snel. Afschrijving op 5 jaar is fiscaal correct, maar economische vervanging na 3 jaar wordt voorzien.
-* **Adoptie:** Zonder de begrote training blijft de winst steken op <10%. Training is kritiek pad.
-* **Beheer:** Vereist Linux/Ansible expertise (reeds intern aanwezig).
+## 4. INVESTERINGSBEGROTING (JAAR 1)
+| Categorie | Post | Bedrag |
+| :--- | :--- | :--- |
+| **CAPEX** | AI-Server & Netwerk-infra | € 60.000 |
+| **OPEX** | Beheer, Energie & Licenties (vrijgesteld via FOSS) | € 10.000 |
+| **Inablement** | Maatwerk Training (InfraForge, PLD & Prompting) | € 30.000 |
+| **TOTAAL** | | **€ 100.000** |
 
 ---
 
-## 7. CONCLUSIE EN ADVIES
-De investering in een eigen DeepSeek-node is vanuit strategisch (privacy) en financieel (ROI) oogpunt zeer rendabel. Geadviseerd wordt om over te gaan tot aanschaf en het trainingstraject parallel aan de levering te starten.
+## 5. OPERATIONELE EFFICIËNTIE (ROI)
+Basis: Team van 25 developers (Loonsom € 2.000.000,- / jaar).
+
+### A. Development Winst (DeepSeek + InfraForge)
+* **Versnelling:** 30% door AI-pairing en het hergebruik van de 310 voorgedefinieerde applicatiestacks.
+* **Waarde:** € 600.000,- per jaar.
+
+### B. Ops & Provisioning Winst (PLD)
+* **Zero Maintenance:** Geen handmatige updates of reparaties van desktops meer. Besparing: 4 uur per dev/maand.
+* **Waarde:** 25 x 4u x € 75,- = € 90.000,- per jaar.
+
+### C. Totale Besparing
+* **Netto Jaarlijks Voordeel:** **€ 670.000,-** (na aftrek van jaarlijkse afschrijving en beheer).
+* **Payback Period:** De volledige investering is binnen **4 maanden** terugverdiend.
 
 ---
 
-**Goedgekeurd door:** ____________________ 
+## 6. RISICO-BEHEERSING
+* **Continuïteit:** De 'Headless by Default' filosofie minimaliseert downtime en aanvals-oppervlakken.
+* **Vendor Lock-in:** 0%. Alle tooling is Open Source (NixOS/Debian, Ansible, DeepSeek).
+* **Security:** "Security by Design" middels Vault-integratie en CIS-benchmarks binnen de InfraForge-rollen.
 
 ---
 
-**Datum:** __________
+## 7. CONCLUSIE
+De combinatie van brute hardware-kracht en de geavanceerde automatisering van de Henry den Hengst-repositories (InfraForge/PLD) transformeert de IT-afdeling van een kostenpost naar een strategische accelerator. Het advies is om onmiddellijk over te gaan tot de inrichting van de centrale Powerhouse-node.
+
+**Autorisatie:** ____________________  **Datum:** __________
