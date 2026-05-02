@@ -1,5 +1,5 @@
 #!/bin/bash
-# netboot-automatic.sh
+# post-install.sh
 # Volledig autonome Netboot-server installatie voor Devuan
 # Detecteert NICs automatisch zonder gebruikersinteractie
 
