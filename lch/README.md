@@ -17,14 +17,14 @@ Deze repository bevat de Ansible-configuratie voor de website en infrastructuur 
    ```
 Hier is je volledige Post-Ansible Checklist:
 
-1. De Grav Admin Gebruiker Aanmaken
+## 1. De Grav Admin Gebruiker Aanmaken
 Ansible installeert Grav, maar maakt om veiligheidsredenen geen beheerder aan.
 Open je browser en ga naar: `https://linuxcafehaarlem.duckdns.org/admin`
 Je ziet nu een scherm om de User Account aan te maken.
 Vul je gebruikersnaam, e-mailadres en een sterk wachtwoord in.
 Klik op Create User. Je bent nu ingelogd in het dashboard.
 
-2. Thema en Plugins Installeren (CLI-methode)
+## 2. Thema en Plugins Installeren (CLI-methode)
 Hoewel de basis van Grav draait, moeten het Typhoon-thema en de benodigde bouwstenen nog geactiveerd worden. Dit doe je het snelst via SSH op de server:
 
 Log in op je server: `ssh root@linuxcafehaarlem.duckdns.org`
