@@ -27,13 +27,11 @@ fi
 
 log_info "Controleren of systeem Devuan is..."
 
-# Devuan herkennen aan /etc/devuan_version of aan de aanwezigheid van 'devuan' in os-release
 if [ -f /etc/devuan_version ]; then
     log_info "Devuan versie: $(cat /etc/devuan_version)"
 elif [ -f /etc/os-release ] && grep -qi "devuan" /etc/os-release; then
     log_info "Devuan gedetecteerd via os-release"
 else
-    # Geen Devuan, stop installatie
     echo ""
     echo "=========================================="
     echo "INSTALLATIE GESTOPT"
@@ -63,7 +61,6 @@ fi
 
 log_info "Automatisch detecteren van netwerkinterfaces..."
 
-# Verzamel alle fysieke NICs
 get_physical_nics() {
     local nics=""
     for iface in $(ls /sys/class/net/ 2>/dev/null | grep -v lo); do
@@ -74,12 +71,10 @@ get_physical_nics() {
     echo $nics
 }
 
-# Check of interface een IP heeft
 has_ip() {
     ip addr show $1 2>/dev/null | grep -q "inet " && return 0 || return 1
 }
 
-# IP van interface ophalen
 get_ip() {
     ip addr show $1 2>/dev/null | grep "inet " | awk '{print $2}' | cut -d/ -f1 | head -1
 }
@@ -91,7 +86,6 @@ if [ -z "$ALL_NICS" ]; then
     exit 1
 fi
 
-# Detecteer WAN (192.168.178.x)
 WAN_IF=""
 LAN_IF=""
 
@@ -105,7 +99,6 @@ for iface in $ALL_NICS; do
     fi
 done
 
-# Verzamel NICs zonder IP
 NO_IP_NICS=""
 for iface in $ALL_NICS; do
     if ! has_ip $iface; then
@@ -113,7 +106,6 @@ for iface in $ALL_NICS; do
     fi
 done
 
-# Bepaal LAN (eerste NIC zonder IP)
 if [ -n "$NO_IP_NICS" ]; then
     LAN_IF=$(echo $NO_IP_NICS | awk '{print $1}')
     log_info "LAN interface: $LAN_IF (geen IP, wordt netboot)"
@@ -122,7 +114,6 @@ else
     exit 1
 fi
 
-# Als WAN niet gedetecteerd is, gebruik dan de andere NIC als WAN
 if [ -z "$WAN_IF" ]; then
     for iface in $ALL_NICS; do
         if [ "$iface" != "$LAN_IF" ]; then
@@ -144,6 +135,7 @@ log_info "Configuratie:"
 log_info "  WAN (internet): ${WAN_IF} -> router (192.168.178.1)"
 log_info "  LAN (netboot):  ${LAN_IF} -> ${LAN_IP}/${LAN_MASK}"
 log_info "  DHCP range:     ${DHCP_START} - ${DHCP_END}"
+log_info "  DNS servers:    9.9.9.9, 1.1.1.1"
 
 # ============================================
 # SYSTEEM UPDATE
@@ -170,7 +162,6 @@ apt install -y \
     net-tools \
     htop
 
-# Stop services voor configuratie
 systemctl stop dnsmasq tftpd-hpa nginx 2>/dev/null || true
 
 # ============================================
@@ -210,7 +201,7 @@ iface ${LAN_IF} inet static
 EOF
 
 # ============================================
-# DNSMASQ CONFIGURATIE
+# DNSMASQ CONFIGURATIE (met DNS 9.9.9.9 en 1.1.1.1)
 # ============================================
 
 log_info "Dnsmasq configureren..."
@@ -223,7 +214,7 @@ interface=${LAN_IF}
 bind-interfaces
 dhcp-range=${DHCP_START},${DHCP_END},12h
 dhcp-option=option:router,${LAN_IP}
-dhcp-option=option:dns-server,8.8.8.8,8.8.4.4
+dhcp-option=option:dns-server,9.9.9.9,1.1.1.1
 
 enable-tftp
 tftp-root=/srv/tftp
@@ -288,14 +279,15 @@ rm -f /etc/nginx/sites-enabled/default
 cat > /var/www/netboot/index.html << EOF
 <!DOCTYPE html>
 <html>
-<head><title>Netboot Server</title></head>
+<head><title>Netboot Server - Devuan</title></head>
 <body>
 <h1>Netboot Server - Devuan</h1>
 <p>Netboot netwerk: ${LAN_NETWORK}/${LAN_MASK}</p>
-<p>DHCP: ${DHCP_START} - ${DHCP_END}</p>
+<p>DHCP range: ${DHCP_START} - ${DHCP_END}</p>
+<p>DNS servers: 9.9.9.9, 1.1.1.1</p>
 <ul>
-    <li><a href="/tftp/">TFTP</a></li>
-    <li><a href="/nfs/">NFS</a></li>
+    <li><a href="/tftp/">TFTP Bestanden</a></li>
+    <li><a href="/nfs/">NFS Shares</a></li>
 </ul>
 </body>
 </html>
@@ -335,6 +327,7 @@ echo "=========================================="
 echo "WAN (internet): ${WAN_IF} -> router (192.168.178.1)"
 echo "LAN (netboot):  ${LAN_IF} -> switch -> PXE-clients"
 echo "Server IP:      ${LAN_IP}"
+echo "DNS:            9.9.9.9 en 1.1.1.1"
 echo "Web interface:  http://${LAN_IP}"
 echo ""
 echo "BELANGRIJK: De switch met PXE-clients mag"
