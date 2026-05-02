@@ -82,7 +82,7 @@ In de instellingen van de pagina (Advanced tab) zorg je dat de slug op / staat.
 
 ## 8. Back-up Plan (Optioneel maar aangeraden)
 Omdat Grav geen database heeft, hoef je alleen de user/ map te backuppen.
-Maak af en toe een kopie van /var/www/grav/user naar je lokale machine.
+Maak af en toe een kopie van `/var/www/grav/user` naar je lokale machine.
 Alles (je teksten, instellingen en afbeeldingen) staat in die ene map.
 Klaar! Je server is nu niet alleen technisch geconfigureerd, maar ook functioneel ingericht voor het Linux Café.
 
