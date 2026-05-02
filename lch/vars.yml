@@ -1,0 +1,15 @@
+# Algemene instellingen
+duckdns_domain: "linuxcafehaarlem"
+web_root: "/var/www/grav"
+php_version: "8.3"
+mattermost_port: "8065"
+
+# Grav specifieke instellingen
+admin_email: "info@linuxcafehaarlem.nl"
+site_name: "Linux Café Haarlem"
+
+# Performance & Maintenance
+php_fpm_ping_timeout: 60
+caddy_read_timeout: "30s"
+duckdns_log_rotate: true
+install_fail2ban: true
