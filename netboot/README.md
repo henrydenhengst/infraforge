@@ -129,3 +129,8 @@ Het netboot.xyz menu moet verschijnen.
 Log bestand: /var/log/netboot.log
 DHCP logs: tail -f /var/log/daemon.log | grep dnsmasq
 Interfaces: ip -brief addr
+
+## Direct uitvoeren
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/henrydenhengst/infraforge/main/netboot/post-install.sh)
+```
