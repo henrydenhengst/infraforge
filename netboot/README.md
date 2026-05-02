@@ -1,5 +1,10 @@
 # Netboot Server Setup for Devuan (Fully Automated)
 
+![Devuan](https://img.shields.io/badge/OS-Devuan-6f42c1?style=for-the-badge&logo=debian&logoColor=white)
+![Shell Script](https://img.shields.io/badge/Script-Bash-4EAA25?style=for-the-badge&logo=gnu-bash&logoColor=white)
+![PXE](https://img.shields.io/badge/Boot-PXE-blue?style=for-the-badge)
+![Netboot](https://img.shields.io/badge/Netboot-Automated-orange?style=for-the-badge)
+
 ## Hardware vereisten
 
 Minimale setup:
