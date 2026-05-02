@@ -1,9 +1,9 @@
 #!/bin/bash
-# post-install.sh
+# netboot-automatic.sh
 # Volledig autonome Netboot-server installatie voor Devuan
 # Detecteert NICs automatisch zonder gebruikersinteractie
 
-set -e
+set -euo pipefail
 
 # ============================================
 # LOGGING NAAR BESTAND
@@ -30,7 +30,7 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # ============================================
-# INIT SYSTEEM DETECTIE (verbeterd)
+# INIT SYSTEEM DETECTIE
 # ============================================
 
 detect_init() {
@@ -89,12 +89,13 @@ is_physical_interface() {
     return 1
 }
 
-# Backup maken van bestand
+# Backup maken van bestand (enkele timestamp)
 backup_file() {
     local file=$1
     if [ -f "$file" ]; then
-        cp "$file" "${file}.backup.$(date +%Y%m%d_%H%M%S)"
-        log_info "Backup gemaakt: ${file}.backup.$(date +%Y%m%d_%H%M%S)"
+        local timestamp=$(date +%Y%m%d_%H%M%S)
+        cp "$file" "${file}.backup.${timestamp}"
+        log_info "Backup gemaakt: ${file}.backup.${timestamp}"
     fi
 }
 
@@ -183,7 +184,7 @@ for iface in $(ls /sys/class/net/ 2>/dev/null | grep -v lo); do
     fi
 done
 
-# WAN fallback via default route (verbeterd)
+# WAN fallback via default route
 if [ -z "$WAN_IF" ]; then
     WAN_IF=$(ip route 2>/dev/null | awk '/default/ {print $5; exit}')
     if [ -n "$WAN_IF" ]; then
@@ -330,7 +331,7 @@ iface ${LAN_IF} inet static
 EOF
 
 # ============================================
-# IP FORWARDING EN NAT
+# IP FORWARDING EN NAT (met -w voor race condition)
 # ============================================
 
 log_info "IP forwarding en NAT inschakelen..."
@@ -343,9 +344,9 @@ if ! grep -q "net.ipv4.ip_forward=1" /etc/sysctl.conf 2>/dev/null; then
     echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 fi
 
-# NAT iptables regel
-iptables -t nat -C POSTROUTING -o $WAN_IF -j MASQUERADE 2>/dev/null || {
-    iptables -t nat -A POSTROUTING -o $WAN_IF -j MASQUERADE
+# NAT iptables regel (met -w)
+iptables -w -t nat -C POSTROUTING -o $WAN_IF -j MASQUERADE 2>/dev/null || {
+    iptables -w -t nat -A POSTROUTING -o $WAN_IF -j MASQUERADE
     log_info "NAT regel toegevoegd"
 }
 
@@ -357,7 +358,7 @@ elif command -v netfilter-persistent >/dev/null 2>&1; then
 fi
 
 # ============================================
-# DNSMASQ CONFIGURATIE
+# DNSMASQ CONFIGURATIE (met lokale DNS forwarding)
 # ============================================
 
 log_info "Dnsmasq configureren..."
@@ -368,7 +369,11 @@ interface=${LAN_IF}
 bind-interfaces
 dhcp-range=${DHCP_START},${DHCP_END},12h
 dhcp-option=option:router,${LAN_IP}
-dhcp-option=option:dns-server,9.9.9.9,1.1.1.1
+dhcp-option=option:dns-server,${LAN_IP}
+
+# DNS forwarding naar externe servers
+server=9.9.9.9
+server=1.1.1.1
 
 enable-tftp
 tftp-root=/srv/tftp
@@ -442,7 +447,7 @@ cat > /var/www/netboot/index.html << EOF
 <h1>Netboot Server - Devuan ($INIT_SYS)</h1>
 <p>Netboot netwerk: ${LAN_NETWORK}/${LAN_MASK}</p>
 <p>DHCP range: ${DHCP_START} - ${DHCP_END}</p>
-<p>DNS servers: 9.9.9.9, 1.1.1.1</p>
+<p>DNS server: ${LAN_IP} (forwarding naar 9.9.9.9, 1.1.1.1)</p>
 <p>NAT: Actief (internet via ${WAN_IF})</p>
 <ul>
     <li><a href="/tftp/">TFTP Bestanden</a></li>
@@ -463,20 +468,22 @@ for service in dnsmasq tftpd-hpa nfs-kernel-server nginx; do
     service_control restart $service
 done
 
-# Herstart networking voor de LAN interface
-service_control restart networking 2>/dev/null || {
-    ifconfig $LAN_IF $LAN_IP netmask 255.255.255.0 up 2>/dev/null || \
-    ip addr add $LAN_IP/24 dev $LAN_IF 2>/dev/null && ip link set $LAN_IF up
-}
+# Herstart networking voor de LAN interface (geen ifconfig)
+log_info "LAN interface configureren..."
+ip addr add $LAN_IP/24 dev $LAN_IF 2>/dev/null || true
+ip link set $LAN_IF up
 
 # ============================================
-# SERVICE STATUS CHECK
+# SERVICE STATUS CHECK (met pipefail veilig)
 # ============================================
 
 echo ""
 log_info "Service status:"
 for svc in dnsmasq tftpd-hpa nfs-kernel-server nginx; do
-    if service_control status $svc 2>/dev/null | grep -q "running\|active"; then
+    set +e
+    STATUS=$(service_control status $svc 2>/dev/null)
+    set -e
+    if echo "$STATUS" | grep -q "running\|active"; then
         echo "  ✓ $svc"
     else
         echo "  ✗ $svc"
@@ -485,7 +492,7 @@ done
 
 # Check NAT
 echo ""
-if iptables -t nat -C POSTROUTING -o $WAN_IF -j MASQUERADE 2>/dev/null; then
+if iptables -w -t nat -C POSTROUTING -o $WAN_IF -j MASQUERADE 2>/dev/null; then
     echo "  ✓ NAT actief op $WAN_IF"
 else
     echo "  ✗ NAT niet actief"
@@ -514,7 +521,7 @@ echo "Init systeem:   $INIT_SYS"
 echo "WAN:            ${WAN_IF} -> router (192.168.178.1)"
 echo "LAN:            ${LAN_IF} -> switch -> PXE-clients"
 echo "Server IP:      ${LAN_IP}"
-echo "DNS:            9.9.9.9, 1.1.1.1"
+echo "DNS:            ${LAN_IP} (forwarding naar 9.9.9.9, 1.1.1.1)"
 echo "NAT:            Actief (clients hebben internet)"
 echo "Web interface:  http://${LAN_IP}"
 echo "Log bestand:    $LOGFILE"
