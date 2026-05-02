@@ -140,3 +140,10 @@ bash <(curl -fsSL https://raw.githubusercontent.com/henrydenhengst/infraforge/ma
 ```bash
 curl -fsSL -o post-install.sh https://raw.githubusercontent.com/henrydenhengst/infraforge/main/netboot/post-install.sh
 ```
+
+## homelab pro
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/henrydenhengst/infraforge/main/netboot/post-install.sh | tee post-install.sh
+bash post-install.sh
+```
