@@ -134,3 +134,9 @@ Interfaces: ip -brief addr
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/henrydenhengst/infraforge/main/netboot/post-install.sh)
 ```
+
+## download → check → run
+
+```bash
+curl -fsSL -o post-install.sh https://raw.githubusercontent.com/henrydenhengst/infraforge/main/netboot/post-install.sh
+```
