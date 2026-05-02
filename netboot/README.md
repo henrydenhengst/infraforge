@@ -1,5 +1,27 @@
 # Netboot Server Setup for Devuan (Fully Automated)
 
+## Hardware vereisten
+
+Minimale setup:
+- Server met twee fysieke netwerkinterfaces (NICs)
+- Eén netwerkkabel naar je bestaande router (voor WAN)
+- Eén netwerkkabel naar een aparte switch (voor LAN)
+- Netwerk switch (ongemanaged is prima) voor de PXE clients
+- Stroomvoorziening voor server en switch
+
+Optioneel maar handig:
+- Extra netwerkkabels voor de PXE clients
+- Monitor en toetsenbord (alleen tijdens installatie van Devuan)
+- SSH toegang (als je server headless draait)
+
+Niet nodig:
+- Geen grafische kaart (headless is prima)
+- Geen bijzondere netwerkkaarten (standaard NICs werken)
+
+Belangrijk:
+- De switch voor PXE clients mag NIET verbonden zijn met je bestaande router
+- De server heeft twee aparte fysieke poorten nodig (USB NICs werken ook, maar fysiek is stabieler)
+
 ## Doel
 
 Dit script zet automatisch een netboot server op op Devuan Linux.
