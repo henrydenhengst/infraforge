@@ -1,0 +1,15 @@
+# Ansible geheimen
+secret.yml
+*.retry
+
+# OS gegenereerde bestanden
+.DS_Store
+Thumbs.db
+
+# Tijdelijke bestanden en logs
+*.log
+/tmp/
+
+# SSH keys
+*.pem
+*.key
