@@ -1,0 +1,170 @@
+---
+- name: Productie Deployment Linux Café Haarlem (Void Linux)
+  hosts: linuxcafe
+  become: yes
+  vars_files:
+    - vars.yml
+    - secret.yml
+
+  pre_tasks:
+    - name: Valideer distributie
+      fail:
+        msg: "FOUT: Dit playbook vereist Void Linux!"
+      when: ansible_distribution != "Void"
+
+  tasks:
+    # 1. INSTALLATIE
+    - name: Installeer systeem-stack
+      community.general.xbps:
+        name: [caddy, php{{ php_version }}-fpm, php{{ php_version }}-gd, php{{ php_version }}-curl, 
+               php{{ php_version }}-mbstring, php{{ php_version }}-xml, php{{ php_version }}-zip, 
+               php{{ php_version }}-intl, git, unzip, curl, ufw, cronie, logrotate, fail2ban]
+        state: present
+        update_cache: yes
+
+    - name: Activeer cronie en fail2ban services
+      file: 
+        src: "/etc/sv/{{ item }}" 
+        dest: "/var/service/{{ item }}" 
+        state: link
+      loop: [cronie, fail2ban]
+
+    # 2. SECURITY & FAIL2BAN CONFIG
+    - name: SSH Hardening
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^PermitRootLogin', line: 'PermitRootLogin no' }
+        - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+      notify: Restart SSH
+
+    - name: Configureer Fail2ban voor SSH
+      copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [sshd]
+          enabled = true
+          port = ssh
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 3
+          bantime = 3600
+      notify: Restart Fail2Ban
+
+    - name: Configureer Firewall (UFW)
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: ['22', '80', '443']
+
+    - name: Activeer Firewall
+      community.general.ufw: { state: enabled, policy: deny }
+
+    # 3. GRAV CMS & PHP OPTIMALISATIE
+    - name: Maak webroot aan
+      file:
+        path: "{{ web_root }}"
+        state: directory
+        owner: _caddy
+        group: _caddy
+        mode: '0755'
+
+    - name: Installeer Grav Admin
+      unarchive:
+        src: https://getgrav.org/download/core/grav-admin/latest
+        dest: /tmp
+        remote_src: yes
+        creates: "/tmp/grav-admin"
+
+    - name: Deploy Grav bestanden
+      shell: |
+        cp -rn /tmp/grav-admin/. {{ web_root }}/
+        chown -R _caddy:_caddy {{ web_root }}
+        rm -rf /tmp/grav-admin
+      args:
+        creates: "{{ web_root }}/index.php"
+
+    - name: Optimaliseer PHP-FPM Workers & Settings
+      lineinfile:
+        path: "/etc/php{{ php_version }}/{{ item.file }}"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { file: 'php.ini', regexp: '^upload_max_filesize', line: 'upload_max_filesize = 32M' }
+        - { file: 'php.ini', regexp: '^memory_limit', line: 'memory_limit = 256M' }
+        - { file: 'php.ini', regexp: '^expose_php', line: 'expose_php = Off' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^;?pm.max_children', line: 'pm.max_children = 10' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^;?pm.start_servers', line: 'pm.start_servers = 3' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^user =', line: 'user = _caddy' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^listen =', line: 'listen = /var/run/php-fpm.sock' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^listen.owner =', line: 'listen.owner = _caddy' }
+      notify: Restart PHP-FPM
+
+    # 4. CADDY & DUCKDNS
+    - name: Schrijf Caddyfile
+      copy:
+        dest: /etc/caddy/Caddyfile
+        content: |
+          {{ duckdns_domain }}.duckdns.org {
+              root * {{ web_root }}
+              encode zstd gzip
+              php_fastcgi unix//var/run/php-fpm.sock
+              try_files {path} {path}/ /index.php?{query}&_url={path}
+              file_server
+              header {
+                  Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+                  X-Content-Type-Options "nosniff"
+                  X-Frame-Options "SAMEORIGIN"
+              }
+              handle_path /chat* {
+                  reverse_proxy localhost:{{ mattermost_port }}
+              }
+          }
+      notify: Reload Caddy
+
+    - name: Setup DuckDNS Script (Defensief)
+      copy:
+        dest: /usr/local/bin/update-duckdns.sh
+        mode: '0755'
+        content: |
+          #!/bin/sh
+          LOG="/var/log/duckdns.log"
+          RESPONSE=$(curl -s "https://www.duckdns.org/update?domains={{ duckdns_domain }}&token={{ duckdns_token }}&ip=")
+          if [ "$RESPONSE" = "OK" ]; then
+              echo "$(date): Update succesvol" >> $LOG
+          else
+              echo "$(date): Update MISLUKT - Response: $RESPONSE" >> $LOG
+          fi
+
+    - name: DuckDNS Cron & Logrotate
+      block:
+        - name: Cronjob DuckDNS
+          ansible.builtin.cron: { name: "DuckDNS", minute: "*/10", job: "/usr/local/bin/update-duckdns.sh" }
+        - name: Logrotate DuckDNS
+          copy:
+            dest: /etc/logrotate.d/duckdns
+            content: |
+              /var/log/duckdns.log { weekly \n rotate 4 \n compress \n missingok \n notifempty }
+
+    # 5. RUNIT SERVICES
+    - name: Link overige Runit services
+      file: { src: "/etc/sv/{{ item }}", dest: "/var/service/{{ item }}", state: link }
+      loop: [caddy, php-fpm, ufw]
+
+    - name: Garandeer service status
+      shell: "sv status {{ item }} || sv start {{ item }}"
+      loop: [caddy, php-fpm, ufw, fail2ban, cronie]
+      changed_when: false
+
+  handlers:
+    - name: Restart SSH
+      shell: sv restart sshd
+    - name: Reload Caddy
+      shell: "sv status caddy && sv reload caddy || true"
+    - name: Restart PHP-FPM
+      shell: "sv status php-fpm && sv restart php-fpm || sv start php-fpm"
+    - name: Restart Fail2Ban
+      shell: "sv status fail2ban && sv restart fail2ban || true"
