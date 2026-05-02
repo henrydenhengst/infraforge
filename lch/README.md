@@ -13,7 +13,7 @@ Deze repository bevat de Ansible-configuratie voor de website en infrastructuur 
 2. Kopieer `secret.example.yml` naar `secret.yml` en vul de tokens in.
 3. Start de uitrol:
    ```bash
-   ansible-playbook -i inventory.ini site.yml
+   ansible-playbook -i inventory.ini site.yml -K
    ```
 Hier is je volledige Post-Ansible Checklist:
 
