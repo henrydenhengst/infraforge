@@ -38,7 +38,6 @@ Voer de GPM (Grav Package Manager) commando's uit als de webserver-gebruiker:
 sudo -u _caddy bin/gpm install typhoon -y
 
 # Installeren van de noodzakelijke plugins voor formulieren en e-mail
-```bash
 sudo -u _caddy bin/gpm install form email login admin -y
 ```
 
