@@ -24,12 +24,37 @@
 
 ## Applicatie Eisen
 
-- **Grav CMS** met admin panel
-- **Mattermost** inclusief **PostgreSQL** database
-- Geen mail server nodig
+- Geen mail server gewenst
 - Mail ontvangst via Duck.com forwarding
 - Gebruikers handmatig toevoegen (uitnodiging via Signal/WhatsApp)
 - Geen SMTP configuratie
+
+# OS Keuze Advies: Void tenzij Devuan
+
+## Uitgangspunt
+
+**Kies Void Linux, tenzij...**
+
+## Void Linux (Default)
+
+Void is de eerste keuze vanwege:
+- Runit (simpeler dan systemd)
+- Xbps (snel en clean)
+- Minimale overhead
+- Rolling release (altijd fresh)
+
+## Tenzij Devuan
+
+**Stap over naar Devuan als:**
+
+### 1. Package beschikbaarheid
+- De benodigde software zit niet in Void repos
+
+### 2. Team context
+- Ik niet de enige beheerder ben
+
+### 3. Technische problemen 
+- Het technisch gezien een probleem is.
 
 ## Compleetheid
 
@@ -48,8 +73,7 @@ Ik verwacht dat het playbook **alles** installeert en configureert:
 ❌ Inventory bestanden
 ❌ Mail verzending / SMTP
 ❌ Complexe deploy pipelines
-❌ Overbodige scripts (deploy.sh, test.sh)
-❌ Docker (tenzij specifiek gevraagd)
+❌ Overbodige scripts
 ❌ Handmatige stappen na het playbook
 
 ## Wat ik WEL wil
