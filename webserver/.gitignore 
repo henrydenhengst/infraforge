@@ -1,0 +1,34 @@
+# Ansible
+*.retry
+.ansible/
+__pycache__/
+*.pyc
+
+# Vault (belangrijk!)
+secret.yml
+.vault_pass
+*.vault
+
+# OS restjes
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Logs
+*.log
+logs/
+
+# Temp files
+*.tmp
+*.bak
+*.old
+
+# Local overrides (niet in repo, maar jij kan ze lokaal gebruiken)
+hosts.local
+vars.local.yml
