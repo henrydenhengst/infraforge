@@ -43,6 +43,11 @@ Void is de eerste keuze vanwege:
 - Minimale overhead
 - Rolling release (altijd fresh)
 
+## TCP/IP
+- static IP: 192.168.178.2/24
+- gateway: 192.168.178.1
+- dns: 9.9.9.9 1.1.1.1 8.8.8.8
+
 ## Tenzij Devuan
 
 **Stap over naar Devuan als:**
