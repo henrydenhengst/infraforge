@@ -1,0 +1,45 @@
+---
+- name: Volledige server configuratie (Void Linux)
+  hosts: localhost
+  connection: local
+  become: yes
+  vars_files:
+    - vars.yml
+    - secret.yml
+
+  pre_tasks:
+    - name: Update xbps
+      command: xbps-install -Su
+      register: xbps_update
+      changed_when: "'packages will be updated' in xbps_update.stdout"
+
+    - name: Install EPEL-equivalent voor Void
+      command: xbps-install -y void-repo-nonfree
+      register: nonfree_repo
+      changed_when: "'already installed' not in nonfree_repo.stderr"
+
+  roles:
+    - role: system_hardening
+    - role: caddy_webserver
+    - role: grav_cms
+    - role: ipfs_node
+    - role: syncthing_relay
+    - role: nostr_relay
+    - role: tor_snowflake
+
+  post_tasks:
+    - name: Start alle services
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - caddy
+        - php-fpm
+        - ipfs
+        - syncthing-relay
+        - nostr-relay
+        - tor-snowflake
+        - fail2ban
+        - ufw
+        - sshd
