@@ -1,19 +1,7 @@
 ---
+# inventory.yml voor localhost (alleen voor compatibiliteit)
 all:
-  children:
-    webservers:
-      hosts:
-        linuxcafe:
-          ansible_host: 192.168.1.100
-          ansible_user: ansible
-          ansible_ssh_private_key_file: ~/.ssh/id_rsa
-          ansible_python_interpreter: /usr/bin/python3
-          
-    production:
-      hosts:
-        linuxcafe:
-          
-  vars:
-    ansible_port: 22
-    ansible_become: yes
-    ansible_become_method: sudo
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: /usr/bin/python3
