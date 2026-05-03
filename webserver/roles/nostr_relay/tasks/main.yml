@@ -1,0 +1,34 @@
+---
+- name: Install nostr relay (strfry of nostr-rs-relay)
+  git:
+    repo: https://github.com/scsibug/nostr-rs-relay.git
+    dest: /opt/nostr-rs-relay
+    version: main
+
+- name: Build relay
+  command: cargo build --release
+  args:
+    chdir: /opt/nostr-rs-relay
+
+- name: Deploy config
+  template:
+    src: nostr-relay.conf.j2
+    dest: /etc/nostr-relay.toml
+
+- name: Deploy runit service
+  template:
+    src: nostr-relay.runit.j2
+    dest: /etc/sv/nostr-relay/run
+    mode: '0755'
+
+- name: Enable service
+  file:
+    src: /etc/sv/nostr-relay
+    dest: /var/service/nostr-relay
+    state: link
+
+handlers:
+  - name: restart nostr-relay
+    service:
+      name: nostr-relay
+      state: restarted
