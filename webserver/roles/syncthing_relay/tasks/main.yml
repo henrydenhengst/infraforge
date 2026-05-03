@@ -1,0 +1,23 @@
+---
+- name: Install syncthing-relaysrv
+  package:
+    name: syncthing-relaysrv
+    state: present
+
+- name: Create environment file
+  template:
+    src: syncthing-relay.env.j2
+    dest: /etc/default/syncthing-relay
+  notify: restart syncthing-relay
+
+- name: Enable runit service
+  file:
+    src: /etc/sv/syncthing-relay
+    dest: /var/service/syncthing-relay
+    state: link
+
+handlers:
+  - name: restart syncthing-relay
+    service:
+      name: syncthing-relay
+      state: restarted
