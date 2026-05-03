@@ -6,7 +6,7 @@
   
   vars:
   base_dir: /opt/matrix
-  domain: "matrix.local"
+  domain: "linuxcafehaarlem.nl"
   
   tasks:
   
