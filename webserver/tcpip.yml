@@ -1,0 +1,33 @@
+---
+- name: Configure static IP on Void Linux (auto interface)
+  hosts: localhost
+  become: yes
+  gather_facts: yes
+
+  vars:
+    ip_address: 192.168.178.2/24
+    gateway: 192.168.178.1
+    dns_servers:
+      - 9.9.9.9
+      - 1.1.1.1
+      - 8.8.8.8
+
+  tasks:
+    - name: Set interface fact
+      set_fact:
+        net_interface: "{{ ansible_default_ipv4.interface }}"
+
+    - name: Configure dhcpcd for static IP
+      blockinfile:
+        path: /etc/dhcpcd.conf
+        marker: "# {mark} ANSIBLE STATIC IP CONFIG"
+        block: |
+          interface {{ net_interface }}
+          static ip_address={{ ip_address }}
+          static routers={{ gateway }}
+          static domain_name_servers={{ dns_servers | join(' ') }}
+
+    - name: Restart dhcpcd
+      service:
+        name: dhcpcd
+        state: restarted
