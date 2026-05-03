@@ -35,7 +35,7 @@ Dit Ansible playbook installeert en configureert automatisch een productie-webse
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/linuxcafe-haarlem/deployment.git
+git clone https://github.com/henrydenhengst linuxcafehaarlem.git
 cd deployment
 
 # 2. Configureer variabelen
