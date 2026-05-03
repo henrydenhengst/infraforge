@@ -1,0 +1,67 @@
+---
+- name: Install PHP and extensions
+  package:
+    name:
+      - php
+      - php-curl
+      - php-gd
+      - php-mbstring
+      - php-xml
+      - php-zip
+      - php-json
+      - php-openssl
+      - php-tokenizer
+      - php-simplexml
+      - php-xmlreader
+      - php-xmlwriter
+      - php-fileinfo
+      - php-intl
+      - php-bz2
+      - php-pdo
+      - php-pdo_pgsql
+    state: present
+
+- name: Configure PHP security
+  lineinfile:
+    path: /etc/php/php.ini
+    regexp: '^{{ item.key }}'
+    line: '{{ item.key }} = {{ item.value }}'
+  loop:
+    - { key: 'expose_php', value: 'Off' }
+    - { key: 'disable_functions', value: 'exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source' }
+    - { key: 'allow_url_fopen', value: 'Off' }
+    - { key: 'open_basedir', value: '{{ grav_path }}:/tmp' }
+
+- name: Download Grav
+  get_url:
+    url: https://getgrav.org/download/core/grav-admin/latest
+    dest: /tmp/grav.zip
+
+- name: Extract Grav
+  unarchive:
+    src: /tmp/grav.zip
+    dest: /var/www/
+    remote_src: yes
+    owner: "{{ system_user }}"
+    group: "{{ system_user }}"
+
+- name: Set permissions
+  file:
+    path: "{{ grav_path }}"
+    state: directory
+    recurse: yes
+    owner: "{{ system_user }}"
+    group: "{{ system_user }}"
+    mode: '755'
+
+- name: Configure PHP-FPM pool
+  template:
+    src: grav-config.php.j2
+    dest: /etc/php/php-fpm.d/grav.conf
+  notify: restart php-fpm
+
+handlers:
+  - name: restart php-fpm
+    service:
+      name: php-fpm
+      state: restarted
