@@ -1,0 +1,26 @@
+---
+# Basis
+domain: "jouw-subdomein.duckdns.org"
+admin_email: "jouw@email.com"
+
+# Gebruikers
+system_user: "mattermost"
+uid: 1001
+
+# Poorten
+ssh_port: 2222  # hardening
+caddy_http_port: 80
+caddy_https_port: 443
+ipfs_port: 4001
+syncthing_relay_tcp: 22067
+syncthing_relay_status: 22070
+nostr_relay_port: 8008
+tor_snowflake_port: 9901
+
+# IPFS
+ipfs_user: "ipfs"
+ipfs_path: "/var/lib/ipfs"
+
+# Paths
+grav_path: "/var/www/grav"
+data_path: "/var/data"
