@@ -36,7 +36,7 @@ Dit Ansible playbook installeert en configureert automatisch een productie-webse
 ```bash
 # 1. Clone repository
 git clone https://github.com/henrydenhengst/linuxcafehaarlem.git
-cd deployment
+cd linuxcafehaarlem
 
 # 2. Configureer variabelen
 nano vars.yml
