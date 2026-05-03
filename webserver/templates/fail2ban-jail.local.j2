@@ -1,0 +1,19 @@
+[DEFAULT]
+bantime = {{ fail2ban_bantime }}
+maxretry = {{ fail2ban_maxretry }}
+findtime = 600
+ignoreip = 127.0.0.1/8 192.168.0.0/16
+
+[sshd]
+enabled = true
+port = {{ ssh_port }}
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+
+[caddy]
+enabled = true
+port = http,https
+filter = caddy
+logpath = /var/log/caddy/*.log
+maxretry = 10
