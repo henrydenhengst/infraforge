@@ -1,0 +1,31 @@
+---
+- name: Install Caddy
+  package:
+    name: caddy
+    state: present
+
+- name: Create Caddy config dir
+  file:
+    path: /etc/caddy
+    state: directory
+    mode: '0755'
+
+- name: Deploy Caddyfile
+  template:
+    src: Caddyfile.j2
+    dest: /etc/caddy/Caddyfile
+    mode: '0644'
+  notify: restart caddy
+
+- name: Enable caddy service
+  service:
+    name: caddy
+    enabled: yes
+    state: started
+  when: not ansible_check_mode
+
+handlers:
+  - name: restart caddy
+    service:
+      name: caddy
+      state: restarted
