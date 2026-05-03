@@ -1,0 +1,52 @@
+{ duckdns_domain }}.duckdns.org {
+    root * {{ web_root }}
+    encode zstd gzip
+    php_fastcgi unix//var/run/php-fpm.sock
+    
+    # Grav CMS rewrite rules
+    try_files {path} {path}/ /index.php?{query}&_url={path}
+    file_server
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    }
+    
+    # Performance
+    request_body {
+        max_size {{ php_upload_max_filesize | default('32M') }}
+    }
+    
+    {% if mattermost_enabled %}
+    # Mattermost reverse proxy
+    handle_path /chat* {
+        reverse_proxy localhost:{{ mattermost_port }} {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_addr}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # WebSocket support voor Mattermost
+            flush_interval -1
+        }
+    }
+    {% endif %}
+    
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10MB
+            roll_keep 5
+        }
+        level INFO
+    }
+}
