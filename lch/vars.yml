@@ -10,12 +10,11 @@ php_version: 82                    # PHP versie (82, 83, of 84 op Void)
 web_root: /srv/http/grav           # Webroot voor Grav CMS
 
 # ====================================
-# Mattermost Configuratie (OPTIONEEL)
+# Mattermost Configuratie (OPTIONEEL - GEEN MAIL)
 # ====================================
 mattermost_enabled: false          # Zet op true om Mattermost te installeren
 mattermost_port: 8065              # Poort waar Mattermost op draait
 mattermost_version: 9.5.0          # Mattermost versie
-mattermost_database: postgresql    # postgresql of mysql (alleen postgresql aanbevolen)
 
 # ====================================
 # PHP Performance Optimalisaties
@@ -57,7 +56,8 @@ duckdns_log_retention: 4           # Aantal weken log te bewaren
 # Logging & Monitoring
 # ====================================
 log_retention_days: 30             # Logs bewaren voor X dagen
-health_check_interval: "*/5"       # Health check interval
+health_check_enabled: true         # Health check aanzetten?
+health_check_interval: "*/5"       # Health check interval (elke 5 min)
 backup_enabled: false              # Automatische backups aanzetten?
 backup_retention: 7                # Backups bewaren voor X dagen
 backup_path: /backup/grav          # Backup locatie
