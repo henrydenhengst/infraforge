@@ -1,0 +1,33 @@
+---
+- name: Install tor
+  package:
+    name: tor
+    state: present
+
+- name: Install snowflake-proxy
+  git:
+    repo: https://git.torproject.org/pluggable-transports/snowflake.git
+    dest: /opt/snowflake
+
+- name: Build proxy
+  command: go build
+  args:
+    chdir: /opt/snowflake/proxy
+    creates: /opt/snowflake/proxy/proxy
+
+- name: Deploy snowflake config
+  template:
+    src: tor-snowflake.env.j2
+    dest: /etc/default/tor-snowflake
+
+- name: Deploy runit service
+  template:
+    src: tor-snowflake.runit.j2
+    dest: /etc/sv/tor-snowflake/run
+    mode: '0755'
+
+- name: Enable service
+  file:
+    src: /etc/sv/tor-snowflake
+    dest: /var/service/tor-snowflake
+    state: link
