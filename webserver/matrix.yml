@@ -1,0 +1,86 @@
+---
+
+- name: Matrix Homelab Stack (Lightweight)
+  hosts: matrix
+  become: true
+  
+  vars:
+  base_dir: /opt/matrix
+  domain: "matrix.local"
+  
+  tasks:
+  
+  - name: Install dependencies (Void Linux)
+    shell: |
+    xbps-install -Sy docker docker-compose git
+  
+  - name: Enable docker service
+    shell: |
+    ln -s /etc/sv/docker /var/service
+  
+  - name: Create base directories
+    file:
+    path: "{{ base_dir }}/{{ item }}"
+    state: directory
+    mode: '0755'
+    loop:
+    
+    - dendrite
+    - postgres
+    - mautrix-telegram
+    - mautrix-signal
+    - mautrix-mattermost
+  
+  - name: Create docker-compose file
+    copy:
+    dest: "{{ base_dir }}/docker-compose.yml"
+    content: |
+    version: "3.8"
+    
+    services:
+
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: matrixpass
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+
+  dendrite:
+    image: matrixdotorg/dendrite-monolith:latest
+    restart: always
+    depends_on:
+      - postgres
+    volumes:
+      - ./dendrite:/data
+    ports:
+      - "8008:8008"
+
+  mautrix-telegram:
+    image: dock.mau.dev/mautrix/telegram:latest
+    restart: always
+    volumes:
+      - ./mautrix-telegram:/data
+    depends_on:
+      - dendrite
+
+  mautrix-signal:
+    image: dock.mau.dev/mautrix/signal:latest
+    restart: always
+    volumes:
+      - ./mautrix-signal:/data
+    depends_on:
+      - dendrite
+
+  mautrix-mattermost:
+    image: dock.mau.dev/mautrix/mattermost:latest
+    restart: always
+    volumes:
+      - ./mautrix-mattermost:/data
+    depends_on:
+      - dendrite
+  
+  - name: Start stack
+    shell: |
+    cd {{ base_dir }} && docker compose up -d
