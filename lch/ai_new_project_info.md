@@ -105,3 +105,12 @@ ansible-galaxy collection install -r requirements.yml
 cp secret.example.yml secret.yml
 ansible-vault encrypt secret.yml
 sudo ansible-playbook site.yml --ask-vault-pass
+```
+
+## Wat ik verwacht van de assistent
+
+- Stel geen remote SSH oplossingen voor
+- Stel geen mail verzending voor
+- Ga uit van Void, tenzij ik Devuan specificeer
+- Houd het simpel (geen over-engineered oplossingen)
+- Vraag naar schaal/gebruikers als het relevant is
