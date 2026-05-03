@@ -1,10 +1,17 @@
 ---
-- name: Update Void Linux systems
+- name: Update Void Linux system
   hosts: localhost
   become: yes
 
   tasks:
-    - name: Update system
-      shell: xbps-install -Syu
+    - name: Sync repositories and update system
+      command: xbps-install -Syu
       register: update_result
-      changed_when: "'updating' in update_result.stdout.lower()"
+      changed_when: 
+        - "'packages will be updated' in update_result.stdout
+        - "'updating' in update_result.stdout.lower()"
+      
+    - name: Show updated packages
+      debug:
+        msg: "{{ update_result.stdout_lines }}"
+      when: update_result.changed
