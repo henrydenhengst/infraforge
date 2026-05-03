@@ -7,6 +7,20 @@ Deze repository bevat de Ansible-configuratie voor de website en infrastructuur 
 - **CMS:** Grav (Flat-file, PHP 8.3)
 - **OS:** Void Linux met Runit service management
 - **Security:** UFW, SSH-hardening, Fail2ban
+- **MatterMost:** PostgreSQL 
+
+
+```bash
+linuxcafehaarlem/
+├── site.yml
+├── vars.yml
+├── secret.yml
+├── inventory.yml
+├── ansible.cfg
+├── templates/
+│   └── Caddyfile.j2
+└── README.md
+```
 
 ## Gebruik
 1. Zorg voor een werkende Void Linux server met SSH-toegang.
