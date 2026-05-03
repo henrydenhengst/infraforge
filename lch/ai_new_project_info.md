@@ -68,10 +68,7 @@ Ik verwacht dat het playbook **alles** installeert en configureert:
 | Component | Versie | Configuratie |
 |-----------|--------|--------------|
 | Caddy | latest | Automatisch HTTPS, security headers |
-| PHP-FPM | 8.2+ | _caddy user, geoptimaliseerd voor Grav |
-| PostgreSQL | latest | Dedicated mattermost user/database |
-| Mattermost | 9.5+ | Geen mail, localhost only |
-| Grav | latest | Admin panel, _caddy ownership |
+| PHP-FPM | 8.2+ |
 | UFW | - | Alleen poort 22,80,443 |
 | Fail2ban | - | SSH protectie, bantime 3600 |
 
