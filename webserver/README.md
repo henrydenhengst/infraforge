@@ -8,7 +8,7 @@ Installeert en configureert op localhost: Caddy, Grav CMS, IPFS node, Syncthing 
 linuxcafehaarlem/
 ├── site.yml
 ├── vars.yml
-├── secret.yml (ge-encrypt met ansible-vault)
+├── secret.yml
 ├── requirements.yml
 ├── templates/
 │   ├── Caddyfile.j2
