@@ -1,0 +1,43 @@
+{{ domain }} {
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'"
+    }
+    
+    # Rate limiting
+    rate_limit {
+        zone dynamic {
+            key {remote_host}
+            events 30
+            window 1m
+        }
+    }
+    
+    # Grav CMS
+    root * {{ grav_path }}
+    php_fastcgi unix//run/php-fpm.sock
+    
+    # Logs
+    log {
+        output file /var/log/caddy/access.log
+    }
+    
+    # IPFS gateway
+    handle_path /ipfs/*, /ipns/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    
+    # Nostr relay
+    handle_path /nostr/* {
+        reverse_proxy 127.0.0.1:{{ nostr_relay_port }}
+    }
+    
+    # Default
+    file_server
+    try_files {path} /index.html
+}
