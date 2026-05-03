@@ -1,11 +1,32 @@
 ---
-- name: Volledige server configuratie (Void Linux)
+- name: Volledige linuxcafehaarlem stack (Void Linux)
   hosts: localhost
   connection: local
   become: yes
+  gather_facts: yes
   vars_files:
     - vars.yml
     - secret.yml
+
+  handlers:
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted
+
+    - name: restart fail2ban
+      service:
+        name: fail2ban
+        state: restarted
+
+    - name: restart networking
+      service:
+        name: NetworkManager
+        state: restarted
+      ignore_errors: yes
+
+    - name: reload ufw
+      command: ufw reload
 
   pre_tasks:
     - name: Update xbps
@@ -13,33 +34,134 @@
       register: xbps_update
       changed_when: "'packages will be updated' in xbps_update.stdout"
 
-    - name: Install EPEL-equivalent voor Void
+    - name: Install nonfree repo
       command: xbps-install -y void-repo-nonfree
-      register: nonfree_repo
-      changed_when: "'already installed' not in nonfree_repo.stderr"
+      register: nonfree
+      changed_when: "'already installed' not in nonfree.stderr"
 
-  roles:
-    - role: system_hardening
-    - role: caddy_webserver
-    - role: grav_cms
-    - role: ipfs_node
-    - role: syncthing_relay
-    - role: nostr_relay
-    - role: tor_snowflake
+  tasks:
+    # System Hardening
+    - name: Change SSH port
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Port '
+        line: "Port {{ ssh_port }}"
+      notify: restart sshd
 
-  post_tasks:
-    - name: Start alle services
+    - name: Disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: "PermitRootLogin no"
+      notify: restart sshd
+
+    - name: Disable password auth
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: "PasswordAuthentication no"
+      notify: restart sshd
+
+    - name: Enable pubkey auth
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PubkeyAuthentication'
+        line: "PubkeyAuthentication yes"
+      notify: restart sshd
+
+    # Static IP configuration
+    - name: Disable dhcpcd
       service:
-        name: "{{ item }}"
-        state: started
-        enabled: yes
+        name: dhcpcd
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: Configure static network
+      template:
+        src: static-network.j2
+        dest: /etc/network/interfaces
+        mode: '0644'
+      notify: restart networking
+
+    # UFW Firewall
+    - name: Install UFW
+      package:
+        name: ufw
+        state: present
+
+    - name: Set UFW defaults
+      ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
       loop:
-        - caddy
-        - php-fpm
-        - ipfs
-        - syncthing-relay
-        - nostr-relay
-        - tor-snowflake
-        - fail2ban
-        - ufw
-        - sshd
+        - { direction: 'incoming', policy: 'deny' }
+        - { direction: 'outgoing', policy: 'allow' }
+
+    - name: Allow SSH on custom port
+      ufw:
+        rule: allow
+        port: "{{ ssh_port }}"
+        proto: tcp
+
+    - name: Allow HTTP/HTTPS
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "{{ caddy_http_port }}"
+        - "{{ caddy_https_port }}"
+
+    - name: Allow IPFS p2p
+      ufw:
+        rule: allow
+        port: "{{ ipfs_port }}"
+        proto: tcp
+
+    - name: Allow Syncthing relay
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "{{ syncthing_relay_tcp }}"
+        - "{{ syncthing_relay_status }}"
+
+    - name: Allow Nostr relay
+      ufw:
+        rule: allow
+        port: "{{ nostr_relay_port }}"
+        proto: tcp
+
+    - name: Allow Tor Snowflake
+      ufw:
+        rule: allow
+        port: "{{ tor_snowflake_port }}"
+        proto: tcp
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
+      notify: reload ufw
+
+    # Fail2ban
+    - name: Install Fail2ban
+      package:
+        name: fail2ban
+        state: present
+
+    - name: Configure fail2ban
+      template:
+        src: fail2ban-jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        mode: '0644'
+      notify: restart fail2ban
+
+    - name: Enable fail2ban
+      service:
+        name: fail2ban
+        enabled: yes
+        state: started
+
+    # Hier komen je overige roles (Caddy, Grav, IPFS, etc.)
