@@ -1,15 +1,32 @@
-# Ansible geheimen
-secret.yml
+# Ansible
 *.retry
+*.log
+ansible.log
+*.vault
 
-# OS gegenereerde bestanden
+# Secrets
+secret.yml
+!secret.example.yml
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
 
-# Tijdelijke bestanden en logs
-*.log
-/tmp/
-
-# SSH keys
-*.pem
-*.key
+# Backups
+backups/
+*.bak
