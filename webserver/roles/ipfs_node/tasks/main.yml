@@ -1,0 +1,48 @@
+---
+- name: Install go-ipfs
+  package:
+    name: go-ipfs
+    state: present
+
+- name: Create ipfs user
+  user:
+    name: "{{ ipfs_user }}"
+    system: yes
+    home: "{{ ipfs_path }}"
+    create_home: yes
+    shell: /sbin/nologin
+
+- name: Initialize IPFS
+  command: ipfs init
+  become_user: "{{ ipfs_user }}"
+  args:
+    creates: "{{ ipfs_path }}/.ipfs/config"
+  environment:
+    IPFS_PATH: "{{ ipfs_path }}"
+
+- name: Configure IPFS (cors, gateway)
+  template:
+    src: 99-ipfs.conf.j2
+    dest: "{{ ipfs_path }}/.ipfs/config.d/99-ipfs.conf"
+    owner: "{{ ipfs_user }}"
+    group: "{{ ipfs_user }}"
+  notify: restart ipfs
+
+- name: Deploy runit service
+  template:
+    src: ipfs.service.j2
+    dest: /etc/sv/ipfs/run
+    mode: '0755'
+  notify: restart ipfs
+
+- name: Link runit service
+  file:
+    src: /etc/sv/ipfs
+    dest: /var/service/ipfs
+    state: link
+
+handlers:
+  - name: restart ipfs
+    service:
+      name: ipfs
+      state: restarted
