@@ -1,15 +1,69 @@
-# Algemene instellingen
-duckdns_domain: "linuxcafehaarlem"
-web_root: "/var/www/grav"
-php_version: "8.3"
-mattermost_port: "8065"
+---
+# ====================================
+# PHP Configuratie
+# ====================================
+php_version: 82                    # PHP versie (82, 83, of 84 op Void)
 
-# Grav specifieke instellingen
-admin_email: "info@linuxcafehaarlem.nl"
-site_name: "Linux Café Haarlem"
+# ====================================
+# Web Server Configuratie
+# ====================================
+web_root: /srv/http/grav           # Webroot voor Grav CMS
 
-# Performance & Maintenance
-php_fpm_ping_timeout: 60
-caddy_read_timeout: "30s"
-duckdns_log_rotate: true
-install_fail2ban: true
+# ====================================
+# Mattermost Configuratie (OPTIONEEL)
+# ====================================
+mattermost_enabled: false          # Zet op true om Mattermost te installeren
+mattermost_port: 8065              # Poort waar Mattermost op draait
+mattermost_version: 9.5.0          # Mattermost versie
+mattermost_database: postgresql    # postgresql of mysql (alleen postgresql aanbevolen)
+
+# ====================================
+# PHP Performance Optimalisaties
+# ====================================
+php_memory_limit: 256M             # Memory limit voor PHP
+php_upload_max_filesize: 32M       # Maximale upload bestandsgrootte
+php_post_max_size: 32M             # Maximale POST data grootte
+php_max_execution_time: 120        # Maximale uitvoeringstijd in seconden
+php_max_input_time: 120            # Maximale input parsing tijd
+
+# ====================================
+# PHP-FPM Pool Configuratie
+# ====================================
+php_fpm_max_children: 10           # Maximaal aantal PHP processen
+php_fpm_start_servers: 3           # Aantal PHP processen bij startup
+php_fpm_min_spare_servers: 2       # Minimaal aantal idle processen
+php_fpm_max_spare_servers: 5       # Maximaal aantal idle processen
+
+# ====================================
+# Security Configuratie
+# ====================================
+firewall_allowed_ports:
+  - '22'     # SSH
+  - '80'     # HTTP
+  - '443'    # HTTPS
+
+# Fail2ban Configuratie
+fail2ban_max_retry: 3              # Maximaal aantal foute pogingen
+fail2ban_bantime: 3600             # Ban tijd in seconden (1 uur)
+fail2ban_findtime: 600             # Tijdsvenster voor detectie (10 min)
+
+# ====================================
+# DuckDNS Configuratie
+# ====================================
+duckdns_update_interval: "*/10"    # Cron interval (elke 10 minuten)
+duckdns_log_retention: 4           # Aantal weken log te bewaren
+
+# ====================================
+# Logging & Monitoring
+# ====================================
+log_retention_days: 30             # Logs bewaren voor X dagen
+health_check_interval: "*/5"       # Health check interval
+backup_enabled: false              # Automatische backups aanzetten?
+backup_retention: 7                # Backups bewaren voor X dagen
+backup_path: /backup/grav          # Backup locatie
+
+# ====================================
+# Systeem Configuratie
+# ====================================
+timezone: Europe/Amsterdam         # Systeem tijdzone
+hostname: linuxcafe                # Hostname van de server
