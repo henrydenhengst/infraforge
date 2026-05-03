@@ -1,6 +1,6 @@
 ---
 - name: Productie Deployment Linux Café Haarlem (Void Linux)
-  hosts: linuxcafe
+  hosts: localhost
   become: yes
   vars_files:
     - vars.yml
