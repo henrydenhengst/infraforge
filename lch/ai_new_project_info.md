@@ -60,7 +60,7 @@ Void is de eerste keuze vanwege:
 
 Ik verwacht dat het playbook **alles** installeert en configureert:
 
-- ✅ Alle pakketten (Caddy, PHP-FPM, Grav, Mattermost, PostgreSQL)
+- ✅ Alle pakketten
 - ✅ Alle dependencies (PHP extensies, PostgreSQL contrib, etc)
 - ✅ Alle services (Runit links, starten/enablen)
 - ✅ Alle configuraties (Caddyfile, PHP-FPM pool, Mattermost config)
