@@ -1,6 +1,6 @@
 ---
 - name: Productie Deployment Linux Café Haarlem (Void Linux)
-  hosts: localhost
+  hosts: linuxcafe
   become: yes
   vars_files:
     - vars.yml
@@ -12,24 +12,171 @@
         msg: "FOUT: Dit playbook vereist Void Linux!"
       when: ansible_distribution != "Void"
 
+    - name: Update package database
+      community.general.xbps:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Set system hostname
+      hostname:
+        name: "{{ hostname | default('linuxcafe') }}"
+
+    - name: Configureer tijdzone
+      file:
+        src: "/usr/share/zoneinfo/{{ timezone | default('Europe/Amsterdam') }}"
+        dest: /etc/localtime
+        state: link
+        force: yes
+
   tasks:
-    # 1. INSTALLATIE
+    # ============================================
+    # 1. BASIS PAKKETTEN INSTALLATIE
+    # ============================================
     - name: Installeer systeem-stack
       community.general.xbps:
-        name: [caddy, php{{ php_version }}-fpm, php{{ php_version }}-gd, php{{ php_version }}-curl, 
-               php{{ php_version }}-mbstring, php{{ php_version }}-xml, php{{ php_version }}-zip, 
-               php{{ php_version }}-intl, git, unzip, curl, ufw, cronie, logrotate, fail2ban]
+        name:
+          - caddy
+          - php{{ php_version }}-fpm
+          - php{{ php_version }}-gd
+          - php{{ php_version }}-curl
+          - php{{ php_version }}-mbstring
+          - php{{ php_version }}-xml
+          - php{{ php_version }}-zip
+          - php{{ php_version }}-intl
+          - git
+          - unzip
+          - curl
+          - ufw
+          - cronie
+          - logrotate
+          - fail2ban
+          - rsync
+          - nano
+          - htop
         state: present
-        update_cache: yes
 
-    - name: Activeer cronie en fail2ban services
-      file: 
-        src: "/etc/sv/{{ item }}" 
-        dest: "/var/service/{{ item }}" 
+    - name: Activeer basis services
+      file:
+        src: "/etc/sv/{{ item }}"
+        dest: "/var/service/{{ item }}"
         state: link
-      loop: [cronie, fail2ban]
+      loop:
+        - cronie
+        - fail2ban
 
-    # 2. SECURITY & FAIL2BAN CONFIG
+    # ============================================
+    # 2. MATTERMOST INSTALLATIE (OPTIONEEL)
+    # ============================================
+    - name: Installeer Mattermost stack
+      block:
+        - name: Installeer PostgreSQL database
+          community.general.xbps:
+            name:
+              - postgresql
+              - postgresql-contrib
+            state: present
+
+        - name: Initialiseer PostgreSQL cluster
+          shell: |
+            if [ ! -d /var/lib/postgresql/data ]; then
+              sudo -u postgres initdb -D /var/lib/postgresql/data
+            fi
+          creates: /var/lib/postgresql/data
+
+        - name: Start PostgreSQL service
+          file:
+            src: /etc/sv/postgresql
+            dest: /var/service/postgresql
+            state: link
+
+        - name: Wacht op PostgreSQL startup
+          wait_for:
+            port: 5432
+            timeout: 30
+
+        - name: Creëer Mattermost database en user
+          become_user: postgres
+          postgresql_query:
+            query: |
+              CREATE USER mmuser WITH PASSWORD '{{ mattermost_db_password }}';
+              CREATE DATABASE mattermost WITH OWNER mmuser;
+              GRANT ALL PRIVILEGES ON DATABASE mattermost TO mmuser;
+          register: db_result
+          ignore_errors: yes
+
+        - name: Download Mattermost
+          unarchive:
+            src: "https://releases.mattermost.com/{{ mattermost_version }}/mattermost-{{ mattermost_version }}-linux-amd64.tar.gz"
+            dest: /opt
+            remote_src: yes
+            creates: /opt/mattermost
+
+        - name: Creëer Mattermost system user
+          user:
+            name: mattermost
+            system: yes
+            shell: /bin/false
+            home: /opt/mattermost
+            create_home: no
+
+        - name: Configureer Mattermost data directory
+          file:
+            path: /opt/mattermost/data
+            state: directory
+            owner: mattermost
+            group: mattermost
+            mode: '0750'
+
+        - name: Configureer Mattermost configuratie
+          template:
+            src: config_docker.json.j2
+            dest: /opt/mattermost/config/config.json
+            owner: mattermost
+            group: mattermost
+            mode: '0640'
+          vars:
+            db_password: "{{ mattermost_db_password }}"
+            site_url: "https://{{ duckdns_domain }}.duckdns.org/chat"
+
+        - name: Fix Mattermost permissions
+          file:
+            path: /opt/mattermost
+            owner: mattermost
+            group: mattermost
+            recurse: yes
+
+        - name: Creëer Mattermost Runit service
+          copy:
+            dest: /etc/sv/mattermost/run
+            mode: '0755'
+            content: |
+              #!/bin/sh
+              exec chpst -u mattermost /opt/mattermost/bin/mattermost
+
+        - name: Creëer Mattermost log directory
+          file:
+            path: /etc/sv/mattermost/log
+            state: directory
+
+        - name: Creëer Mattermost log run script
+          copy:
+            dest: /etc/sv/mattermost/log/run
+            mode: '0755'
+            content: |
+              #!/bin/sh
+              exec svlogd -tt /var/log/mattermost
+
+        - name: Enable Mattermost service
+          file:
+            src: /etc/sv/mattermost
+            dest: /var/service/mattermost
+            state: link
+
+      when: mattermost_enabled | default(false)
+
+    # ============================================
+    # 3. SECURITY & FAIL2BAN
+    # ============================================
     - name: SSH Hardening
       lineinfile:
         path: /etc/ssh/sshd_config
@@ -38,32 +185,53 @@
       loop:
         - { regexp: '^PermitRootLogin', line: 'PermitRootLogin no' }
         - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+        - { regexp: '^#?PubkeyAuthentication', line: 'PubkeyAuthentication yes' }
+        - { regexp: '^#?MaxAuthTries', line: 'MaxAuthTries {{ fail2ban_max_retry | default(3) }}' }
+        - { regexp: '^#?Protocol', line: 'Protocol 2' }
+        - { regexp: '^#?X11Forwarding', line: 'X11Forwarding no' }
       notify: Restart SSH
 
-    - name: Configureer Fail2ban voor SSH
+    - name: Configureer Fail2ban via jail.local
       copy:
         dest: /etc/fail2ban/jail.local
         content: |
+          [DEFAULT]
+          bantime = {{ fail2ban_bantime | default(3600) }}
+          findtime = {{ fail2ban_findtime | default(600) }}
+          maxretry = {{ fail2ban_max_retry | default(3) }}
+          
           [sshd]
           enabled = true
           port = ssh
           filter = sshd
           logpath = /var/log/auth.log
-          maxretry = 3
-          bantime = 3600
+          maxretry = {{ fail2ban_max_retry | default(3) }}
+          bantime = {{ fail2ban_bantime | default(3600) }}
+          
+          [caddy]
+          enabled = true
+          port = http,https
+          filter = caddy
+          logpath = /var/log/caddy/access.log
+          maxretry = 5
+          bantime = 600
       notify: Restart Fail2Ban
 
-    - name: Configureer Firewall (UFW)
+    - name: Configureer UFW Firewall
       community.general.ufw:
         rule: allow
         port: "{{ item }}"
         proto: tcp
-      loop: ['22', '80', '443']
+      loop: "{{ firewall_allowed_ports | default(['22', '80', '443']) }}"
 
-    - name: Activeer Firewall
-      community.general.ufw: { state: enabled, policy: deny }
+    - name: Activeer UFW (default deny)
+      community.general.ufw:
+        state: enabled
+        policy: deny
 
-    # 3. GRAV CMS & PHP OPTIMALISATIE
+    # ============================================
+    # 4. GRAV CMS INSTALLATIE & PHP CONFIG
+    # ============================================
     - name: Maak webroot aan
       file:
         path: "{{ web_root }}"
@@ -72,14 +240,14 @@
         group: _caddy
         mode: '0755'
 
-    - name: Installeer Grav Admin
+    - name: Download Grav Admin Panel
       unarchive:
         src: https://getgrav.org/download/core/grav-admin/latest
         dest: /tmp
         remote_src: yes
         creates: "/tmp/grav-admin"
 
-    - name: Deploy Grav bestanden
+    - name: Deploy Grav bestanden naar webroot
       shell: |
         cp -rn /tmp/grav-admin/. {{ web_root }}/
         chown -R _caddy:_caddy {{ web_root }}
@@ -87,84 +255,228 @@
       args:
         creates: "{{ web_root }}/index.php"
 
-    - name: Optimaliseer PHP-FPM Workers & Settings
+    - name: Configureer PHP optimalisaties
       lineinfile:
         path: "/etc/php{{ php_version }}/{{ item.file }}"
         regexp: "{{ item.regexp }}"
         line: "{{ item.line }}"
       loop:
-        - { file: 'php.ini', regexp: '^upload_max_filesize', line: 'upload_max_filesize = 32M' }
-        - { file: 'php.ini', regexp: '^memory_limit', line: 'memory_limit = 256M' }
+        - { file: 'php.ini', regexp: '^upload_max_filesize', line: 'upload_max_filesize = {{ php_upload_max_filesize | default("32M") }}' }
+        - { file: 'php.ini', regexp: '^post_max_size', line: 'post_max_size = {{ php_post_max_size | default("32M") }}' }
+        - { file: 'php.ini', regexp: '^memory_limit', line: 'memory_limit = {{ php_memory_limit | default("256M") }}' }
         - { file: 'php.ini', regexp: '^expose_php', line: 'expose_php = Off' }
-        - { file: 'php-fpm.d/www.conf', regexp: '^;?pm.max_children', line: 'pm.max_children = 10' }
-        - { file: 'php-fpm.d/www.conf', regexp: '^;?pm.start_servers', line: 'pm.start_servers = 3' }
+        - { file: 'php.ini', regexp: '^max_execution_time', line: 'max_execution_time = {{ php_max_execution_time | default(120) }}' }
+        - { file: 'php.ini', regexp: '^max_input_time', line: 'max_input_time = {{ php_max_input_time | default(120) }}' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^;?pm.max_children', line: 'pm.max_children = {{ php_fpm_max_children | default(10) }}' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^;?pm.start_servers', line: 'pm.start_servers = {{ php_fpm_start_servers | default(3) }}' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^;?pm.min_spare_servers', line: 'pm.min_spare_servers = {{ php_fpm_min_spare_servers | default(2) }}' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^;?pm.max_spare_servers', line: 'pm.max_spare_servers = {{ php_fpm_max_spare_servers | default(5) }}' }
         - { file: 'php-fpm.d/www.conf', regexp: '^user =', line: 'user = _caddy' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^group =', line: 'group = _caddy' }
         - { file: 'php-fpm.d/www.conf', regexp: '^listen =', line: 'listen = /var/run/php-fpm.sock' }
         - { file: 'php-fpm.d/www.conf', regexp: '^listen.owner =', line: 'listen.owner = _caddy' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^listen.group =', line: 'listen.group = _caddy' }
+        - { file: 'php-fpm.d/www.conf', regexp: '^listen.mode =', line: 'listen.mode = 0660' }
       notify: Restart PHP-FPM
+      when: php_version is defined
 
-    # 4. CADDY & DUCKDNS
-    - name: Schrijf Caddyfile
-      copy:
+    # ============================================
+    # 5. CADDY CONFIGURATIE
+    # ============================================
+    - name: Configureer Caddyfile
+      template:
+        src: Caddyfile.j2
         dest: /etc/caddy/Caddyfile
-        content: |
-          {{ duckdns_domain }}.duckdns.org {
-              root * {{ web_root }}
-              encode zstd gzip
-              php_fastcgi unix//var/run/php-fpm.sock
-              try_files {path} {path}/ /index.php?{query}&_url={path}
-              file_server
-              header {
-                  Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-                  X-Content-Type-Options "nosniff"
-                  X-Frame-Options "SAMEORIGIN"
-              }
-              handle_path /chat* {
-                  reverse_proxy localhost:{{ mattermost_port }}
-              }
-          }
+        owner: _caddy
+        group: _caddy
+        mode: '0644'
+      vars:
+        mattermost_enabled: "{{ mattermost_enabled | default(false) }}"
+        mattermost_port: "{{ mattermost_port | default(8065) }}"
       notify: Reload Caddy
 
-    - name: Setup DuckDNS Script (Defensief)
-      copy:
-        dest: /usr/local/bin/update-duckdns.sh
-        mode: '0755'
-        content: |
-          #!/bin/sh
-          LOG="/var/log/duckdns.log"
-          RESPONSE=$(curl -s "https://www.duckdns.org/update?domains={{ duckdns_domain }}&token={{ duckdns_token }}&ip=")
-          if [ "$RESPONSE" = "OK" ]; then
-              echo "$(date): Update succesvol" >> $LOG
-          else
-              echo "$(date): Update MISLUKT - Response: $RESPONSE" >> $LOG
-          fi
-
-    - name: DuckDNS Cron & Logrotate
+    # ============================================
+    # 6. DUCKDNS DYNAMISCHE DNS
+    # ============================================
+    - name: Setup DuckDNS dynamische DNS
       block:
-        - name: Cronjob DuckDNS
-          ansible.builtin.cron: { name: "DuckDNS", minute: "*/10", job: "/usr/local/bin/update-duckdns.sh" }
-        - name: Logrotate DuckDNS
+        - name: Creëer update script
+          copy:
+            dest: /usr/local/bin/update-duckdns.sh
+            mode: '0755'
+            content: |
+              #!/bin/bash
+              LOG="/var/log/duckdns.log"
+              URL="https://www.duckdns.org/update?domains={{ duckdns_domain }}&token={{ duckdns_token }}&ip="
+              
+              RESPONSE=$(curl -s "$URL")
+              
+              if [ "$RESPONSE" = "OK" ]; then
+                  echo "$(date '+%%Y-%%m-%%d %%H:%%M:%%S') - SUCCES: IP updated" >> $LOG
+              else
+                  echo "$(date '+%%Y-%%m-%%d %%H:%%M:%%S') - FOUT: $RESPONSE" >> $LOG
+              fi
+
+        - name: Configureer logrotate
           copy:
             dest: /etc/logrotate.d/duckdns
             content: |
-              /var/log/duckdns.log { weekly \n rotate 4 \n compress \n missingok \n notifempty }
+              /var/log/duckdns.log {
+                  weekly
+                  rotate {{ duckdns_log_retention | default(4) }}
+                  compress
+                  missingok
+                  notifempty
+                  create 0644 root root
+              }
 
-    # 5. RUNIT SERVICES
+        - name: Installeer cronjob
+          ansible.builtin.cron:
+            name: "duckdns-update"
+            minute: "{{ duckdns_update_interval | default('*/10') | regex_replace('^\\*/', '') }}"
+            job: "/usr/local/bin/update-duckdns.sh > /dev/null 2>&1"
+            state: present
+
+      when: duckdns_domain is defined and duckdns_token is defined
+
+    # ============================================
+    # 7. MONITORING & BACKUPS
+    # ============================================
+    - name: Setup monitoring systeem
+      block:
+        - name: Creëer health check script
+          copy:
+            dest: /usr/local/bin/health-check.sh
+            mode: '0755'
+            content: |
+              #!/bin/bash
+              echo "=== Linux Café Haarlem Health Check ==="
+              echo "Tijd: $(date)"
+              echo ""
+              
+              for service in caddy php-fpm ufw fail2ban cronie; do
+                  if sv status $service > /dev/null 2>&1; then
+                      echo "✅ $service: running"
+                  else
+                      echo "❌ $service: stopped"
+                  fi
+              done
+              
+              if [ "{{ mattermost_enabled | default(false) }}" = "true" ]; then
+                  if sv status mattermost > /dev/null 2>&1; then
+                      echo "✅ mattermost: running"
+                  else
+                      echo "❌ mattermost: stopped"
+                  fi
+              fi
+              
+              echo ""
+              echo "Webserver test:"
+              if curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -q "200\|301"; then
+                  echo "✅ Grav CMS: bereikbaar"
+              else
+                  echo "❌ Grav CMS: niet bereikbaar"
+              fi
+
+        - name: Health check cronjob
+          ansible.builtin.cron:
+            name: "health-check"
+            minute: "{{ health_check_interval | default('*/5') | regex_replace('^\\*/', '') }}"
+            job: "/usr/local/bin/health-check.sh >> /var/log/health-check.log 2>&1"
+            state: present
+
+      when: health_check_enabled | default(true)
+
+    - name: Setup backups
+      block:
+        - name: Creëer backup directory
+          file:
+            path: "{{ backup_path }}"
+            state: directory
+            mode: '0755'
+
+        - name: Creëer backup script
+          copy:
+            dest: /usr/local/bin/backup.sh
+            mode: '0755'
+            content: |
+              #!/bin/bash
+              BACKUP_DIR="{{ backup_path }}"
+              DATE=$(date +%%Y%%m%%d_%%H%%M%%S)
+              
+              # Backup Grav
+              tar -czf "$BACKUP_DIR/grav_$DATE.tar.gz" -C {{ web_root }} .
+              
+              # Keep only last X backups
+              find "$BACKUP_DIR" -name "grav_*.tar.gz" -mtime +{{ backup_retention }} -delete
+
+        - name: Backup cronjob (dagelijks)
+          ansible.builtin.cron:
+            name: "backup"
+            hour: "2"
+            minute: "0"
+            job: "/usr/local/bin/backup.sh > /dev/null 2>&1"
+            state: present
+
+      when: backup_enabled | default(false)
+
+    # ============================================
+    # 8. RUNIT SERVICE MANAGEMENT
+    # ============================================
     - name: Link overige Runit services
-      file: { src: "/etc/sv/{{ item }}", dest: "/var/service/{{ item }}", state: link }
-      loop: [caddy, php-fpm, ufw]
+      file:
+        src: "/etc/sv/{{ item }}"
+        dest: "/var/service/{{ item }}"
+        state: link
+      loop:
+        - caddy
+        - php-fpm
+        - ufw
 
     - name: Garandeer service status
       shell: "sv status {{ item }} || sv start {{ item }}"
-      loop: [caddy, php-fpm, ufw, fail2ban, cronie]
+      loop:
+        - caddy
+        - php-fpm
+        - ufw
+        - fail2ban
+        - cronie
       changed_when: false
+
+    - name: Start Mattermost service indien enabled
+      shell: "sv status mattermost || sv start mattermost"
+      when: mattermost_enabled | default(false)
+      changed_when: false
+
+    # ============================================
+    # 9. FINALISATIE
+    # ============================================
+    - name: Toon deployment samenvatting
+      debug:
+        msg:
+          - "✅ Deployment succesvol afgerond!"
+          - "📍 Website: https://{{ duckdns_domain }}.duckdns.org"
+          - "🔧 Admin panel: https://{{ duckdns_domain }}.duckdns.org/admin"
+          - "📊 Health check: /usr/local/bin/health-check.sh"
+          - "📝 Logs: /var/log/"
+          - "🔥 Firewall: UFW actief (alleen poort 22,80,443)"
+          - "🛡️ Fail2ban: SSH brute-force protectie actief"
+          - "🔄 DuckDNS: Update elke 10 minuten"
+      when: duckdns_domain is defined
 
   handlers:
     - name: Restart SSH
       shell: sv restart sshd
+
     - name: Reload Caddy
       shell: "sv status caddy && sv reload caddy || true"
+
     - name: Restart PHP-FPM
       shell: "sv status php-fpm && sv restart php-fpm || sv start php-fpm"
+
     - name: Restart Fail2Ban
       shell: "sv status fail2ban && sv restart fail2ban || true"
+
+    - name: Restart PostgreSQL
+      shell: "sv status postgresql && sv restart postgresql || true"
+      when: mattermost_enabled | default(false)
