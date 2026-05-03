@@ -82,10 +82,24 @@ Ik verwacht dat het playbook **alles** installeert en configureert:
 - ✅ Templates voor configuraties
 - ✅ Vault voor geheimen
 - ✅ Minimale bestandset (.gitignore, site.yml, vars.yml, secret.yml, requirements.yml, templates/)
-- ✅ Heldere README met instructies
 - ✅ Handlers voor service management
 - ✅ OS hardening out-of-the-box
 - ✅ Application security by default
+
+## Heldere README.md
+
+- Projectnaam
+- Relevante Badges
+- Beschrijving
+- Features
+- Installatie
+- Het Gebruik
+- Configuratie
+- Hoe het werkt
+- Vereisten
+- Contributing
+- License MIT
+- Status
 
 ## Standaard Stack
 
