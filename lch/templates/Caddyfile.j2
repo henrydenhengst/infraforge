@@ -1,4 +1,4 @@
-{ duckdns_domain }}.duckdns.org {
+{{ duckdns_domain }}.duckdns.org {
     root * {{ web_root }}
     encode zstd gzip
     php_fastcgi unix//var/run/php-fpm.sock
@@ -22,7 +22,7 @@
     }
     
     {% if mattermost_enabled %}
-    # Mattermost reverse proxy
+    # Mattermost reverse proxy (geen mail notificaties)
     handle_path /chat* {
         reverse_proxy localhost:{{ mattermost_port }} {
             header_up Host {host}
