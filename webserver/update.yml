@@ -1,0 +1,10 @@
+---
+- name: Update Void Linux systems
+  hosts: localhost
+  become: yes
+
+  tasks:
+    - name: Update system
+      shell: xbps-install -Syu
+      register: update_result
+      changed_when: "'updating' in update_result.stdout.lower()"
