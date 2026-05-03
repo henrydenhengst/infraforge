@@ -44,6 +44,9 @@ Void is de eerste keuze vanwege:
 - Rolling release (altijd fresh)
 
 ## TCP/IP
+
+Zoek de naam van de interface, gebruik de juiste naam.
+
 - static IP: 192.168.178.2/24
 - gateway: 192.168.178.1
 - dns: 9.9.9.9 1.1.1.1 8.8.8.8
