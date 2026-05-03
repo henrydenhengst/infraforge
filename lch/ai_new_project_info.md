@@ -69,19 +69,19 @@ Ik verwacht dat het playbook **alles** installeert en configureert:
 
 ## Wat ik NIET wil
 
-❌ Remote SSH deployments
-❌ Inventory bestanden
-❌ Mail verzending / SMTP
-❌ Complexe deploy pipelines
-❌ Overbodige scripts
-❌ Handmatige stappen na het playbook
+- ❌ Remote SSH deployments
+- ❌ Inventory bestanden
+- ❌ Mail verzending / SMTP
+- ❌ Complexe deploy pipelines
+- ❌ Overbodige scripts
+- ❌ Handmatige stappen na het playbook
 
 ## Wat ik WEL wil
 
 ✅ Simpele, idempotente playbooks
 ✅ Templates voor configuraties
 ✅ Vault voor geheimen
-✅ Minimale bestandset (site.yml, vars.yml, secret.yml, requirements.yml, templates/)
+✅ Minimale bestandset (.gitignore, site.yml, vars.yml, secret.yml, requirements.yml, templates/)
 ✅ Heldere README met instructies
 ✅ Handlers voor service management
 ✅ OS hardening out-of-the-box
