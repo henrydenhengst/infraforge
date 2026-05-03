@@ -65,7 +65,7 @@
         - fail2ban
 
     # ============================================
-    # 2. MATTERMOST INSTALLATIE (OPTIONEEL)
+    # 2. MATTERMOST INSTALLATIE (OPTIONEEL - ZONDER MAIL)
     # ============================================
     - name: Installeer Mattermost stack
       block:
@@ -127,7 +127,7 @@
             group: mattermost
             mode: '0750'
 
-        - name: Configureer Mattermost configuratie
+        - name: Configureer Mattermost configuratie (zonder mail)
           template:
             src: config_docker.json.j2
             dest: /opt/mattermost/config/config.json
@@ -137,6 +137,7 @@
           vars:
             db_password: "{{ mattermost_db_password }}"
             site_url: "https://{{ duckdns_domain }}.duckdns.org/chat"
+            email_enabled: false
 
         - name: Fix Mattermost permissions
           file:
@@ -276,7 +277,6 @@
         - { file: 'php-fpm.d/www.conf', regexp: '^listen =', line: 'listen = /var/run/php-fpm.sock' }
         - { file: 'php-fpm.d/www.conf', regexp: '^listen.owner =', line: 'listen.owner = _caddy' }
         - { file: 'php-fpm.d/www.conf', regexp: '^listen.group =', line: 'listen.group = _caddy' }
-        - { file: 'php-fpm.d/www.conf', regexp: '^listen.mode =', line: 'listen.mode = 0660' }
       notify: Restart PHP-FPM
       when: php_version is defined
 
@@ -312,9 +312,9 @@
               RESPONSE=$(curl -s "$URL")
               
               if [ "$RESPONSE" = "OK" ]; then
-                  echo "$(date '+%%Y-%%m-%%d %%H:%%M:%%S') - SUCCES: IP updated" >> $LOG
+                  echo "$(date '+%Y-%m-%d %H:%M:%S') - SUCCES: IP updated" >> $LOG
               else
-                  echo "$(date '+%%Y-%%m-%%d %%H:%%M:%%S') - FOUT: $RESPONSE" >> $LOG
+                  echo "$(date '+%Y-%m-%d %H:%M:%S') - FOUT: $RESPONSE" >> $LOG
               fi
 
         - name: Configureer logrotate
@@ -402,7 +402,7 @@
             content: |
               #!/bin/bash
               BACKUP_DIR="{{ backup_path }}"
-              DATE=$(date +%%Y%%m%%d_%%H%%M%%S)
+              DATE=$(date +%Y%m%d_%H%M%S)
               
               # Backup Grav
               tar -czf "$BACKUP_DIR/grav_$DATE.tar.gz" -C {{ web_root }} .
@@ -462,6 +462,7 @@
           - "🔥 Firewall: UFW actief (alleen poort 22,80,443)"
           - "🛡️ Fail2ban: SSH brute-force protectie actief"
           - "🔄 DuckDNS: Update elke 10 minuten"
+          - "📧 Mail ontvangst: vcp5693@duck.com (via Duck.com forwarding)"
       when: duckdns_domain is defined
 
   handlers:
