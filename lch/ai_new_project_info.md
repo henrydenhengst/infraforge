@@ -136,6 +136,43 @@ Activeren: rc-update add [service] default
 - Secrets in ansible-vault
 - Geen mail verzending
 
+## Backup (standaard)
+
+### Uitgangspunt
+- Backups zijn verplicht voor elke applicatie
+- Backup locatie: USB disk (permanent aangesloten)
+- Formaat: ext4
+- Geen encryptie (KISS)
+- Frequentie: dagelijks (via cron)
+- Bewaartermijn: 30 dagen (rotatie)
+
+### USB disk & udev
+- Disk wordt herkend via UUID
+- Mount punt: /mnt/backup
+- fstab: UUID=[UUID] /mnt/backup ext4 defaults,nofail 0 0
+- Rechten: backup:backup
+
+### Backup structuur
+/mnt/backup/[appnaam]/
+  daily.0/ (meest recent)
+  daily.1/
+  ...
+  daily.30/
+
+### Backup scripts
+- /usr/local/bin/backup-[appnaam].sh per applicatie
+- /etc/cron.daily/backup-all (centrale cron)
+- Logging: /var/log/backup.log
+
+### Wat NIET in backup
+- /proc, /sys, /dev
+- /tmp, cache directories
+- Logs (logrotate beheert die)
+
+### Restore
+- cp -r /mnt/backup/[appnaam]/daily.0/* /destination/
+- Database: psql/pg_restore of mysql
+
 ## Applicatie Eisen
 - Geen mail server
 - Mail ontvangst via Duck.com forwarding
@@ -169,6 +206,7 @@ Playbook installeert en configureert:
 - Alle configuraties
 - Alle security
 - Alle monitoring
+- Alle backups (udev, scripts, cron)
 
 ## Wat ik NIET wil
 - Remote SSH deployments
@@ -243,7 +281,7 @@ sudo ansible-playbook site.yml --ask-vault-pass
 
 ## 6. Data & opslag
 - Data pad: [/pad/naar/data]
-- Backups: [ja/nee, simpel/uitgebreid]
+- Backups: [default baseline / afwijking]
 
 ## 7. Containers
 - [Wel/Niet] Docker gebruiken
