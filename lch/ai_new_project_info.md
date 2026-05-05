@@ -12,7 +12,7 @@
 
 - Localhost only
 - Geen load balancing of clustering
-- VPS met beperkte resources is voldoende
+- (mini pc) met beperkte resources is voldoende
 
 ## Hardware & Optimalisatie
 
