@@ -241,19 +241,15 @@ Playbook installeert en configureert:
 - Geen uitleg buiten het codeblock.
 - Geen extra commentaar, geen preamble, geen afsluiting.
 - Gebruik GitHub-flavored Markdown.
-- Houd regels kort en vermijd onnodig lange regels.
-- Gebruik duidelijke headings, bullets en tabellen waar nuttig.
-- Maak de structuur logisch, technisch en overzichtelijk.
-- Zorg dat alles direct kopieerbaar is zonder opmaakfouten.
-- Gebruik geen HTML tenzij strikt noodzakelijk.
-- Gebruik geen horizontale lijnen tenzij echt nuttig.
-- Zet codevoorbeelden in aparte fenced codeblocks.
-- Als iets onduidelijk is, stel eerst maximaal 3 gerichte vragen.
-- korte regels;
-- compacte bullets;
-- zo min mogelijk tabellen;
-- code alleen in echte fenced blocks;
-- geen lange alinea’s die over je scherm lopen
+- Houd tekst kort en schermvriendelijk.
+- Gebruik korte bullets en korte alinea’s.
+- Vermijd brede tabellen tenzij echt nodig.
+- Zet code alleen in fenced codeblocks.
+- Gebruik duidelijke headings en een logische structuur.
+- Zorg dat alles direct kopieerbaar is.
+- Gebruik geen HTML.
+- Gebruik geen horizontale lijnen.
+- Stel bij onduidelijkheid maximaal 3 gerichte vragen.
 
 ## Standaard Stack
 - Caddy latest (HTTPS, security headers)
