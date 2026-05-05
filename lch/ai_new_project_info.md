@@ -1,5 +1,150 @@
 # Mijn SERVER Ansible Configuratie Voorkeuren
 
+## AI Assistent Workflow voor Ansible 
+### Configuraties (Runit/OpenRC Edition)
+
+## Kernregel
+Systemd is niet toegestaan. Geen uitzonderingen.
+
+Toegestaan: Runit (Void) en OpenRC (Devuan).
+
+## OS Keuze
+
+Stap 1: Default = Void Linux
+
+Stap 2: Devuan als workaround als:
+- Package niet in Void repos
+- Ik niet de enige beheerder ben
+- Technische problemen met Void
+
+Devuan is toegestaan omdat het geen systemd gebruikt.
+
+## Wat niet mag
+Distributies met systemd: Debian, Ubuntu, Fedora, RHEL, Arch, etc.
+
+## Fase 1: Advies (geen code)
+
+### 1. OS Keuze Check
+- Software in Void repos? Ja -> Void
+- Nee -> bestaat alternatief in Void?
+- Nee -> Devuan
+- Heeft Devuan ook systemd nodig? Stop.
+
+### 2. Init System Compatibiliteit
+
+Runit (Void):
+- Service scripts: runit + ./run
+- Logging: svlogd
+- Timers: cron of sleep loop
+
+OpenRC (Devuan):
+- Service scripts: /etc/init.d/ + rc-update
+- Logging: syslog
+- Timers: cron
+
+### 3. Systemd Block Check
+
+| Dependency | Compatibel | Actie |
+|------------|------------|-------|
+| systemd als PID 1 | Nee | Stop |
+| socket-activatie | Nee | Stop |
+| systemd --user | Nee | Stop |
+| systemd-timers | Ja (met werk) | Vervang door cron |
+| systemd-journald | Ja (werkbaar) | Log naar files |
+
+Stop item verplicht? Stop.
+
+### 4. Overige checks
+- Past binnen 25 gebruikers op mini-pc?
+- Hidden costs?
+- Extra poorten?
+- Mail blokkeren in config?
+- Database groei?
+- Backup plan haalbaar?
+- Trade-offs duidelijk?
+
+## Fase 2: Go/No Go
+
+Gebruiker kiest:
+- Go -> AI schrijft playbooks
+- Pas aan -> AI herziet advies
+- Stop -> Project gaat niet door
+
+Stop melding:
+STOP - Project gaat niet door
+Applicatie: [naam]
+Reden: [systemd dependency]
+Alternatieven: [lijst]
+
+## Fase 3: Code (alleen na groen licht)
+
+Wat NIET mag:
+- Geen mail/SMTP
+- Geen remote SSH
+- Geen inventory
+- Geen systemd
+- Geen handmatige stappen
+
+Wat WEL mag:
+- Idempotente playbooks
+- Templates voor configuraties
+- Vault voor geheimen
+- Handlers
+- Runit of OpenRC scripts
+
+## Runit template (Void)
+
+Service (/etc/sv/[service]/run):
+#!/bin/sh
+exec 2>&1
+exec chpst -u [user]:[group] [command]
+
+Log (/etc/sv/[service]/log/run):
+#!/bin/sh
+exec svlogd -tt /var/log/[service]
+
+Activeren:
+ln -s /etc/sv/[service] /var/service/
+
+## OpenRC template (Devuan)
+
+Service (/etc/init.d/[service]):
+#!/sbin/openrc-run
+name="[service]"
+command="[command]"
+command_user="[user]"
+command_background=true
+
+depend() {
+    need net
+}
+
+Activeren:
+rc-update add [service] default
+
+## Voorbeeld 1: Mattermost op Void (Go)
+
+OS: Void (packages beschikbaar)
+Compatibel: Geen harde systemd dependencies
+Advies: Go - schrijf code
+
+## Voorbeeld 2: Applicatie met systemd socket (Stop)
+
+Reden: systemd.socket verplicht, geen workaround
+Stop - project gaat niet door
+
+## Samenvatting voor AI
+
+Mag ik systemd voorstellen? Nee.
+Mag ik Devuan voorstellen? Ja, als workaround.
+Wanneer Devuan? Package niet in Void, team context, of technisch probleem.
+Applicatie heeft systemd nodig? Stop.
+Runit scripts? Ja, voor Void.
+OpenRC scripts? Ja, voor Devuan.
+Aanname over systemd? Nee, het is er niet.
+
+---
+
 ## Basis Methodiek
 
 - Ansible als Configuration Management (geen deployment tool)
