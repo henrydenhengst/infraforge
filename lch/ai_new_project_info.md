@@ -1,4 +1,4 @@
-# Mijn Ansible Configuratie Voorkeuren
+# Mijn SERVER Ansible Configuratie Voorkeuren
 
 ## Basis Methodiek
 
@@ -11,9 +11,31 @@
 ## Infrastructuur
 
 - Localhost only
-- Kleine schaal (max 25 gebruikers)
 - Geen load balancing of clustering
 - VPS met beperkte resources is voldoende
+
+## Hardware & Optimalisatie
+
+### Processor & Stabiliteit
+- **Microcode Updates:** Installeert zowel `intel-microcode` als `amd64-microcode` om beveiligingslekken en stabiliteitsfouten direct op de CPU te patchen.
+- **Thermisch Beheer:** Activeert `thermald` om oververhitting en "throttelen" te voorkomen, geschikt voor mini-pc's met passieve of kleine actieve koeling.
+
+### Opslag & Randapparatuur
+- **Cross-Platform Storage:** Volledige lees- en schrijfondersteuning voor NTFS (externe schijven) en exFAT (USB-sticks/SD-kaarten).
+- **Smartcard Support:** Activeert `pcscd` en `opensc` voor hardware-tokens, eID-lezers en authenticatiekaarten.
+
+### Optimalisatie voor CPU, Memory en Energieverbruik
+
+| Component | Optimalisatie |
+|-----------|----------------|
+| **CPU**   | Prestatieprofiel via `cpupower` (governor: `performance` voor vaste netstroom) |
+| **Memory**| **Geen zram** – swap op schijf heeft de voorkeur voor stabiliteit bij een mini-pc |
+| **SSD**   | Trim actief (`fstrim.timer`), `noatime` mount-optie, `discard` asynchroon |
+| **Energie**| Geen energiebesparingen; mini-pc draait altijd op netstroom |
+
+### Containers (optioneel)
+- **Docker indien nodig** (geen Podman). Installatie alleen als variabele `install_docker: true` in `vars.yml`.
+- Containers draaien in **gebruikersnamespace** waar mogelijk (rootless).
 
 ## Security Verwachtingen
 
