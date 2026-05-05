@@ -3,11 +3,11 @@
 ## Stap 1: Jij geeft opdracht aan AI-1
 "Installeer [applicatie] volgens mijn baseline"
 
-## Stap 2: AI-1 geeft advies + jij gaat akkoord
+## Stap 2: DeepSeek geeft advies + jij gaat akkoord
 (Jullie doorlopen de adviesfase)
 
-## Stap 3: AI-1 schrijft de volledige Ansible structuur
-Output: 15 directories, 30 files
+## Stap 3: DeepSeek schrijft de volledige Ansible structuur
+Output: ## directories, ## files
 
 ## Stap 4: Jij zet alles in een ZIP
 ```bash
@@ -66,3 +66,5 @@ EINDOORDEEL: [Ga door / Pas aan / Stop]
 
 ## Nu reviewen
 Hier is de ZIP. Pak uit, lees alle bestanden, en geef je review.
+
+## Review terug communiceren naar DeepSeek.
