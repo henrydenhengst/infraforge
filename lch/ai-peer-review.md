@@ -68,3 +68,57 @@ EINDOORDEEL: [Ga door / Pas aan / Stop]
 Hier is de ZIP. Pak uit, lees alle bestanden, en geef je review.
 
 ## Review terug communiceren naar DeepSeek.
+
+---
+
+# Workflow: DeepSeek (schrijver) + ChatGPT (reviewer)
+
+## Stap 1: Jij geeft opdracht aan DeepSeek
+[Plak de volledige opdracht + baseline]
+
+## Stap 2: DeepSeek geeft advies + jij gaat akkoord
+
+## Stap 3: DeepSeek schrijft de Ansible structuur
+
+## Stap 4: Jij zet alle bestanden in een ZIP
+
+## Stap 5: Jij geeft ChatGPT DEZELFDE opdracht + baseline + ZIP
+
+Bericht naar ChatGPT:
+
+--- BEGIN CHATGPT INSTRUCTIE ---
+Je bent code reviewer.
+
+Hier is de opdracht die de schrijver (DeepSeek) kreeg:
+[PLAK DE VOLLEDIGE OPDRACHT + BASELINE]
+
+Review de bijgevoegde ZIP tegen deze opdracht.
+
+Zijn alle verplichte onderdelen aanwezig?
+Zijn er stop-voorwaarden overtreden?
+Is de code idempotent?
+
+Output formaat:
+REVIEW: ACCEPT / REJECT / ACCEPT MET OP MERKINGEN
+
+BLOKKERENDE ISSUES:
+- [bestand: regel - probleem]
+
+VERPLICHTE ONDERDELEN (missend):
+- [onderdeel]
+
+KWALITEITSTIPS:
+- [tip]
+
+EINDOORDEEL: Ga door / Pas aan / Stop
+--- EINDE CHATGPT INSTRUCTIE ---
+
+## Stap 6: ChatGPT reviewt de ZIP
+
+## Stap 7: Jij kopieert review naar DeepSeek
+
+## Stap 8: DeepSeek verwerkt feedback en maakt nieuwe versie
+
+## Stap 9: Herhaal stap 4-8 tot ACCEPT
+
+## Stap 10: Jij draait het playbook
