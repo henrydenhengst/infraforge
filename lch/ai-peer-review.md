@@ -8,7 +8,9 @@ Stap 3: DeepSeek schrijft Ansible code
 
 Stap 4: Jij zet code in een ZIP: zip -r project-review.zip project/
 
-Stap 5: Jij stuurt naar ChatGPT:
+---
+
+## Stap 5: Jij stuurt naar ChatGPT:
 
 "Je bent reviewer. Dit is de opdracht die DeepSeek kreeg: [PLAK HIER OPDRACHT + BASELINE] Review de ZIP tegen deze opdracht.
 
@@ -18,6 +20,8 @@ BLOKKERENDE ISSUES: (bestand: regel - probleem)
 VERPLICHTE ONDERDELEN (missend): (onderdeel)
 KWALITEITSTIPS: (tip)
 EINDOORDEEL: Ga door / Pas aan / Stop"
+
+---
 
 Stap 6: ChatGPT reviewt de ZIP
 
