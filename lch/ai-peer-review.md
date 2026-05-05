@@ -6,7 +6,7 @@ Stap 2: DeepSeek geeft advies, jij gaat akkoord
 
 Stap 3: DeepSeek schrijft Ansible code
 
-Stap 4: Jij zet code in een ZIP: zip -r project-review.zip project/
+Stap 4: Jij zet code in een ZIP: `zip -r project-review.zip project/`
 
 ---
 
