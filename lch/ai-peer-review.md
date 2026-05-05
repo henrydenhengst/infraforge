@@ -1,4 +1,4 @@
-# Workflow: Jij + AI-1 (schrijver) + ChatGPT (reviewer)
+# Workflow: Jij + DeepSeek (schrijver) + ChatGPT (reviewer)
 
 ## Stap 1: Jij geeft opdracht aan AI-1
 "Installeer [applicatie] volgens mijn baseline"
@@ -19,7 +19,7 @@ zip -r project-review.zip project/
 
 ## ChatGPT review instructie (copy-paste)
 
-# AI-2 Reviewer Instructies
+# ChatGPT Reviewer Instructies
 
 Je bent code reviewer. Je krijgt een ZIP bestand met Ansible playbooks, templates en scripts.
 
