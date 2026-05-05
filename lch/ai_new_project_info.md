@@ -166,3 +166,96 @@ sudo ansible-playbook site.yml --ask-vault-pass
 - Ga uit van Void, tenzij ik Devuan specificeer
 - Houd het simpel (geen over-engineered oplossingen)
 - Vraag naar schaal/gebruikers als het relevant is
+
+---
+
+🧩 Opdracht Specificatie (Ansible Homelab)
+
+1. Doel
+
+Beschrijf in één of twee zinnen wat je wilt bereiken.
+Bijvoorbeeld: het installeren en configureren van een specifieke applicatie of stack.
+
+2. Te installeren componenten
+
+Noem expliciet:
+
+- Welke applicaties
+- Welke ondersteunende diensten (database, webserver, etc.)
+
+Wees concreet. Vermijd impliciete aannames.
+
+3. Bereikbaarheid
+
+Geef aan hoe de service bereikbaar moet zijn:
+
+- Alleen lokaal netwerk (LAN)
+- Of publiek via internet
+
+Indien publiek:
+
+- Vermeld of je een domein gebruikt (en welke)
+
+4. Netwerk
+
+Bevestig of je standaard netwerkconfig gebruikt of afwijkingen hebt:
+
+- Interface naam
+- Statisch IP
+- Gateway en DNS
+
+Alleen vermelden als het afwijkt van je baseline, anders impliciet akkoord.
+
+5. Gebruik & schaal
+
+Geef een realistische indicatie:
+
+- Aantal gebruikers (ruwe schatting is voldoende)
+- Verwacht gebruik (licht, gemiddeld, intensief)
+
+6. Data & opslag
+
+Beschrijf:
+
+- Waar data opgeslagen moet worden (standaard pad of afwijking)
+- Of persistentie belangrijk is (meestal wel)
+- Of je backups verwacht (ja/nee, simpel/uitgebreid)
+
+7. Containers (optioneel)
+
+Geef expliciet aan:
+
+- Of Docker gebruikt moet worden
+- Of alles native op het OS draait
+
+8. Security (aanvullend op baseline)
+
+Alle extra eisen bovenop je standaard:
+
+- Specifieke poorten
+- Extra bescherming (bijv. extra fail2ban regels)
+- Toegangsrestricties
+
+Als niets extra’s nodig is: expliciet vermelden dat de baseline voldoende is.
+
+9. Verwachte output
+
+Beschrijf wat je concreet wilt ontvangen:
+
+- Volledige Ansible structuur
+- Alle configuraties inbegrepen
+- Werkend zonder handmatige stappen
+- Idempotent
+- Passend binnen jouw baseline (Void, runit, localhost)
+
+10. Beperkingen (hard constraints)
+
+Herhaal expliciet wat niet mag afwijken:
+
+- Geen remote SSH gebruik
+- Geen mail/SMPP configuratie
+- Geen inventory bestanden
+- Geen handmatige stappen achteraf
+- Void Linux als uitgangspunt
+
+---
