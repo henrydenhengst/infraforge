@@ -225,7 +225,9 @@ Playbook installeert en configureert:
 - OS hardening out-of-the-box
 - Application security by default
 
-## README.md vereisten
+## README.md 
+
+### Inhoudelijke vereisten
 - Projectnaam + badges
 - Beschrijving + features
 - Installatie + Gebruik
@@ -233,6 +235,20 @@ Playbook installeert en configureert:
 - Vereisten
 - Contributing + MIT License
 - Status
+
+### Technische vereisten
+- Output uitsluitend als raw Markdown in één enkel codeblock.
+- Geen uitleg buiten het codeblock.
+- Geen extra commentaar, geen preamble, geen afsluiting.
+- Gebruik GitHub-flavored Markdown.
+- Houd regels kort en vermijd onnodig lange regels.
+- Gebruik duidelijke headings, bullets en tabellen waar nuttig.
+- Maak de structuur logisch, technisch en overzichtelijk.
+- Zorg dat alles direct kopieerbaar is zonder opmaakfouten.
+- Gebruik geen HTML tenzij strikt noodzakelijk.
+- Gebruik geen horizontale lijnen tenzij echt nuttig.
+- Zet codevoorbeelden in aparte fenced codeblocks.
+- Als iets onduidelijk is, stel eerst maximaal 3 gerichte vragen.
 
 ## Standaard Stack
 - Caddy latest (HTTPS, security headers)
