@@ -36,6 +36,14 @@
 ### Containers (optioneel)
 - **Docker indien nodig** (geen Podman). Installatie alleen als variabele `install_docker: true` in `vars.yml`.
 - Containers draaien in **gebruikersnamespace** waar mogelijk (rootless).
+- **Installatie** alleen als `install_docker: true` in `vars.yml`
+- **Rootless mode** standaard ingeschakeld voor betere isolatie
+- **Log limieten:** `max-size: 10m` en `max-file: 3` per container (voorkomt volgeschreven schijf)
+- **Standaard resource limits:** `memory: 512m`, `cpus: 0.5` per container (aanpasbaar per service)
+- **Geen swap** voor containers (forceert memory discipline)
+- **Gebruikt `overlay2`** storage driver (stabiel en zuinig)
+- **Live restore** ingeschakeld (containers blijven draaien bij Docker herstart)
+- **Automatisch opruimen:** `docker system prune -f` wekelijks via cron (tijdelijk: 24u, ongebruikt: 72u)
 
 ## Security Verwachtingen
 
