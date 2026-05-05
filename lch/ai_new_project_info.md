@@ -249,6 +249,11 @@ Playbook installeert en configureert:
 - Gebruik geen horizontale lijnen tenzij echt nuttig.
 - Zet codevoorbeelden in aparte fenced codeblocks.
 - Als iets onduidelijk is, stel eerst maximaal 3 gerichte vragen.
+- korte regels;
+- compacte bullets;
+- zo min mogelijk tabellen;
+- code alleen in echte fenced blocks;
+- geen lange alinea’s die over je scherm lopen
 
 ## Standaard Stack
 - Caddy latest (HTTPS, security headers)
