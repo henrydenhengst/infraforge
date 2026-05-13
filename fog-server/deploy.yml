@@ -1,0 +1,169 @@
+---
+- name: "Productie FOG Server - AlmaLinux 10 - Final Release"
+  hosts: fog_server
+  become: true
+  gather_facts: true
+  collections:
+    - community.general
+
+  vars:
+    # Verplichte variabelen via Environment of Vault
+    images_uuid: "{{ lookup('env', 'FOG_IMAGES_UUID') }}"
+    fog_db_root_password: "{{ lookup('env', 'FOG_DB_ROOT_PW') }}"
+    fog_mysql_password: "{{ lookup('env', 'FOG_MYSQL_PW') }}"
+    fog_storage_mysql_password: "{{ lookup('env', 'FOG_STORAGE_PW') }}"
+    
+    bond_name: "bond0"
+    bond_ip: "10.0.0.10/24"
+    bond_gw: "10.0.0.1"
+    bond_dns: "1.1.1.1"
+    # Dynamische interface detectie voor de Esprimo Quad-NIC
+    intel_ports: "{{ ansible_facts.interfaces | select('match', '^enp.*') | reject('equalto', 'lo') | list }}"
+    nfs_threads: 16
+    fog_version: "1.6.0" # Stabiele release tag
+
+  handlers:
+    - name: restart_nfs
+      systemd:
+        name: nfs-server
+        state: restarted
+
+    - name: reload_firewalld
+      service:
+        name: firewalld
+        state: reloaded
+
+  tasks:
+    - name: "1. Omgevingsvalidatie"
+      block:
+        - name: "Check op verplichte variabelen"
+          fail:
+            msg: "Een of meer verplichte env vars (UUID of PW) ontbreken."
+          when: (images_uuid == "") or (fog_db_root_password == "")
+
+        - name: "Check op bestaande installatie"
+          stat:
+            path: /opt/fog/.fogsettings
+          register: fogsettings_exists
+
+        - name: "Stop als FOG al aanwezig is"
+          fail:
+            msg: "FOG is al geïnstalleerd op deze machine."
+          when: fogsettings_exists.stat.exists
+
+    - name: "2. OS & Netwerk Provisioning"
+      block:
+        - name: "Basis pakketten installeren"
+          dnf:
+            name: [epel-release, python3-libselinux, NetworkManager, nfs-utils, rpcbind, tftp-server, mariadb-server, git, php-mysqlnd, python3-mysql]
+            state: present
+
+        - name: "Netwerk: Idempotente Bond (Mode 5)"
+          community.general.nmcli:
+            conn_name: "{{ bond_name }}"
+            ifname: "{{ bond_name }}"
+            type: bond
+            mode: balance-tlb
+            ip4: "{{ bond_ip }}"
+            gw4: "{{ bond_gw }}"
+            dns4: "{{ bond_dns }}"
+            autoconnect: yes
+            state: present
+          register: bond_config
+
+        - name: "Netwerk: Slaves koppelen"
+          community.general.nmcli:
+            conn_name: "{{ bond_name }}-{{ item }}"
+            ifname: "{{ item }}"
+            type: ethernet
+            slave_type: bond
+            master: "{{ bond_name }}"
+            autoconnect: yes
+            state: present
+          loop: "{{ intel_ports }}"
+
+    - name: "3. Opslag & Security"
+      block:
+        - name: "Mount SSD"
+          mount:
+            path: "/images"
+            src: "UUID={{ images_uuid }}"
+            fstype: ext4
+            opts: "noatime,nodiratime"
+            state: mounted
+
+        - name: "NFS Tuning"
+          lineinfile:
+            path: /etc/nfs.conf
+            regexp: '^#?threads='
+            line: "threads={{ nfs_threads }}"
+          notify: restart_nfs
+
+        - name: "Firewall: Poorten openen"
+          firewalld:
+            port: "{{ item }}"
+            permanent: yes
+            state: enabled
+            immediate: yes
+          loop: ["80/tcp", "443/tcp", "69/udp", "111/tcp", "111/udp", "2049/tcp", "20048/tcp"]
+          notify: reload_firewalld
+
+        - name: "SELinux Booleans"
+          seboolean:
+            name: "{{ item }}"
+            state: yes
+            persistent: yes
+          loop: [httpd_can_network_connect, httpd_use_nfs, tftp_use_nfs]
+
+    - name: "4. FOG Installatie"
+      block:
+        - name: "Config mappen aanmaken"
+          file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0755'
+          loop: ["/opt/fog", "/opt/fogproject"]
+
+        - name: "Template .fogsettings plaatsen"
+          template:
+            src: templates/fogsettings.j2
+            dest: /opt/fog/.fogsettings
+
+        - name: "Clone FOG Repository"
+          git:
+            repo: 'https://github.com/FOGProject/fogproject.git'
+            dest: /opt/fogproject
+            version: "{{ fog_version }}"
+            depth: 1
+
+        - name: "FOG Installer uitvoeren"
+          command:
+            cmd: "./installfog.sh -y --no-interact > /var/log/fog_install.log 2>&1"
+            chdir: /opt/fogproject/bin
+            creates: /opt/fog/.fogsettings
+          register: fog_install
+          failed_when: fog_install.rc != 0 or 'ERROR' in fog_install.stdout
+
+    - name: "5. Post-Installatie & Permissies"
+      block:
+        - name: "MariaDB root wachtwoord configureren"
+          mysql_user:
+            name: root
+            password: "{{ fog_db_root_password }}"
+            host: localhost
+            login_unix_socket: /var/lib/mysql/mysql.sock
+          no_log: true
+
+        - name: "Permissies /images/dev (Zonder recurse)"
+          file:
+            path: /images/dev
+            state: directory
+            owner: fogproject
+            group: fogproject
+            mode: '0777'
+
+    - name: "6. Finale Reboot"
+      reboot:
+        msg: "Provisioning voltooid op de Esprimo E900"
+        reboot_timeout: 600
+      when: fog_install.changed or bond_config.changed
