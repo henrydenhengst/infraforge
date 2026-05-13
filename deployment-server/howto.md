@@ -1,18 +1,16 @@
 ```
 deployment_server/
+├── main.yml                    ← Alles in één!
 ├── ansible.cfg
 ├── .gitignore
-├── 01_detect_and_setup_network.yml
-├── 02_full_deployment_server.yml
-├── 03_rollback.yml
+├── 03_rollback.yml             ← Optioneel, voor noodgevallen
 └── templates/
     └── drbl_answer_30.j2
 
-# Stap 1: Detecteer NICs
-ansible-playbook 01_detect_and_setup_network.yml --ask-become-pass
+cd /root/deployment_server
 
-# Stap 2: Volledige installatie
-ansible-playbook 02_full_deployment_server.yml --ask-become-pass
+# Alles in één keer
+ansible-playbook main.yml --ask-become-pass
 
 # Controleer
 cat /etc/deployment_server_ready
