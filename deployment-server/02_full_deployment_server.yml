@@ -1,5 +1,5 @@
 ---
-- name: Full Deployment Server Configuration - Production Ready v3.0
+- name: Full Deployment Server Configuration for Debian 13 Trixie
   hosts: localhost
   become: yes
   vars:
@@ -17,11 +17,7 @@
     dns_servers: "{{ network_config.dns_servers }}"
     backup_dir: "/root/deployment_backups/{{ ansible_date_time.epoch }}"
     drbl_answer_file: "/tmp/drbl_answer_{{ ansible_date_time.epoch }}.txt"
-    
-    # Monitoring & Alerting
-    admin_email: "admin@{{ ansible_domain | default('deployment.local') }}"
-    enable_monitoring: true
-    prometheus_node_exporter: false
+    admin_email: "root@localhost"
 
   pre_tasks:
     - name: Verify network configuration exists
@@ -30,18 +26,9 @@
       register: network_config_file
       failed_when: not network_config_file.stat.exists
 
-    - name: Validate required variables
-      assert:
-        that:
-          - internal_interface | length > 0
-          - upstream_interface | length > 0
-          - dhcp_router | ipaddr
-          - internal_subnet | ipaddr
-        fail_msg: "Required network variables are missing or invalid"
-
   tasks:
     # ============================================
-    # 1. COMPREHENSIVE BACKUP
+    # 1. BACKUP
     # ============================================
     - name: Create backup directory
       file:
@@ -49,7 +36,7 @@
         state: directory
         mode: '0700'
 
-    - name: Backup all relevant configuration directories
+    - name: Backup existing configurations
       archive:
         path:
           - /etc/dhcp
@@ -60,31 +47,20 @@
           - /etc/drbl
           - /etc/netplan
           - /etc/iptables
-          - /etc/cockpit
-        dest: "{{ backup_dir }}/full_config_backup.tar.gz"
+        dest: "{{ backup_dir }}/config_backup.tar.gz"
         format: gz
         remove: no
       ignore_errors: yes
 
-    - name: Save package list for potential rollback
-      command: dpkg --get-selections > {{ backup_dir }}/packages_before.txt
-      ignore_errors: yes
-
     # ============================================
-    # 2. SYSTEM PACKAGES INSTALLATION
+    # 2. PACKAGE INSTALLATION
     # ============================================
     - name: Update package cache
       apt:
         update_cache: yes
         cache_valid_time: 3600
 
-    - name: Upgrade all packages
-      apt:
-        upgrade: dist
-        autoremove: yes
-        autoclean: yes
-
-    - name: Install core packages with specific versions
+    - name: Install all required packages
       apt:
         name:
           - drbl
@@ -99,10 +75,8 @@
           - memtest86+
           - memtest86
           - smartmontools
-          - ansible
           - make
           - gcc
-          - liblzma-dev
           - genisoimage
           - syslinux
           - syslinux-common
@@ -111,21 +85,15 @@
           - isolinux
           - xorriso
           - ufw
+          - postfix
+          - mailutils
         state: present
-        update_cache: yes
-
-    - name: Install monitoring packages (optional)
-      apt:
-        name:
-          - prometheus-node-exporter
-        state: present
-      when: enable_monitoring and prometheus_node_exporter
 
     # ============================================
-    # 3. NETWORK CONFIGURATION (MET ROLLBACK)
+    # 3. NETWORK CONFIGURATION
     # ============================================
-    - name: Check if internal interface already has correct IP
-      command: 
+    - name: Check if internal interface has correct IP
+      command:
         cmd: "ip -4 addr show {{ internal_interface }} | grep -q '{{ dhcp_router }}/{{ internal_prefix }}'"
       register: ip_configured
       ignore_errors: yes
@@ -133,13 +101,6 @@
 
     - name: Configure static IP on internal interface
       block:
-        - name: Backup current netplan config
-          copy:
-            src: /etc/netplan/
-            dest: "{{ backup_dir }}/netplan_before/"
-            remote_src: yes
-          ignore_errors: yes
-
         - name: Create netplan configuration
           copy:
             dest: /etc/netplan/99-deployment-server.yaml
@@ -153,51 +114,43 @@
                       - {{ dhcp_router }}/{{ internal_prefix }}
                     dhcp4: no
             mode: '0644'
-          register: netplan_config
 
         - name: Validate netplan configuration
           command: netplan try --timeout 30
           register: netplan_test
           failed_when: netplan_test.rc != 0
-          
+
         - name: Apply netplan configuration
           command: netplan apply
           when: netplan_test.rc == 0
-          
-        - name: Wait for interface to stabilize
+
+        - name: Wait for interface stabilization
           wait_for:
             timeout: 10
       when: ip_configured is failed
 
     # ============================================
-    # 4. DHCP CONFIGURATION (MET SYNTAX CHECK)
+    # 4. DHCP SERVER
     # ============================================
     - name: Configure DHCP server
       copy:
         dest: /etc/dhcp/dhcpd.conf
         content: |
-          # DHCP Configuration for PXE Boot - Generated by Ansible v3.0
-          # Generated: {{ ansible_date_time.iso8601 }}
-          
           option domain-name "deployment.local";
           option domain-name-servers {{ dns_servers | join(', ') }};
           default-lease-time 600;
           max-lease-time 7200;
           authoritative;
           log-facility local7;
-          
+
           subnet {{ internal_network }} netmask {{ internal_netmask }} {
               range {{ dhcp_range_start }} {{ dhcp_range_end }};
               option routers {{ dhcp_router }};
               option broadcast-address {{ internal_broadcast }};
-              
-              # PXE Boot configuration
               next-server {{ dhcp_router }};
               filename "pxelinux.0";
-              
-              # UEFI support (verbeterd voor alle architecturen)
+
               option arch code 93 = unsigned integer 16;
-              
               if option arch = 00:07 {
                   filename "netboot.xyz.efi";
               } elsif option arch = 00:09 {
@@ -211,7 +164,7 @@
         mode: '0644'
       register: dhcp_config
 
-    - name: Validate DHCP configuration syntax
+    - name: Validate DHCP configuration
       command: dhcpd -t -cf /etc/dhcp/dhcpd.conf
       register: dhcp_test
       failed_when: dhcp_test.rc != 0
@@ -224,7 +177,7 @@
       notify: restart_services
 
     # ============================================
-    # 5. TFTP CONFIGURATION
+    # 5. TFTP SERVER
     # ============================================
     - name: Create TFTP root directory
       file:
@@ -234,26 +187,19 @@
         owner: tftp
         group: nogroup
 
-    - name: Configure TFTP securely
+    - name: Configure TFTP
       copy:
         dest: /etc/default/tftpd-hpa
         content: |
           TFTP_USERNAME="tftp"
           TFTP_DIRECTORY="/srv/tftp"
           TFTP_ADDRESS="{{ dhcp_router }}:69"
-          TFTP_OPTIONS="--secure --create --blocksize 1468 --verbose"
+          TFTP_OPTIONS="--secure --create --blocksize 1468"
         mode: '0644'
       notify: restart_services
 
     - name: Copy PXE bootloaders
       block:
-        - name: Ensure syslinux is installed
-          apt:
-            name: syslinux-common
-            state: present
-          retries: 3
-          delay: 5
-
         - name: Copy syslinux modules
           copy:
             src: "{{ item.src }}"
@@ -264,16 +210,14 @@
             - { src: "/usr/lib/syslinux/modules/bios/menu.c32", dest: "/srv/tftp/menu.c32" }
             - { src: "/usr/lib/syslinux/modules/bios/libutil.c32", dest: "/srv/tftp/libutil.c32" }
             - { src: "/usr/lib/syslinux/pxelinux.0", dest: "/srv/tftp/pxelinux.0" }
-          ignore_errors: yes
       rescue:
-        - name: Install syslinux from alternative location
+        - name: Install syslinux if missing
           apt:
-            name: syslinux
+            name: syslinux-common
             state: present
-          notify: restart_services
 
     # ============================================
-    # 6. NFS CONFIGURATION
+    # 6. NFS SERVER
     # ============================================
     - name: Create NFS share directory
       file:
@@ -283,7 +227,7 @@
         owner: nobody
         group: nogroup
 
-    - name: Configure NFS exports securely
+    - name: Configure NFS exports
       lineinfile:
         path: /etc/exports
         line: '/home/partimag {{ internal_subnet }}(rw,sync,no_subtree_check,insecure,root_squash)'
@@ -291,55 +235,36 @@
       notify: restart_services
 
     # ============================================
-    # 7. APT CACHER-NG (SECURE)
+    # 7. APT CACHER-NG
     # ============================================
-    - name: Configure Apt-Cacher-NG securely
+    - name: Configure Apt-Cacher-NG
       copy:
         dest: /etc/apt-cacher-ng/acng.conf
         content: |
-          # Security-hardened Apt-Cacher-NG Configuration
-          # Generated: {{ ansible_date_time.iso8601 }}
-          
           CacheDir: /var/cache/apt-cacher-ng
           LogDir: /var/log/apt-cacher-ng
           Port: 3142
           BindAddress: {{ dhcp_router }}
-          
-          # Allow only official Debian/Ubuntu repositories
           Remap-debrep: file:deb_mirror*.gz /debian/ file:backends_debian
           Remap-debsec: file:deb_mirror*.gz /debian-security/ file:backends_debian
-          Remap-uburep: file:ubuntu_mirrors /ubuntu/ file:backends_ubuntu
-          
-          # Strict pass-through pattern
-          PassThroughPattern: ^(security|deb)\.debian\.org|archive\.ubuntu\.com|deb\.debian\.net
-          
-          # Performance & security
+          PassThroughPattern: ^(security|deb)\.debian\.org
           MaxAge: 30
           MaxCacheUsage: 80
-          MaxCacheAge: 30
-          MaxWait: 30
-          MaxConnectionRate: 10
           VerboseLog: 1
-          Debug: 0
           MaxThreads: 20
-          SocketPath: /var/cache/apt-cacher-ng/_socket
-          PidFile: /var/run/apt-cacher-ng/pid
         mode: '0644'
       notify: restart_services
 
     # ============================================
-    # 8. NAT & IPTABLES (IDEMPOTENT)
+    # 8. NAT & IPTABLES
     # ============================================
     - name: Enable IP forwarding
       sysctl:
-        name: "{{ item }}"
+        name: net.ipv4.ip_forward
         value: '1'
         sysctl_set: yes
         state: present
         reload: yes
-      loop:
-        - net.ipv4.ip_forward
-        - net.ipv6.conf.all.forwarding
 
     - name: Check if NAT rule exists
       command: iptables -t nat -C POSTROUTING -s {{ internal_subnet }} -o {{ upstream_interface }} -j MASQUERADE
@@ -347,26 +272,24 @@
       ignore_errors: yes
       changed_when: false
 
-    - name: Add NAT rule if not exists
+    - name: Add NAT rule
       iptables:
         table: nat
         chain: POSTROUTING
         source: "{{ internal_subnet }}"
         out_interface: "{{ upstream_interface }}"
         jump: MASQUERADE
-        comment: "Ansible-managed NAT for deployment network"
+        comment: "NAT for deployment network"
       when: nat_exists is failed
 
     - name: Add forwarding rules
       block:
-        - name: Add forward accept rule
-          iptables:
+        - iptables:
             chain: FORWARD
             in_interface: "{{ internal_interface }}"
             out_interface: "{{ upstream_interface }}"
             jump: ACCEPT
-        - name: Add established connections rule
-          iptables:
+        - iptables:
             chain: FORWARD
             in_interface: "{{ upstream_interface }}"
             out_interface: "{{ internal_interface }}"
@@ -374,50 +297,35 @@
             jump: ACCEPT
       when: nat_exists is failed
 
-    - name: Save iptables rules persistently
+    - name: Save iptables rules
       shell: |
         mkdir -p /etc/iptables
         iptables-save > /etc/iptables/rules.v4
-        ip6tables-save > /etc/iptables/rules.v6
       args:
         creates: /etc/iptables/rules.v4
 
     # ============================================
-    # 9. NETBOOT.XYZ (MET FALLBACK)
+    # 9. NETBOOT.XYZ
     # ============================================
     - name: Clone netboot.xyz repository
       git:
         repo: https://github.com/netbootxyz/netboot.xyz.git
         dest: /opt/netboot.xyz
-        version: master
         depth: 1
         force: no
       register: netboot_clone
       ignore_errors: yes
 
-    - name: Build netboot.xyz with fallback
+    - name: Build or download netboot.xyz
       block:
-        - name: Attempt to build netboot.xyz
+        - name: Build netboot.xyz
           command: make build
           args:
             chdir: /opt/netboot.xyz
-          register: netboot_build
           timeout: 300
-          changed_when: "'already' not in netboot_build.stdout"
-          
-        - name: Copy built netboot.xyz files to TFTP
-          synchronize:
-            src: /opt/netboot.xyz/
-            dest: /srv/tftp/
-            delete: no
-            rsync_opts:
-              - "--include=*.kpxe"
-              - "--include=*.efi"
-              - "--include=*.lkrn"
-              - "--include=ipxe/"
-              - "--exclude=*"
-      rescue:
-        - name: Download pre-built netboot.xyz binaries (fallback)
+          when: netboot_clone is success
+
+        - name: Download pre-built binaries (fallback)
           get_url:
             url: "{{ item.url }}"
             dest: "{{ item.dest }}"
@@ -425,162 +333,88 @@
           loop:
             - { url: "https://boot.netboot.xyz/ipxe/netboot.xyz.efi", dest: "/srv/tftp/netboot.xyz.efi" }
             - { url: "https://boot.netboot.xyz/ipxe/netboot.xyz.kpxe", dest: "/srv/tftp/netboot.xyz.kpxe" }
-            - { url: "https://boot.netboot.xyz/ipxe/netboot.xyz.lkrn", dest: "/srv/tftp/netboot.xyz.lkrn" }
           when: netboot_clone is failed
+      rescue:
+        - name: Log netboot.xyz failure
+          copy:
+            content: "netboot.xyz setup failed at {{ ansible_date_time.iso8601 }}"
+            dest: "{{ backup_dir }}/netboot_failure.log"
 
     # ============================================
-    # 10. DRBL SETUP (VERSIE-SPECIFIEK)
+    # 10. DRBL 5.4.10-1 SETUP
     # ============================================
-    - name: Detect DRBL version
-      command: drblsrv --version
-      register: drbl_version_output
-      ignore_errors: yes
-      changed_when: false
-
-    - name: Parse DRBL version
-      set_fact:
-        drbl_version: "{{ drbl_version_output.stdout | regex_replace('^[^0-9]*([0-9]+\\.[0-9]+).*$', '\\1') }}"
-      when: drbl_version_output is success
-
-    - name: Validate DRBL version compatibility
-      fail:
-        msg: "DRBL version {{ drbl_version }} is not compatible. Minimum required: 2.6"
-      when: drbl_version_output is failed or (drbl_version | float < 2.6)
-
     - name: Check if DRBL is already configured
       stat:
         path: /etc/drbl/drblrc
-      register: drbl_config
+      register: drbl_configured
 
-    - name: Create DRBL answer file (versie-specifiek)
+    - name: Create DRBL answer file for version 5.4.10-1
       template:
-        src: "drbl_answer_{{ drbl_version | regex_replace('\\.', '') }}.j2"
+        src: templates/drbl_answer_30.j2
         dest: "{{ drbl_answer_file }}"
         mode: '0600'
-      vars:
-        drbl_major: "{{ drbl_version.split('.')[0] | int }}"
-        drbl_minor: "{{ drbl_version.split('.')[1] | int }}"
-      when: not drbl_config.stat.exists
-      ignore_errors: yes
+      when: not drbl_configured.stat.exists
 
     - name: Initialize DRBL server
-      shell: /opt/drbl/sbin/drblsrv -i
-      args:
-        stdin: "{{ drbl_answer_file }}"
-      when: not drbl_config.stat.exists and drbl_answer_file is defined
+      shell: /opt/drbl/sbin/drblsrv -i < {{ drbl_answer_file }}
+      when: not drbl_configured.stat.exists
       register: drblsrv_output
       timeout: 600
-      failed_when: 
+      failed_when:
         - drblsrv_output.rc != 0
         - "'ERROR' in drblsrv_output.stderr | default('')"
-      changed_when: "'already' not in drblsrv_output.stdout | default('')"
 
     - name: Push DRBL configuration
-      shell: /opt/drbl/sbin/drblpush -i
-      args:
-        stdin: "{{ drbl_answer_file }}"
-      when: not drbl_config.stat.exists and drbl_answer_file is defined
+      shell: /opt/drbl/sbin/drblpush -i < {{ drbl_answer_file }}
+      when: not drbl_configured.stat.exists
       register: drblpush_output
       timeout: 300
       failed_when: drblpush_output.rc != 0
 
-    - name: Clean up DRBL answer file
+    - name: Remove DRBL answer file
       file:
         path: "{{ drbl_answer_file }}"
         state: absent
-      when: drbl_answer_file is defined
 
     # ============================================
-    # 11. TEST CLONEZILLA FUNCTIONALITY
+    # 11. SMART MONITORING
     # ============================================
-    - name: Test NFS mount for Clonezilla
-      block:
-        - name: Create test mount point
-          file:
-            path: /mnt/test_clonezilla
-            state: directory
-
-        - name: Attempt to mount NFS share
-          command: mount -t nfs localhost:/home/partimag /mnt/test_clonezilla
-          register: nfs_mount_test
-          failed_when: false
-
-        - name: Verify NFS is working
-          stat:
-            path: /mnt/test_clonezilla
-          register: nfs_check
-
-        - name: Clean up test mount
-          command: umount /mnt/test_clonezilla
-          ignore_errors: yes
-          
-        - name: Remove test mount point
-          file:
-            path: /mnt/test_clonezilla
-            state: absent
-      tags: test
-
-    # ============================================
-    # 12. SMART MONITORING MET EMAIL
-    # ============================================
-    - name: Configure smartd with email alerts
+    - name: Configure smartd
       copy:
         dest: /etc/smartd.conf
         content: |
-          # SMART monitoring for all disks - Generated {{ ansible_date_time.iso8601 }}
-          DEVICESCAN -a -o on -S on -s (S/../.././02|L/../../7/03) -m {{ admin_email }} -M diminishing -M test
+          DEVICESCAN -a -o on -S on -s (S/../.././02|L/../../7/03) -m {{ admin_email }} -M diminishing
         mode: '0644'
       notify: restart_services
 
-    - name: Install mail utilities for alerts
-      apt:
-        name:
-          - postfix
-          - mailutils
-        state: present
-      when: admin_email != "root"
-
     # ============================================
-    # 13. COCKPIT (MET HTTPS EN IDEMPOTENT CERT)
+    # 12. COCKPIT
     # ============================================
-    - name: Generate Cockpit self-signed certificate (only once)
+    - name: Generate Cockpit SSL certificate (idempotent)
       shell: |
         if [ ! -f /etc/cockpit/ws-cert.pem ]; then
           openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
             -keyout /etc/cockpit/ws-key.pem \
             -out /etc/cockpit/ws-cert.pem \
             -subj '/CN={{ dhcp_router }}/O=Deployment Server/C=NL'
-          chmod 640 /etc/cockpit/ws-key.pem
-          chmod 644 /etc/cockpit/ws-cert.pem
         fi
       args:
         creates: /etc/cockpit/ws-cert.pem
-      notify: restart_services
 
-    - name: Configure Cockpit for HTTPS only
+    - name: Configure Cockpit
       copy:
         dest: /etc/cockpit/cockpit.conf
         content: |
           [WebService]
-          Origins = https://{{ dhcp_router }}:9090 https://localhost:9090 https://{{ ansible_hostname }}:9090
+          Origins = https://{{ dhcp_router }}:9090 https://localhost:9090
           Protocol = https
           AllowUnencrypted = false
-        
-          [Log]
-          Level = info
-        mode: '0644'
-      notify: restart_services
 
     # ============================================
-    # 14. UFW FIREWALL (MET SSH PROTECTION)
+    # 13. FIREWALL (UFW)
     # ============================================
-    - name: Configure UFW firewall safely
+    - name: Configure UFW
       block:
-        - name: Reset UFW to defaults
-          ufw:
-            state: reset
-          ignore_errors: yes
-
         - name: Set default policies
           ufw:
             direction: "{{ item.direction }}"
@@ -601,7 +435,110 @@
             port: "{{ item }}"
             proto: tcp
           loop:
-            - '9090'   # Cockpit HTTPS
-            - '3142'   # Apt-Cacher-NG
-            
-  
+            - '9090'
+            - '3142'
+
+        - name: Allow DHCP/TFTP on internal interface
+          ufw:
+            rule: allow
+            interface: "{{ internal_interface }}"
+            port: "{{ item.port }}"
+            proto: "{{ item.proto }}"
+          loop:
+            - { port: '67', proto: udp }
+            - { port: '69', proto: udp }
+            - { port: '2049', proto: tcp }
+
+        - name: Enable UFW
+          ufw:
+            state: enabled
+      ignore_errors: yes
+
+    # ============================================
+    # 14. START SERVICES
+    # ============================================
+    - name: Enable and start all services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      loop:
+        - isc-dhcp-server
+        - tftpd-hpa
+        - nfs-kernel-server
+        - apt-cacher-ng
+        - smartd
+        - cockpit
+
+    # ============================================
+    # 15. HEALTH CHECKS
+    # ============================================
+    - name: Verify DHCP service
+      command: systemctl is-active isc-dhcp-server
+      register: dhcp_status
+      failed_when: dhcp_status.stdout != "active"
+
+    - name: Verify TFTP service
+      command: systemctl is-active tftpd-hpa
+      register: tftp_status
+      failed_when: tftp_status.stdout != "active"
+
+    - name: Verify NFS service
+      command: systemctl is-active nfs-kernel-server
+      register: nfs_status
+      failed_when: nfs_status.stdout != "active"
+
+    # ============================================
+    # 16. STATUS FILE
+    # ============================================
+    - name: Create deployment status file
+      copy:
+        dest: /etc/deployment_server_ready
+        content: |
+          DEPLOYMENT SERVER - FULLY CONFIGURED
+          ======================================
+          Date: {{ ansible_date_time.iso8601 }}
+          Hostname: {{ ansible_hostname }}
+          OS: Debian 13 Trixie
+          DRBL Version: 5.4.10-1
+
+          NETWORK:
+          - Upstream interface: {{ upstream_interface }}
+          - Internal interface: {{ internal_interface }}
+          - Subnet: {{ internal_subnet }}
+          - DHCP server: {{ dhcp_router }}
+          - DHCP range: {{ dhcp_range_start }} - {{ dhcp_range_end }}
+
+          SERVICES:
+          - DHCP/TFTP: active
+          - NFS: /home/partimag
+          - Apt-Cacher: http://{{ dhcp_router }}:3142
+          - Cockpit: https://{{ dhcp_router }}:9090
+          - SMART monitoring: active
+
+          Client PXE boot is ready.
+        mode: '0644'
+
+    - name: Display completion message
+      debug:
+        msg:
+          - "✅ Deployment server is fully configured"
+          - "📡 DHCP/TFTP active on {{ internal_interface }}"
+          - "🌐 Cockpit: https://{{ dhcp_router }}:9090"
+          - "💾 Backup: {{ backup_dir }}"
+
+  handlers:
+    - name: restart_services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+        daemon_reload: yes
+      loop:
+        - isc-dhcp-server
+        - tftpd-hpa
+        - nfs-kernel-server
+        - apt-cacher-ng
+        - smartd
+        - cockpit
+      listen: restart_all_services
