@@ -1,94 +1,30 @@
-{# 
-  DRBL 3.0+ Answer File
-  Voor Debian 13+ met DRBL 3.x
-#}
-
-{# Taal: Engels #}
 en
-
-{# DRBL installeren? #}
 y
-
-{# DHCP interface #}
 {{ internal_interface }}
-
-{# Clonezilla Live upgrade? #}
 y
-
-{# UEFI boot ondersteuning? #}
 y
-
-{# Secure Boot ondersteuning? #}
 y
-
-{# DRBL clients DNS? #}
 n
-
-{# Clients hostname via DHCP? #}
 n
-
-{# Aantal client images om te bewaren #}
 1
-
-{# DHCLIENT instellen? #}
 n
-
-{# VPN client? #}
 n
-
-{# Aantal CPU cores voor build #}
 10
-
-{# Lokale repo gebruiken? #}
 n
-
-{# Subnet voor DRBL clients #}
 {{ internal_subnet }}
-
-{# DHCP range beginnen? #}
 y
-
-{# DHCP start IP #}
 {{ dhcp_range_start }}
-
-{# DHCP eind IP #}
 {{ dhcp_range_end }}
-
-{# Broadcast adres #}
 {{ internal_broadcast }}
-
-{# DHCP relay? #}
 n
-
-{# Proxy DHCP? #}
 n
-
-{# IPv6 ondersteuning? #}
 n
-
-{# Wake-on-LAN? #}
 1
-
-{# Koppelen aan Windows AD? #}
 n
-
-{# DRBL client package update? #}
 y
-
-{# Live OS boot via NFS? #}
 y
-
-{# Clonezilla als standaard? #}
 y
-
-{# AMD GPU ondersteuning? #}
 n
-
-{# NVIDIA GPU ondersteuning? #}
 n
-
-{# ZFS ondersteuning? #}
 n
-
-{# Encryption ondersteuning? #}
 y
