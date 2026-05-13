@@ -7,7 +7,6 @@ deployment_server/
 └── templates/
     └── drbl_answer_30.j2
 
-cd /root/deployment_server
 
 # Alles in één keer
 ansible-playbook main.yml --ask-become-pass
