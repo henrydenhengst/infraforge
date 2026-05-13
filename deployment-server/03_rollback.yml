@@ -1,0 +1,56 @@
+---
+- name: Rollback Deployment Server to Previous State
+  hosts: localhost
+  become: yes
+  vars:
+    backup_dir: "{{ lookup('env', 'BACKUP_DIR') | default('/root/deployment_backups/latest') }}"
+
+  tasks:
+    - name: Find latest backup
+      find:
+        paths: /root/deployment_backups/
+        patterns: "full_config_backup.tar.gz"
+        file_type: file
+      register: available_backups
+
+    - name: Display available backups
+      debug:
+        msg: "Available backups: {{ available_backups.files | map(attribute='path') | list }}"
+
+    - name: Confirm rollback
+      pause:
+        prompt: "⚠️ WARNING: This will restore from {{ backup_dir }}. Type 'yes' to continue"
+      when: backup_dir != "/root/deployment_backups/latest"
+
+    - name: Stop all services
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+      loop:
+        - isc-dhcp-server
+        - tftpd-hpa
+        - nfs-kernel-server
+        - apt-cacher-ng
+        - cockpit
+
+    - name: Restore configuration from backup
+      unarchive:
+        src: "{{ backup_dir }}/full_config_backup.tar.gz"
+        dest: /
+        remote_src: yes
+      when: backup_dir is defined
+
+    - name: Restart services
+      systemd:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - isc-dhcp-server
+        - tftpd-hpa
+        - nfs-kernel-server
+        - apt-cacher-ng
+        - cockpit
+
+    - name: Display rollback completion
+      debug:
+        msg: "✅ Rollback completed from {{ backup_dir }}"
