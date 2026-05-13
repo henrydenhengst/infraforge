@@ -1,24 +1,73 @@
-{# DRBL 2.6 Answer File - Geïdentificeerd door '26' in bestandsnaam #}
+{# 
+  DRBL 2.6.x Answer File
+  Voor Debian 12/13 met DRBL 2.6
+#}
+
+{# Taal: Engels #}
 en
+
+{# DRBL installeren? #}
 y
+
+{# DHCP interface #}
 {{ internal_interface }}
+
+{# Clonezilla Live upgrade? #}
 y
+
+{# DRBL clients DNS? #}
 n
+
+{# Clients hostname via DHCP? #}
 n
+
+{# Aantal client images om te bewaren #}
 1
+
+{# DHCLIENT instellen? #}
 n
+
+{# NIS gebruiken? #}
 n
+
+{# Aantal CPU cores voor build #}
 10
+
+{# Lokale repo gebruiken? #}
 n
+
+{# Subnet voor DRBL clients #}
 {{ internal_subnet }}
+
+{# DHCP range beginnen? #}
 y
+
+{# DHCP start IP #}
 {{ dhcp_range_start }}
+
+{# DHCP eind IP #}
 {{ dhcp_range_end }}
+
+{# Broadcast adres #}
 {{ internal_broadcast }}
+
+{# DHCP relay? #}
 n
+
+{# Proxy DHCP? #}
 n
+
+{# Wake-on-LAN? #}
 1
+
+{# Koppelen aan Windows AD? #}
 n
+
+{# DRBL client package update? #}
 y
+
+{# Live OS boot via NFS? #}
 y
+
+{# Clonezilla als standaard? #}
 y
