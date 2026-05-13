@@ -1,4 +1,4 @@
-# Ontwerpdocument: FOG Imaging Appliance (Haarlem Editie)
+# Ontwerpdocument: FOG Imaging Appliance (Linux Cafe Haarlem Editie)
 
 ## 1. Doel van het Systeem
 Dit systeem is ontworpen als een robuuste, reproduceerbare imaging-server voor het **Laptop Revive** project. Het doel is om op grote schaal Linux Mint te installeren op gedoneerde laptops voor studenten, gebruikmakend van enterprise-grade automatisering op basis van **AlmaLinux 10**.
@@ -34,4 +34,4 @@ Het volledige systeem wordt beheerd via **Ansible** (Infrastructure as Code), wa
 4.  **Lifecycle:** Logs worden centraal bijgehouden in `/var/log/fog_install.log` voor onderhoud en troubleshooting.
 
 ---
-*Gegenereerd voor: Henry den Hengst / Laptop Revive Haarlem (Mei 2026)*
+*Henry den Hengst / Linux Cafe Haarlem (Mei 2026)*
