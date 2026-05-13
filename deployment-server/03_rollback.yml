@@ -1,15 +1,15 @@
 ---
-- name: Rollback Deployment Server to Previous State
+- name: Rollback Deployment Server Configuration
   hosts: localhost
   become: yes
   vars:
-    backup_dir: "{{ lookup('env', 'BACKUP_DIR') | default('/root/deployment_backups/latest') }}"
+    backup_dir: "{{ lookup('env', 'BACKUP_DIR') }}"
 
   tasks:
-    - name: Find latest backup
+    - name: Find available backups
       find:
         paths: /root/deployment_backups/
-        patterns: "full_config_backup.tar.gz"
+        pattern: "config_backup.tar.gz"
         file_type: file
       register: available_backups
 
@@ -17,10 +17,10 @@
       debug:
         msg: "Available backups: {{ available_backups.files | map(attribute='path') | list }}"
 
-    - name: Confirm rollback
-      pause:
-        prompt: "⚠️ WARNING: This will restore from {{ backup_dir }}. Type 'yes' to continue"
-      when: backup_dir != "/root/deployment_backups/latest"
+    - name: Require backup directory parameter
+      fail:
+        msg: "Please specify BACKUP_DIR, e.g.: -e 'BACKUP_DIR=/root/deployment_backups/1234567890'"
+      when: backup_dir == ""
 
     - name: Stop all services
       systemd:
@@ -33,12 +33,11 @@
         - apt-cacher-ng
         - cockpit
 
-    - name: Restore configuration from backup
+    - name: Restore from backup
       unarchive:
-        src: "{{ backup_dir }}/full_config_backup.tar.gz"
+        src: "{{ backup_dir }}/config_backup.tar.gz"
         dest: /
         remote_src: yes
-      when: backup_dir is defined
 
     - name: Restart services
       systemd:
@@ -51,6 +50,6 @@
         - apt-cacher-ng
         - cockpit
 
-    - name: Display rollback completion
+    - name: Rollback complete
       debug:
         msg: "✅ Rollback completed from {{ backup_dir }}"
