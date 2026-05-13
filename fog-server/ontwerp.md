@@ -2,7 +2,7 @@
 > FOG Imaging Appliance (Linux Cafe Haarlem Editie)
 
 ## 1. Doel van het Systeem
-Dit systeem is ontworpen als een robuuste, reproduceerbare imaging-server voor het **Laptop Revive** project. Het doel is om op grote schaal Linux Mint te installeren op gedoneerde laptops voor studenten, gebruikmakend van enterprise-grade automatisering op basis van **AlmaLinux 10**.
+Dit systeem is ontworpen als een robuuste, reproduceerbare imaging-server voor het **Linux Cafe Haarlem** project. Het doel is om op grote schaal Linux Mint te installeren op gedoneerde laptops voor studenten, gebruikmakend van enterprise-grade automatisering op basis van **AlmaLinux 10**.
 
 ## 2. Hardware Architectuur
 *   **Basisstation:** Fujitsu Esprimo E900.
