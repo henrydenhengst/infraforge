@@ -14,7 +14,10 @@ ansible-playbook main.yml --ask-become-pass
 # Controleer
 cat /etc/deployment_server_ready
 
-# Rollback (indien nodig)
-ansible-playbook 03_rollback.yml --ask-become-pass -e "BACKUP_DIR=/root/deployment_backups/1234567890"
+# Automatisch naar de laatste backup
+ansible-playbook 03_rollback.yml --ask-become-pass
+
+# OF expliciet een backup kiezen
+ansible-playbook 03_rollback.yml --ask-become-pass -e "BACKUP_DIR=/root/deployment_backups/1747215000"
 
 ```
