@@ -1,79 +1,10 @@
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-*.so
-
-# Ansible
 *.retry
 *.log
-*.pid
-.ansible/
-~*
-#*#
-
-# Inventory (bevat gevoelige data)
-inventories/*/hosts
-inventories/*/group_vars/
-!inventories/*/group_vars/all.yml.example
-hosts
-
-# Temp files
-*.tmp
-*.temp
-*.swp
-*.swo
-*~
-*.bak
-*.backup
-*.old
-*.new
-
-# DRBL answer files (bevat wachtwoorden)
+*.pyc
+__pycache__/
 /tmp/drbl_answer_*.txt
-
-# Backups
-/backups/
-/backup/
-*.tar.gz
-*.tgz
-*.zip
-
-# Deployment specific
+*.backup
 /home/partimag/
 /srv/tftp/
-/etc/deployment_server_*.yml
-/etc/deployment_server_*.conf
-
-# Secrets and credentials
-*.key
 *.pem
-*.cert
-*.crt
-*.p12
-secrets.yml
-vault.yml
-*.vault
-
-# OS generated
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# IDE specific
-.vscode/
-.idea/
-*.sublime-*
-.project
-.classpath
-
-# Logs
-*.log
-/var/log/ansible.log
+*.key
