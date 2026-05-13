@@ -1,12 +1,98 @@
-[defaults]
-host_key_checking = False
-timeout = 30
-gathering = smart
-stdout_callback = yaml
-display_skipped_hosts = False
-display_ok_hosts = False
-forks = 20
-pipelining = True
+---
+- name: Detect Network Interfaces and Setup Initial Configuration
+  hosts: localhost
+  become: yes
+  vars:
+    internal_subnet: "10.10.10.0/24"
+    dhcp_range_start: "10.10.10.100"
+    dhcp_range_end: "10.10.10.200"
+    dhcp_router: "10.10.10.1"
+    dns_servers: ["8.8.8.8", "1.1.1.1"]
+    backup_dir: "/root/deployment_backups/{{ ansible_date_time.epoch }}"
 
-[ssh_connection]
-pipelining = True
+  tasks:
+    - name: Install required Python packages
+      pip:
+        name:
+          - netaddr
+          - ipaddress
+        state: present
+
+    - name: Create backup directory
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Get all physical network interfaces (exclude virtual)
+      set_fact:
+        all_interfaces: >-
+          {{ ansible_interfaces 
+             | reject('equalto', 'lo') 
+             | reject('search', '^(veth|docker|br-|virbr|tap|tun)') 
+             | list }}
+
+    - name: Fail if less than 2 physical NICs found
+      fail:
+        msg: |
+          Deployment server requires at least 2 physical network interfaces.
+          Found: {{ all_interfaces | default([]) | join(', ') }}
+      when: all_interfaces | length < 2
+
+    - name: Set upstream interface (interface with default route)
+      set_fact:
+        upstream_interface: "{{ ansible_default_ipv4.interface }}"
+
+    - name: Set internal interface (the other physical NIC)
+      set_fact:
+        internal_interface: "{{ all_interfaces | reject('equalto', upstream_interface) | first }}"
+
+    - name: Display interface assignment
+      debug:
+        msg:
+          - "Upstream interface (internet): {{ upstream_interface }}"
+          - "Internal interface (deployment LAN): {{ internal_interface }}"
+
+    - name: Calculate network parameters
+      set_fact:
+        internal_netmask: "{{ internal_subnet | ansible.utils.ipaddr('netmask') }}"
+        internal_broadcast: "{{ internal_subnet | ansible.utils.ipaddr('broadcast') }}"
+        internal_network: "{{ internal_subnet | ansible.utils.ipaddr('network') }}"
+        internal_prefix: "{{ internal_subnet | ansible.utils.ipaddr('prefix') }}"
+
+    - name: Validate dhcp_router is within internal_subnet
+      fail:
+        msg: "dhcp_router {{ dhcp_router }} is not in subnet {{ internal_subnet }}"
+      when: dhcp_router not in internal_subnet
+
+    - name: Save network configuration
+      copy:
+        dest: /etc/deployment_server_network.yml
+        content: |
+          ---
+          upstream_interface: {{ upstream_interface }}
+          internal_interface: {{ internal_interface }}
+          internal_subnet: {{ internal_subnet }}
+          internal_netmask: {{ internal_netmask }}
+          internal_broadcast: {{ internal_broadcast }}
+          internal_network: {{ internal_network }}
+          internal_prefix: {{ internal_prefix }}
+          dhcp_range_start: {{ dhcp_range_start }}
+          dhcp_range_end: {{ dhcp_range_end }}
+          dhcp_router: {{ dhcp_router }}
+          dns_servers: {{ dns_servers }}
+        mode: '0600'
+
+    - name: Install base packages
+      apt:
+        name:
+          - python3-pip
+          - git
+          - curl
+          - wget
+          - vim
+          - net-tools
+          - ethtool
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
