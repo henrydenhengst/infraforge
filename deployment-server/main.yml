@@ -1,0 +1,613 @@
+---
+- name: Full Deployment Server Installation - Debian 13 Trixie (DRBL 5.4.10-1)
+  hosts: localhost
+  become: yes
+  vars:
+    # Network configuration
+    internal_subnet: "10.10.10.0/24"
+    dhcp_range_start: "10.10.10.100"
+    dhcp_range_end: "10.10.10.200"
+    dhcp_router: "10.10.10.1"
+    dns_servers: ["8.8.8.8", "1.1.1.1"]
+    
+    # Other settings
+    backup_dir: "/root/deployment_backups/{{ ansible_date_time.epoch }}"
+    drbl_answer_file: "/tmp/drbl_answer_{{ ansible_date_time.epoch }}.txt"
+    admin_email: "root@localhost"
+
+  tasks:
+    # ============================================
+    # PART 1: DETECTIE & PREREQUISITES
+    # ============================================
+    
+    - name: Install required Python packages
+      pip:
+        name:
+          - netaddr
+          - ipaddress
+        state: present
+
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install base packages
+      apt:
+        name:
+          - python3-pip
+          - git
+          - curl
+          - wget
+          - vim
+          - net-tools
+          - ethtool
+        state: present
+
+    - name: Create backup directory
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Backup existing configurations
+      archive:
+        path:
+          - /etc/dhcp
+          - /etc/default/isc-dhcp-server
+          - /etc/default/tftpd-hpa
+          - /etc/exports
+          - /etc/apt-cacher-ng
+          - /etc/drbl
+          - /etc/netplan
+          - /etc/iptables
+        dest: "{{ backup_dir }}/config_backup.tar.gz"
+        format: gz
+        remove: no
+      ignore_errors: yes
+
+    # ============================================
+    # PART 2: NIC DETECTIE
+    # ============================================
+    
+    - name: Get all physical network interfaces (exclude virtual)
+      set_fact:
+        all_interfaces: >-
+          {{ ansible_interfaces 
+             | reject('equalto', 'lo') 
+             | reject('search', '^(veth|docker|br-|virbr|tap|tun)') 
+             | list }}
+
+    - name: Fail if less than 2 physical NICs found
+      fail:
+        msg: |
+          Deployment server requires at least 2 physical network interfaces.
+          Found: {{ all_interfaces | default([]) | join(', ') }}
+      when: all_interfaces | length < 2
+
+    - name: Set upstream interface (interface with default route)
+      set_fact:
+        upstream_interface: "{{ ansible_default_ipv4.interface }}"
+
+    - name: Set internal interface (the other physical NIC)
+      set_fact:
+        internal_interface: "{{ all_interfaces | reject('equalto', upstream_interface) | first }}"
+
+    - name: Display interface assignment
+      debug:
+        msg:
+          - "Upstream interface (internet): {{ upstream_interface }}"
+          - "Internal interface (deployment LAN): {{ internal_interface }}"
+
+    - name: Calculate network parameters
+      set_fact:
+        internal_netmask: "{{ internal_subnet | ansible.utils.ipaddr('netmask') }}"
+        internal_broadcast: "{{ internal_subnet | ansible.utils.ipaddr('broadcast') }}"
+        internal_network: "{{ internal_subnet | ansible.utils.ipaddr('network') }}"
+        internal_prefix: "{{ internal_subnet | ansible.utils.ipaddr('prefix') }}"
+
+    - name: Validate dhcp_router is within internal_subnet
+      fail:
+        msg: "dhcp_router {{ dhcp_router }} is not in subnet {{ internal_subnet }}"
+      when: dhcp_router not in internal_subnet
+
+    # ============================================
+    # PART 3: PACKAGE INSTALLATIE
+    # ============================================
+    
+    - name: Install all required packages
+      apt:
+        name:
+          - drbl
+          - clonezilla
+          - clonezilla-live
+          - apt-cacher-ng
+          - tftpd-hpa
+          - nfs-kernel-server
+          - isc-dhcp-server
+          - iptables-persistent
+          - cockpit
+          - memtest86+
+          - memtest86
+          - smartmontools
+          - make
+          - gcc
+          - genisoimage
+          - syslinux
+          - syslinux-common
+          - pxelinux
+          - mtools
+          - isolinux
+          - xorriso
+          - ufw
+          - postfix
+          - mailutils
+        state: present
+
+    # ============================================
+    # PART 4: NETWORK CONFIGURATIE
+    # ============================================
+    
+    - name: Check if internal interface has correct IP
+      command:
+        cmd: "ip -4 addr show {{ internal_interface }} | grep -q '{{ dhcp_router }}/{{ internal_prefix }}'"
+      register: ip_configured
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Configure static IP on internal interface
+      block:
+        - name: Create netplan configuration
+          copy:
+            dest: /etc/netplan/99-deployment-server.yaml
+            content: |
+              network:
+                version: 2
+                renderer: networkd
+                ethernets:
+                  {{ internal_interface }}:
+                    addresses:
+                      - {{ dhcp_router }}/{{ internal_prefix }}
+                    dhcp4: no
+            mode: '0644'
+
+        - name: Validate netplan configuration
+          command: netplan try --timeout 30
+          register: netplan_test
+          failed_when: netplan_test.rc != 0
+
+        - name: Apply netplan configuration
+          command: netplan apply
+          when: netplan_test.rc == 0
+
+        - name: Wait for interface stabilization
+          wait_for:
+            timeout: 10
+      when: ip_configured is failed
+
+    # ============================================
+    # PART 5: DHCP SERVER
+    # ============================================
+    
+    - name: Configure DHCP server
+      copy:
+        dest: /etc/dhcp/dhcpd.conf
+        content: |
+          option domain-name "deployment.local";
+          option domain-name-servers {{ dns_servers | join(', ') }};
+          default-lease-time 600;
+          max-lease-time 7200;
+          authoritative;
+          log-facility local7;
+
+          subnet {{ internal_network }} netmask {{ internal_netmask }} {
+              range {{ dhcp_range_start }} {{ dhcp_range_end }};
+              option routers {{ dhcp_router }};
+              option broadcast-address {{ internal_broadcast }};
+              next-server {{ dhcp_router }};
+              filename "pxelinux.0";
+
+              option arch code 93 = unsigned integer 16;
+              if option arch = 00:07 {
+                  filename "netboot.xyz.efi";
+              } elsif option arch = 00:09 {
+                  filename "netboot.xyz.efi";
+              } elsif option arch = 00:0b {
+                  filename "netboot.xyz.efi";
+              } else {
+                  filename "pxelinux.0";
+              }
+          }
+        mode: '0644'
+      register: dhcp_config
+
+    - name: Validate DHCP configuration
+      command: dhcpd -t -cf /etc/dhcp/dhcpd.conf
+      register: dhcp_test
+      failed_when: dhcp_test.rc != 0
+
+    - name: Configure DHCP interface
+      lineinfile:
+        path: /etc/default/isc-dhcp-server
+        regexp: '^INTERFACESv4='
+        line: 'INTERFACESv4="{{ internal_interface }}"'
+      notify: restart_services
+
+    # ============================================
+    # PART 6: TFTP SERVER
+    # ============================================
+    
+    - name: Create TFTP root directory
+      file:
+        path: /srv/tftp
+        state: directory
+        mode: '0755'
+        owner: tftp
+        group: nogroup
+
+    - name: Configure TFTP
+      copy:
+        dest: /etc/default/tftpd-hpa
+        content: |
+          TFTP_USERNAME="tftp"
+          TFTP_DIRECTORY="/srv/tftp"
+          TFTP_ADDRESS="{{ dhcp_router }}:69"
+          TFTP_OPTIONS="--secure --create --blocksize 1468"
+        mode: '0644'
+      notify: restart_services
+
+    - name: Copy PXE bootloaders
+      block:
+        - name: Copy syslinux modules
+          copy:
+            src: "{{ item.src }}"
+            dest: "{{ item.dest }}"
+            remote_src: yes
+          loop:
+            - { src: "/usr/lib/syslinux/modules/bios/ldlinux.c32", dest: "/srv/tftp/ldlinux.c32" }
+            - { src: "/usr/lib/syslinux/modules/bios/menu.c32", dest: "/srv/tftp/menu.c32" }
+            - { src: "/usr/lib/syslinux/modules/bios/libutil.c32", dest: "/srv/tftp/libutil.c32" }
+            - { src: "/usr/lib/syslinux/pxelinux.0", dest: "/srv/tftp/pxelinux.0" }
+      rescue:
+        - name: Install syslinux if missing
+          apt:
+            name: syslinux-common
+            state: present
+
+    # ============================================
+    # PART 7: NFS SERVER
+    # ============================================
+    
+    - name: Create NFS share directory
+      file:
+        path: /home/partimag
+        state: directory
+        mode: '0755'
+        owner: nobody
+        group: nogroup
+
+    - name: Configure NFS exports
+      lineinfile:
+        path: /etc/exports
+        line: '/home/partimag {{ internal_subnet }}(rw,sync,no_subtree_check,insecure,root_squash)'
+        create: yes
+      notify: restart_services
+
+    # ============================================
+    # PART 8: APT CACHER-NG
+    # ============================================
+    
+    - name: Configure Apt-Cacher-NG
+      copy:
+        dest: /etc/apt-cacher-ng/acng.conf
+        content: |
+          CacheDir: /var/cache/apt-cacher-ng
+          LogDir: /var/log/apt-cacher-ng
+          Port: 3142
+          BindAddress: {{ dhcp_router }}
+          Remap-debrep: file:deb_mirror*.gz /debian/ file:backends_debian
+          Remap-debsec: file:deb_mirror*.gz /debian-security/ file:backends_debian
+          PassThroughPattern: ^(security|deb)\.debian\.org
+          MaxAge: 30
+          MaxCacheUsage: 80
+          VerboseLog: 1
+          MaxThreads: 20
+        mode: '0644'
+      notify: restart_services
+
+    # ============================================
+    # PART 9: NAT & IPTABLES
+    # ============================================
+    
+    - name: Enable IP forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        sysctl_set: yes
+        state: present
+        reload: yes
+
+    - name: Check if NAT rule exists
+      command: iptables -t nat -C POSTROUTING -s {{ internal_subnet }} -o {{ upstream_interface }} -j MASQUERADE
+      register: nat_exists
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Add NAT rule
+      iptables:
+        table: nat
+        chain: POSTROUTING
+        source: "{{ internal_subnet }}"
+        out_interface: "{{ upstream_interface }}"
+        jump: MASQUERADE
+        comment: "NAT for deployment network"
+      when: nat_exists is failed
+
+    - name: Add forwarding rules
+      block:
+        - iptables:
+            chain: FORWARD
+            in_interface: "{{ internal_interface }}"
+            out_interface: "{{ upstream_interface }}"
+            jump: ACCEPT
+        - iptables:
+            chain: FORWARD
+            in_interface: "{{ upstream_interface }}"
+            out_interface: "{{ internal_interface }}"
+            ctstate: ESTABLISHED,RELATED
+            jump: ACCEPT
+      when: nat_exists is failed
+
+    - name: Save iptables rules
+      shell: |
+        mkdir -p /etc/iptables
+        iptables-save > /etc/iptables/rules.v4
+      args:
+        creates: /etc/iptables/rules.v4
+
+    # ============================================
+    # PART 10: NETBOOT.XYZ
+    # ============================================
+    
+    - name: Clone netboot.xyz repository
+      git:
+        repo: https://github.com/netbootxyz/netboot.xyz.git
+        dest: /opt/netboot.xyz
+        depth: 1
+        force: no
+      register: netboot_clone
+      ignore_errors: yes
+
+    - name: Build or download netboot.xyz
+      block:
+        - name: Build netboot.xyz
+          command: make build
+          args:
+            chdir: /opt/netboot.xyz
+          timeout: 300
+          when: netboot_clone is success
+
+        - name: Download pre-built binaries (fallback)
+          get_url:
+            url: "{{ item.url }}"
+            dest: "{{ item.dest }}"
+            mode: '0644'
+          loop:
+            - { url: "https://boot.netboot.xyz/ipxe/netboot.xyz.efi", dest: "/srv/tftp/netboot.xyz.efi" }
+            - { url: "https://boot.netboot.xyz/ipxe/netboot.xyz.kpxe", dest: "/srv/tftp/netboot.xyz.kpxe" }
+          when: netboot_clone is failed
+      rescue:
+        - name: Log netboot.xyz failure
+          copy:
+            content: "netboot.xyz setup failed at {{ ansible_date_time.iso8601 }}"
+            dest: "{{ backup_dir }}/netboot_failure.log"
+
+    # ============================================
+    # PART 11: DRBL 5.4.10-1 SETUP
+    # ============================================
+    
+    - name: Check if DRBL is already configured
+      stat:
+        path: /etc/drbl/drblrc
+      register: drbl_configured
+
+    - name: Create DRBL answer file for version 5.4.10-1
+      template:
+        src: drbl_answer_30.j2
+        dest: "{{ drbl_answer_file }}"
+        mode: '0600'
+      when: not drbl_configured.stat.exists
+
+    - name: Initialize DRBL server
+      shell: /opt/drbl/sbin/drblsrv -i < {{ drbl_answer_file }}
+      when: not drbl_configured.stat.exists
+      register: drblsrv_output
+      timeout: 600
+      failed_when:
+        - drblsrv_output.rc != 0
+        - "'ERROR' in drblsrv_output.stderr | default('')"
+
+    - name: Push DRBL configuration
+      shell: /opt/drbl/sbin/drblpush -i < {{ drbl_answer_file }}
+      when: not drbl_configured.stat.exists
+      register: drblpush_output
+      timeout: 300
+      failed_when: drblpush_output.rc != 0
+
+    - name: Remove DRBL answer file
+      file:
+        path: "{{ drbl_answer_file }}"
+        state: absent
+
+    # ============================================
+    # PART 12: SMART MONITORING
+    # ============================================
+    
+    - name: Configure smartd
+      copy:
+        dest: /etc/smartd.conf
+        content: |
+          DEVICESCAN -a -o on -S on -s (S/../.././02|L/../../7/03) -m {{ admin_email }} -M diminishing
+        mode: '0644'
+      notify: restart_services
+
+    # ============================================
+    # PART 13: COCKPIT
+    # ============================================
+    
+    - name: Generate Cockpit SSL certificate (idempotent)
+      shell: |
+        if [ ! -f /etc/cockpit/ws-cert.pem ]; then
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout /etc/cockpit/ws-key.pem \
+            -out /etc/cockpit/ws-cert.pem \
+            -subj '/CN={{ dhcp_router }}/O=Deployment Server/C=NL'
+        fi
+      args:
+        creates: /etc/cockpit/ws-cert.pem
+
+    - name: Configure Cockpit
+      copy:
+        dest: /etc/cockpit/cockpit.conf
+        content: |
+          [WebService]
+          Origins = https://{{ dhcp_router }}:9090 https://localhost:9090
+          Protocol = https
+          AllowUnencrypted = false
+
+    # ============================================
+    # PART 14: FIREWALL (UFW)
+    # ============================================
+    
+    - name: Configure UFW
+      block:
+        - name: Set default policies
+          ufw:
+            direction: "{{ item.direction }}"
+            policy: "{{ item.policy }}"
+          loop:
+            - { direction: incoming, policy: deny }
+            - { direction: outgoing, policy: allow }
+
+        - name: Allow SSH (prevent lockout)
+          ufw:
+            rule: allow
+            port: '22'
+            proto: tcp
+
+        - name: Allow essential services
+          ufw:
+            rule: allow
+            port: "{{ item }}"
+            proto: tcp
+          loop:
+            - '9090'
+            - '3142'
+
+        - name: Allow DHCP/TFTP on internal interface
+          ufw:
+            rule: allow
+            interface: "{{ internal_interface }}"
+            port: "{{ item.port }}"
+            proto: "{{ item.proto }}"
+          loop:
+            - { port: '67', proto: udp }
+            - { port: '69', proto: udp }
+            - { port: '2049', proto: tcp }
+
+        - name: Enable UFW
+          ufw:
+            state: enabled
+      ignore_errors: yes
+
+    # ============================================
+    # PART 15: START SERVICES
+    # ============================================
+    
+    - name: Enable and start all services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      loop:
+        - isc-dhcp-server
+        - tftpd-hpa
+        - nfs-kernel-server
+        - apt-cacher-ng
+        - smartd
+        - cockpit
+
+    # ============================================
+    # PART 16: HEALTH CHECKS
+    # ============================================
+    
+    - name: Verify DHCP service
+      command: systemctl is-active isc-dhcp-server
+      register: dhcp_status
+      failed_when: dhcp_status.stdout != "active"
+
+    - name: Verify TFTP service
+      command: systemctl is-active tftpd-hpa
+      register: tftp_status
+      failed_when: tftp_status.stdout != "active"
+
+    - name: Verify NFS service
+      command: systemctl is-active nfs-kernel-server
+      register: nfs_status
+      failed_when: nfs_status.stdout != "active"
+
+    # ============================================
+    # PART 17: STATUS FILE
+    # ============================================
+    
+    - name: Create deployment status file
+      copy:
+        dest: /etc/deployment_server_ready
+        content: |
+          DEPLOYMENT SERVER - FULLY CONFIGURED
+          ======================================
+          Date: {{ ansible_date_time.iso8601 }}
+          Hostname: {{ ansible_hostname }}
+          OS: Debian 13 Trixie
+          DRBL Version: 5.4.10-1
+
+          NETWORK:
+          - Upstream interface: {{ upstream_interface }}
+          - Internal interface: {{ internal_interface }}
+          - Subnet: {{ internal_subnet }}
+          - DHCP server: {{ dhcp_router }}
+          - DHCP range: {{ dhcp_range_start }} - {{ dhcp_range_end }}
+
+          SERVICES:
+          - DHCP/TFTP: active
+          - NFS: /home/partimag
+          - Apt-Cacher: http://{{ dhcp_router }}:3142
+          - Cockpit: https://{{ dhcp_router }}:9090
+          - SMART monitoring: active
+
+          Client PXE boot is ready.
+        mode: '0644'
+
+    - name: Display completion message
+      debug:
+        msg:
+          - "✅ Deployment server is fully configured"
+          - "📡 DHCP/TFTP active on {{ internal_interface }}"
+          - "🌐 Cockpit: https://{{ dhcp_router }}:9090"
+          - "💾 Backup: {{ backup_dir }}"
+
+  handlers:
+    - name: restart_services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+        daemon_reload: yes
+      loop:
+        - isc-dhcp-server
+        - tftpd-hpa
+        - nfs-kernel-server
+        - apt-cacher-ng
+        - smartd
+        - cockpit
+      listen: restart_all_services
